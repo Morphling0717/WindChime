@@ -1,0 +1,30 @@
+/* 风铃摇曳 — 成功反馈；宿主需引入本文件一次（组件内已 import） */
+@keyframes windchime-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+.windchime-sway-active {
+  animation: windchime-sway 0.85s ease-in-out 2;
+  transform-origin: top center;
+}
+
+@keyframes windchime-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.windchime-success-enter {
+  animation: windchime-fade-in 0.35s ease-out both;
+}

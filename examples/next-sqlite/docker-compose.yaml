@@ -1,0 +1,16 @@
+# 在 WindChime 仓库根目录执行:
+#   docker compose -f examples/next-sqlite/docker-compose.yaml up --build
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: examples/next-sqlite/Dockerfile
+    ports:
+      - "3010:3000"
+    environment:
+      WINDCHIME_DATA_DIR: /data
+    volumes:
+      - windchime-sqlite:/data
+
+volumes:
+  windchime-sqlite:

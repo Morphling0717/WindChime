@@ -1,0 +1,12 @@
+dist
+node_modules
+
+# tarballs from npm pack
+*.tgz
+
+# runtime / local
+.DS_Store
+*.log
+*.tsbuildinfo
+examples/**/data/
+examples/**/.next/
