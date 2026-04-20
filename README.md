@@ -12,6 +12,8 @@
 
 本包只负责 UI 与轻量客户端逻辑；**持久化、鉴权、反滥用、真正的拉黑生效逻辑都在宿主应用（例如 Next.js API Route）中实现**。示例参见 `examples/next-sqlite`。
 
+> 🎐 **致敬**：本项目在产品形态上参考了日本的匿名提问服务 **[Marshmallow（マシュマロ）](https://marshmallow-qa.com)**，提供类似的「粉丝匿名向创作者投递问题」体验，但实现、代码与 UI 均为独立编写，**与 Marshmallow 官方无任何关联**。
+
 当前版本：`0.3.0`（见根目录 `package.json`）。
 
 ---
