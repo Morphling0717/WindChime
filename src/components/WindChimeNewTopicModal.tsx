@@ -428,7 +428,7 @@ export function WindChimeNewTopicModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={64}
-              placeholder="🎂 Uli 生日快乐来信 2026"
+              placeholder="🎂 生日快乐来信 2026"
               className={titleError ? th.inputError : th.input}
             />
             {titleError && <div className={th.errLine}>✕ {titleError}</div>}
