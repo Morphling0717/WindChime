@@ -71,8 +71,14 @@ export type WindChimeQrCardProps = {
     footer?: string;
     /** 海报纵向画布宽度（px），默认 900 */
     width?: number;
-    /** 海报背景渐变 [起色, 止色]，默认紫粉 */
+    /** 海报背景渐变 [起色, 止色]，默认紫粉；当提供 `backgroundImageSrc` 时仍会作为加载失败的 fallback 底色 */
     gradient?: [string, string];
+    /** 海报背景图 URL（建议同源或带 CORS）。加载成功后按 cover 方式铺满画布 */
+    backgroundImageSrc?: string;
+    /** 背景图不透明度 0~1，默认 1 */
+    backgroundImageOpacity?: number;
+    /** 背景图之上叠加的半透明覆盖色，用于保证文字可读；默认 `rgba(0,0,0,0.38)` */
+    backgroundImageOverlay?: string;
     textColor?: string;
     /** 顶部圆形头像 URL（需 CORS 允许或同源） */
     avatarSrc?: string;
@@ -275,7 +281,7 @@ export function WindChimeQrCard({
     const ctx = out.getContext('2d');
     if (!ctx) return;
 
-    // 渐变背景
+    // 渐变背景（始终绘制，作为背景图加载失败时的 fallback）
     const [g1, g2] = poster.gradient ?? ['#8b5cf6', '#ec4899'];
     const grad = ctx.createLinearGradient(0, 0, W, H);
     grad.addColorStop(0, g1);
@@ -283,14 +289,43 @@ export function WindChimeQrCard({
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // 柔光圆
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.beginPath();
-    ctx.arc(W * 0.85, H * 0.08, W * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(W * 0.1, H * 0.92, W * 0.28, 0, Math.PI * 2);
-    ctx.fill();
+    // 背景图（cover 缩放 + 覆盖层）
+    let bgImageDrawn = false;
+    if (poster.backgroundImageSrc) {
+      try {
+        const bg = await loadImage(poster.backgroundImageSrc);
+        const bgAlpha = Math.min(
+          1,
+          Math.max(0, poster.backgroundImageOpacity ?? 1),
+        );
+        const scale = Math.max(W / bg.width, H / bg.height);
+        const dw = bg.width * scale;
+        const dh = bg.height * scale;
+        const dx = (W - dw) / 2;
+        const dy = (H - dh) / 2;
+        ctx.save();
+        ctx.globalAlpha = bgAlpha;
+        ctx.drawImage(bg, dx, dy, dw, dh);
+        ctx.restore();
+        const overlay = poster.backgroundImageOverlay ?? 'rgba(0,0,0,0.38)';
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, W, H);
+        bgImageDrawn = true;
+      } catch {
+        /* 加载失败则保持纯渐变 + 柔光圆 */
+      }
+    }
+
+    // 柔光圆（仅无背景图时绘制，避免和背景图打架）
+    if (!bgImageDrawn) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(W * 0.85, H * 0.08, W * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(W * 0.1, H * 0.92, W * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     const textColor = poster.textColor ?? '#ffffff';
 

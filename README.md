@@ -2,19 +2,38 @@
 
 匿名「风铃」提问箱的可嵌入 React 组件库：
 
+**投稿与管理**
 - **投稿面板** `WindChimeSender`
 - **浮动按钮 + 弹窗（内置禁用态）** `WindChimeFloatingButton`
-- **管理收件表格** `WindChimeAdminPanel`（分类 Tab / 批量 / 行操作 / 拉黑）
+- **Speed-Dial** `WindChimeSpeedDial`（主按钮展开多个子入口）
+- **管理收件表格** `WindChimeAdminPanel`（分类 Tab / 批量 / 行操作 / 拉黑 / **待审核 tab**）
 - **黑名单面板** `WindChimeBlocklistPanel`
-- **二维码与海报** `WindChimeQrCard`
-- **海报编辑器（标题/副文/落款/头像）** `WindChimeQrPosterEditor`
-- 可选 **Cloudflare Turnstile** `TurnstileWidget`
 
-本包只负责 UI 与轻量客户端逻辑；**持久化、鉴权、反滥用、真正的拉黑生效逻辑都在宿主应用（例如 Next.js API Route）中实现**。示例参见 `examples/next-sqlite`。
+**审核与安全**
+- **待审核面板** `WindChimeFlaggedPanel`（默认折叠 + 点击查看原文 modal）
+- **敏感词配置** `WindChimeBlockedTermsPanel`
+
+**二维码与海报**
+- **二维码卡** `WindChimeQrCard`
+- **海报编辑器** `WindChimeQrPosterEditor`
+
+**Mail Topics（多主题收件箱）** 🆕 0.4.0
+- **主题 Tab 栏** `WindChimeTopicTabs`（染色 / 未读 badge / 快捷归档）
+- **新建主题** `WindChimeNewTopicModal`（slug 校验 + 时间窗 + 永久活动二次确认）
+- **归档确认** `WindChimeArchiveConfirmModal`
+- **往期活动抽屉** `WindChimeArchivedTopicsDrawer`
+- **访客端状态页** `WindChimeTopicStatePage`（已结束 / 暂停中 / 未开始 + 倒计时）
+- **顶部活动横幅** `WindChimeActiveTopicsBanner`
+
+**其它**
+- 可选 **Cloudflare Turnstile** `TurnstileWidget`
+- **时间 / 时区工具**（`windChimeLocalToUtcIso` / `windChimeFormatInTimeZone` 等）
+
+本包只负责 UI 与轻量客户端逻辑；**持久化、鉴权、反滥用、真正的拉黑生效、跨主题路由规则都在宿主应用（例如 Next.js API Route）中实现**。示例参见 `examples/next-sqlite`。
 
 > 🎐 **致敬**：本项目在产品形态上参考了日本的匿名提问服务 **[Marshmallow（マシュマロ）](https://marshmallow-qa.com)**，提供类似的「粉丝匿名向创作者投递问题」体验，但实现、代码与 UI 均为独立编写，**与 Marshmallow 官方无任何关联**。
 
-当前版本：`0.3.0`（见根目录 `package.json`）。
+当前版本：`0.4.0`（见根目录 `package.json`）。
 
 ---
 
@@ -28,16 +47,21 @@
 | 关键词拦截 | `blockedTerms` 子串匹配（不区分大小写）；**不能替代服务端审核** |
 | 发送者指纹 | Sender 在 `localStorage` 生成并持续上报 `senderFingerprint`；服务端可与 IP/UA 叠加哈希成 `User-XXXX` 稳定标签 |
 | Turnstile | 传入 `turnstileSiteKey` 时在提交前要求人机验证，并把 `turnstileToken` 交给 `onSubmit` |
-| 收件箱分类 | Admin 面板内置「全部 / 未读 / 红心 / 已回复」Tab，支持受控（`filter` + `onFilterChange`）或非受控（按 `items` 自动过滤） |
+| 收件箱分类 | Admin 面板内置「全部 / 未读 / 红心 / **待审核**」Tab，支持受控（`filter` + `onFilterChange`）或非受控（按 `items` 自动过滤） |
+| 命中敏感词 | `isFlagged=true` 的消息**只在「待审核」tab 显示**，默认 `all/unread/favorited` 都自动隐藏；配合 `WindChimeFlaggedPanel` 做折叠 + 点击查看原文，防止直播切后台时糊脸 |
+| 敏感词库 | `WindChimeBlockedTermsPanel` 一键编辑服务端敏感词库（受控 + 拉取两种模式） |
 | 行级操作 | 收藏（`onToggleFavorite`）、已读切换（`onToggleRead`）、回复（`onReply`）、删除（`onDelete`）、拉黑（`onBlockSender`），发送者标签自动显示 |
 | 批量操作 | 多选 + `onBatchDelete` / `onBatchMarkRead` |
 | 黑名单 | `WindChimeBlocklistPanel` 展示被拉黑发送者并支持 `onUnblock` |
 | 二维码 / 海报 | `WindChimeQrCard` 主题色前景 + 中心 Logo + 下载 PNG；`poster.enabled` 额外输出社交海报 |
 | 海报编辑器 | `WindChimeQrPosterEditor` 为主播/管理员提供 heading/body/footer/avatar 表单，可选 `storageKey` 自动 localStorage 持久化 |
 | 浮动按钮 | `WindChimeFloatingButton` 固定角落按钮 + 弹窗，内置「禁用态」灰化、ESC 关闭、可轮询 settings 端点 |
-| 换肤 | 每个组件都接受 `theme`：传入 Tailwind `className` 片段覆盖默认样式 |
+| Speed-Dial | `WindChimeSpeedDial` 主按钮展开 N 个子按钮（竖向），子按钮可独立禁用态 |
+| Mail Topics | 多主题收件箱 UI 全套：tab 栏 / 新建 / 归档确认 / 往期抽屉 / 访客状态页 / 顶部活动横幅 |
+| 时间工具 | `windChimeLocalToUtcIso` / `windChimeFormatInTimeZone`：datetime-local ↔ UTC ISO 双向转换，默认 `Asia/Shanghai`，也支持任意 IANA 时区（带 DST 的西时区也 OK） |
+| 换肤 | 每个组件都接受 `theme`：传入 Tailwind `className` 片段覆盖默认样式；新组件的动画用 `windchime.css` 里的 CSS keyframes，不依赖 framer-motion / lucide-react / next-link |
 
-组件根节点带有稳定 `data-widget` 属性（如 `windchime-sender / windchime-admin / windchime-blocklist / windchime-qr / windchime-letter`），便于 E2E 或样式定位。
+组件根节点带有稳定 `data-widget` 属性（如 `windchime-sender / windchime-admin / windchime-blocklist / windchime-qr / windchime-letter / windchime-flagged / windchime-blocked-terms / windchime-topic-tabs / windchime-active-topics-banner / windchime-topic-state-page / windchime-speed-dial`），便于 E2E 或样式定位。
 
 ### 可选依赖
 
@@ -373,6 +397,129 @@ export function ShareTools({ pageUrl }: { pageUrl: string }) {
 
 ---
 
+## 0.4.0 新组件速览
+
+> 以下组件**不**发网络请求（除非你走"拉取模式"），不绑定任何具体后端；每个都提供受控 + 可选拉取两种模式。
+
+### `WindChimeFlaggedPanel` —「待审核」留言面板
+
+```tsx
+'use client';
+import { WindChimeFlaggedPanel } from '@windchime/embed';
+
+<WindChimeFlaggedPanel
+  items={messages}                                // 全量列表；组件内部 filter((m) => m.isFlagged)
+  onLoadDetail={async (id) => {                   // 打开 modal 时懒加载原文
+    const r = await fetch(`/api/mail/messages/${id}`, { headers: auth });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }}
+  onMarkRead={async (id) => { /* PATCH isRead:true */ }}
+  onDelete={async (id)   => { /* DELETE */ }}
+  onBlockSender={async (id) => { /* POST .../block */ }}
+  onAfterAction={() => void reload()}
+/>
+```
+
+### `WindChimeBlockedTermsPanel` — 敏感词配置
+
+```tsx
+// 受控模式（推荐）
+<WindChimeBlockedTermsPanel
+  terms={terms}                                   // string[]
+  onSave={async (next) => {                       // next 已自动去重 + lowercase
+    await fetch('/api/mail/blocked-terms', { method: 'PUT', body: JSON.stringify({ terms: next }) });
+    setTerms(next);
+  }}
+/>
+
+// 拉取模式
+<WindChimeBlockedTermsPanel
+  endpoint="/api/mail/blocked-terms"
+  requestHeaders={{ 'x-admin-password': pwd }}
+  onUnauthorized={() => logout()}
+/>
+```
+
+### Mail Topics 子系统
+
+```tsx
+import {
+  WindChimeTopicTabs,
+  WindChimeNewTopicModal,
+  WindChimeArchiveConfirmModal,
+  WindChimeArchivedTopicsDrawer,
+  WindChimeTopicStatePage,
+  WindChimeActiveTopicsBanner,
+  type WindChimeTopic,
+} from '@windchime/embed';
+
+// 管理端：主 Tab 栏
+<WindChimeTopicTabs
+  topics={topics}
+  activeTopicId={activeId}
+  onSwitch={setActiveId}
+  onOpenNewTopic={() => setShowNewModal(true)}
+  onOpenArchivedDrawer={() => setShowArchive(true)}
+  onOpenGlobalSettings={() => scrollToSettings()}
+  onQuickArchive={(id) => handleArchive(topics.find(t => t.id === id)!)}
+/>
+
+// 新建主题（slug 正则 + 保留字 + 时间窗校验全内置）
+<WindChimeNewTopicModal
+  open={showNewModal}
+  onClose={() => setShowNewModal(false)}
+  endpoint="/api/mail/topics"
+  requestHeaders={{ 'x-admin-password': pwd }}
+  onCreated={(topic) => setTopics(xs => [...xs, topic])}
+/>
+
+// 首页 <body> 顶部
+<WindChimeActiveTopicsBanner
+  topics={siteConfig.activeTopics}                // 也可改用 endpoint="/api/mail/topics"
+  linkPrefix="/m"
+  linkAs={NextLink}                               // 接 next/link 拿 prefetch
+/>
+
+// /m/[slug]/page.tsx 服务端判断到非 active 时
+<WindChimeTopicStatePage
+  variant="scheduled"
+  topicTitle={topic.title}
+  topicDescription={topic.description}
+  startsAt={topic.startsAt}
+  linkAs={NextLink}
+  footer="YOURSITE · MAIL_TOPICS"
+/>
+```
+
+### `WindChimeSpeedDial`
+
+```tsx
+<WindChimeSpeedDial
+  position="bottom-left"
+  items={[
+    {
+      key: 'mail',
+      icon: <MailIcon className="h-6 w-6" />,
+      label: '发信箱',
+      hint: '匿名投信',
+      disabled: !mailEnabled,
+      disabledHint: '发信箱暂时关闭',
+      onClick: () => setMailOpen(true),
+    },
+    {
+      key: 'gacha',
+      icon: <GachaIcon className="h-6 w-6" />,
+      label: '扭蛋机',
+      hint: '随机一张表情包',
+      onClick: () => setGachaOpen(true),
+    },
+  ]}
+/>
+```
+
+---
+
 ## 安全与上线检查清单
 
 1. **服务端校验 Turnstile**  
@@ -429,6 +576,37 @@ WindChime/
 ---
 
 ## 版本历史
+
+### 0.4.0
+
+> "从 UliUli 下沉的一批通用 UI"——把实际业务项目里打磨过的审核 / 敏感词 / 多主题收件箱能力回灌到上游包里，方便别的项目直接开箱用。
+
+**审核 & 敏感词**
+- 新增 `WindChimeFlaggedPanel`：默认只列发送者 + 时间，点「查看原文」才弹 modal 展开完整内容（`createPortal`），带「标已读 / 拉黑 / 删除」三个可选回调；配 `onLoadDetail` 懒加载详情。
+- 新增 `WindChimeBlockedTermsPanel`：大文本框 + 保存按钮，支持**受控**（`terms + onSave`）与**拉取**（`endpoint + requestHeaders`）两种模式；自动 split / trim / lowercase / 去重。
+- `WindChimeMessageRecord` 新增可选 `isFlagged: boolean`；`WindChimeInboxFilter` 新增 `'flagged'`；`WindChimeAdminPanel` 新增「待审核」tab，**命中审核旗标的消息只在该 tab 显示**，默认 `all / unread / favorited` 会自动过滤掉它们，防止直播切后台时糊脸。
+
+**Mail Topics（多主题收件箱）**
+- 新增类型模块 `types-topics`：`WindChimeTopic` / `WindChimeTopicState` / `WindChimeTopicListResponse` / `WindChimeTopicArchiveResponse` / `WindChimeTopicCreateInput` / `WindChimeTopicPatchInput` + `windChimeTopicStateLabel` / `isWindChimeTopicOpenNow` 辅助函数。
+- 新增常量：`WIND_CHIME_TOPIC_SLUG_REGEX`（`^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$`）、`WIND_CHIME_TOPIC_RESERVED_SLUGS`（`default / new / admin / api / m`）。
+- 新增 `WindChimeTopicTabs`：tab 按 `default → active → scheduled → ended` 分组排序；未读 badge、状态染色、已结束 tab 带「待归档」快捷按钮；末尾 ≥3 个已结束时提示一键清理。
+- 新增 `WindChimeNewTopicModal`：slug 正则 + 保留字客户端校验；默认勾选时间窗（+0/+7 天）；取消勾选弹"永久活动 ≈ 常规信箱平行版"二次确认；入库前自动把北京时间转成 UTC ISO Z 串。
+- 新增 `WindChimeArchiveConfirmModal`：当主题还有未读 / 待审核留言时弹窗，三按钮（先 markRead 再归档 / 仍然归档 / 取消）。
+- 新增 `WindChimeArchivedTopicsDrawer`：右侧滑出抽屉，搜索 title / slug + 一键恢复；支持受控或拉取模式。
+- 新增 `WindChimeTopicStatePage`：访客端「已结束 / 暂停中 / 未开始 + 倒计时」通用提示页；内置三种默认图标（可覆盖）、倒计时自动每秒刷新、到点提示"刷新页面即可投信"。
+- 新增 `WindChimeActiveTopicsBanner`：全站顶部活动横幅，0 条不渲染、1 条直跳 `/m/{slug}`、≥2 条跳 `/m`；内置 × 按钮 + `sessionStorage` signature（新活动出现会自动取消 dismiss）。
+
+**Speed-Dial**
+- 新增 `WindChimeSpeedDial`：主按钮（默认"+"）展开 N 个竖向子按钮；每个 item 可独立禁用（灰化 + 换 `disabledHint`）；`closeOnClick` 控制点击是否自动收起；支持 `bottom-left / bottom-right / top-left / top-right` 四个默认位置。
+
+**时间 / 时区工具**
+- 新增 `windChimeLocalToUtcIso(localInput, timeZone?)` / `windChimeUtcIsoToLocal(iso, timeZone?)` / `windChimeNowAsLocal(timeZone?)` / `windChimePlusDaysAsLocal(days, timeZone?)` / `windChimeFormatInTimeZone(iso, { timeZone?, locale?, withSeconds? })`。
+- 默认时区 `WIND_CHIME_DEFAULT_TIME_ZONE = 'Asia/Shanghai'`；实现用 `Intl.DateTimeFormat` 反算偏移，支持任意 IANA 时区（含 DST，不再是写死 `+08:00`）。
+
+**样式 / 兼容**
+- 新增 `styles/windchime.css` 里的 `windchime-overlay-enter` / `windchime-modal-enter` / `windchime-drawer-enter` / `windchime-sheet-enter` / `windchime-dial-item-enter` 关键帧；新组件**一律用 CSS 动画**，不引入 `framer-motion`。
+- 所有新组件**不依赖** `lucide-react`（默认图标均为内联 SVG，可通过 `icons` / `icon` prop 完全替换）、**不依赖** `next/link`（默认用 `<a>`，需要 `next/link` 时通过 `linkAs` prop 注入）。
+- 所有新组件都接受 `theme` prop，空即用内置玻璃拟态默认样式；配套导出 `WindChimeFlaggedPanelTheme` / `WindChimeBlockedTermsPanelTheme` / `WindChimeTopicTabsTheme` / `WindChimeTopicStatePageTheme` / `WindChimeActiveTopicsBannerTheme` / `WindChimeNewTopicModalTheme` / `WindChimeArchiveConfirmModalTheme` / `WindChimeArchivedTopicsDrawerTheme` / `WindChimeSpeedDialTheme`。
 
 ### 0.3.0
 

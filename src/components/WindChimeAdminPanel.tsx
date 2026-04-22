@@ -95,23 +95,35 @@ const FILTER_META: { key: WindChimeInboxFilter; label: string }[] = [
   { key: 'all', label: '全部信笺' },
   { key: 'unread', label: '未读' },
   { key: 'favorited', label: '红心收藏' },
+  { key: 'flagged', label: '待审核' },
 ];
 
 function applyFilter(rows: WindChimeMessageRecord[], f: WindChimeInboxFilter) {
-  if (f === 'all') return rows;
-  if (f === 'unread') return rows.filter((r) => !r.isRead);
-  if (f === 'favorited') return rows.filter((r) => r.isFavorited);
-  return rows;
+  // 命中审核旗标的消息仅在「待审核」tab 里展示，避免在默认 all/unread
+  // 视图里不经意间把敏感词原文糊到主播脸上（例如直播时切到后台）。
+  if (f === 'flagged') return rows.filter((r) => r.isFlagged);
+  const nonFlagged = rows.filter((r) => !r.isFlagged);
+  if (f === 'all') return nonFlagged;
+  if (f === 'unread') return nonFlagged.filter((r) => !r.isRead);
+  if (f === 'favorited') return nonFlagged.filter((r) => r.isFavorited);
+  return nonFlagged;
 }
 
 function computeCounts(rows: WindChimeMessageRecord[]): Record<WindChimeInboxFilter, number> {
+  let all = 0;
   let unread = 0;
   let favorited = 0;
+  let flagged = 0;
   for (const r of rows) {
+    if (r.isFlagged) {
+      flagged += 1;
+      continue; // 审核旗标消息不计入 all/unread/favorited
+    }
+    all += 1;
     if (!r.isRead) unread += 1;
     if (r.isFavorited) favorited += 1;
   }
-  return { all: rows.length, unread, favorited };
+  return { all, unread, favorited, flagged };
 }
 
 export function WindChimeAdminPanel({
@@ -159,6 +171,7 @@ export function WindChimeAdminPanel({
       all: counts?.all ?? auto.all,
       unread: counts?.unread ?? auto.unread,
       favorited: counts?.favorited ?? auto.favorited,
+      flagged: counts?.flagged ?? auto.flagged,
     };
   }, [items, counts]);
 
@@ -438,6 +451,12 @@ export function WindChimeAdminPanel({
                       <span className="inline-flex items-center gap-1 rounded-full bg-violet-100/90 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
                         <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
                         未读
+                      </span>
+                    )}
+                    {row.isFlagged && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-100/90 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                        待审核
                       </span>
                     )}
                   </div>

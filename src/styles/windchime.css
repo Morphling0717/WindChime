@@ -28,3 +28,83 @@
 .windchime-success-enter {
   animation: windchime-fade-in 0.35s ease-out both;
 }
+
+/* ---------- Modal / Drawer 通用动画（替代 framer-motion 基本缓动） ---------- */
+
+/* 遮罩渐显 */
+@keyframes windchime-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.windchime-overlay-enter {
+  animation: windchime-overlay-in 0.2s ease-out both;
+}
+
+/* 模态缩放 + 位移进入 */
+@keyframes windchime-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.windchime-modal-enter {
+  animation: windchime-modal-in 0.25s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+}
+
+/* 从右侧滑入（用于抽屉） */
+@keyframes windchime-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.windchime-drawer-enter {
+  animation: windchime-drawer-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* 底部上浮（移动端 sheet 风格） */
+@keyframes windchime-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.windchime-sheet-enter {
+  animation: windchime-sheet-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* Speed-Dial 子按钮交错进入 */
+@keyframes windchime-dial-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.windchime-dial-item-enter {
+  animation: windchime-dial-item-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+}
