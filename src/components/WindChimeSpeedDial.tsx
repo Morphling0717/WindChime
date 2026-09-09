@@ -1,12 +1,7 @@
-'use client';
+"use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import '../styles/windchime.css';
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import "../styles/windchime.css";
 
 /**
  * 角落收纳式 Speed-Dial：主按钮展开多个子按钮（竖向排列）。
@@ -23,7 +18,7 @@ import '../styles/windchime.css';
  */
 
 function cn(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 export type WindChimeSpeedDialItem = {
@@ -60,25 +55,26 @@ export type WindChimeSpeedDialTheme = {
 };
 
 const DEFAULT_THEME: Required<WindChimeSpeedDialTheme> = {
-  root: 'pointer-events-none fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center gap-3',
-  scrim: 'fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]',
+  root: "pointer-events-none fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center gap-3",
+  scrim: "fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]",
   mainButton:
-    'pointer-events-auto relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-violet-500 bg-white/90 text-violet-600 shadow-[0_8px_30px_rgba(139,92,246,0.25)] backdrop-blur-md transition-colors hover:bg-violet-500 hover:text-white dark:border-violet-400 dark:bg-slate-950/80 dark:text-violet-300 dark:hover:bg-violet-500 dark:hover:text-white',
-  mainButtonIcon: 'block',
-  itemsWrap:
-    'pointer-events-auto flex flex-col-reverse items-center gap-3',
-  itemRoot: 'relative flex items-center gap-3',
+    "pointer-events-auto relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-violet-500 bg-white/90 text-violet-600 shadow-[0_8px_30px_rgba(139,92,246,0.25)] backdrop-blur-md transition-colors hover:bg-violet-500 hover:text-white dark:border-violet-400 dark:bg-slate-950/80 dark:text-violet-300 dark:hover:bg-violet-500 dark:hover:text-white",
+  mainButtonIcon: "block",
+  itemsWrap: "pointer-events-auto flex flex-col-reverse items-center gap-3",
+  itemRoot: "relative flex items-center gap-3",
   itemLabel:
-    'pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md border border-violet-300/60 bg-white/90 px-3 py-1.5 font-mono text-xs text-violet-800 shadow-sm backdrop-blur-md dark:border-violet-400/40 dark:bg-slate-950/80 dark:text-violet-200',
-  itemLabelText: 'font-bold',
-  itemLabelHint: 'ml-2 text-slate-500 dark:text-slate-400',
+    "pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md border border-violet-300/60 bg-white/90 px-3 py-1.5 font-mono text-xs text-violet-800 shadow-sm backdrop-blur-md dark:border-violet-400/40 dark:bg-slate-950/80 dark:text-violet-200",
+  itemLabelText: "font-bold",
+  itemLabelHint: "ml-2 text-slate-500 dark:text-slate-400",
   itemButton:
-    'flex h-12 w-12 items-center justify-center rounded-full border-2 border-violet-500 bg-white/90 text-violet-600 shadow-[0_6px_20px_rgba(139,92,246,0.2)] backdrop-blur-md transition-colors hover:bg-violet-500 hover:text-white dark:border-violet-400 dark:bg-slate-950/80 dark:text-violet-300 dark:hover:bg-violet-500 dark:hover:text-white',
+    "flex h-12 w-12 items-center justify-center rounded-full border-2 border-violet-500 bg-white/90 text-violet-600 shadow-[0_6px_20px_rgba(139,92,246,0.2)] backdrop-blur-md transition-colors hover:bg-violet-500 hover:text-white dark:border-violet-400 dark:bg-slate-950/80 dark:text-violet-300 dark:hover:bg-violet-500 dark:hover:text-white",
   itemButtonDisabled:
-    'flex h-12 w-12 items-center justify-center rounded-full border-2 border-slate-400/60 bg-slate-200/70 text-slate-400 shadow-sm backdrop-blur-md cursor-not-allowed dark:border-slate-600/60 dark:bg-slate-800/60 dark:text-slate-500',
+    "flex h-12 w-12 items-center justify-center rounded-full border-2 border-slate-400/60 bg-slate-200/70 text-slate-400 shadow-sm backdrop-blur-md cursor-not-allowed dark:border-slate-600/60 dark:bg-slate-800/60 dark:text-slate-500",
 };
 
-function mergeTheme(t?: WindChimeSpeedDialTheme): Required<WindChimeSpeedDialTheme> {
+function mergeTheme(
+  t?: WindChimeSpeedDialTheme,
+): Required<WindChimeSpeedDialTheme> {
   return { ...DEFAULT_THEME, ...(t ?? {}) };
 }
 
@@ -111,25 +107,32 @@ export type WindChimeSpeedDialProps = {
   disableScrim?: boolean;
 
   /** 固定位置（仅在用默认 theme 时生效；自定义 theme.root 会完全接管） */
-  position?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+  position?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
 
   theme?: WindChimeSpeedDialTheme;
   className?: string;
 };
 
-const POSITION_CLASS: Record<NonNullable<WindChimeSpeedDialProps['position']>, string> = {
-  'bottom-left': 'pointer-events-none fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center gap-3',
-  'bottom-right': 'pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-3',
-  'top-left': 'pointer-events-none fixed top-6 left-6 z-50 flex flex-col items-center gap-3',
-  'top-right': 'pointer-events-none fixed top-6 right-6 z-50 flex flex-col items-end gap-3',
+const POSITION_CLASS: Record<
+  NonNullable<WindChimeSpeedDialProps["position"]>,
+  string
+> = {
+  "bottom-left":
+    "pointer-events-none fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center gap-3",
+  "bottom-right":
+    "pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-3",
+  "top-left":
+    "pointer-events-none fixed top-6 left-6 z-50 flex flex-col items-center gap-3",
+  "top-right":
+    "pointer-events-none fixed top-6 right-6 z-50 flex flex-col items-end gap-3",
 };
 
 export function WindChimeSpeedDial({
   items,
   mainIcon = DEFAULT_PLUS_ICON,
-  mainAriaLabel = '展开菜单',
+  mainAriaLabel = "展开菜单",
   disableScrim = false,
-  position = 'bottom-left',
+  position = "bottom-left",
   theme,
   className,
 }: WindChimeSpeedDialProps) {
@@ -141,28 +144,31 @@ export function WindChimeSpeedDial({
   useEffect(() => {
     if (!expanded) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setExpanded(false);
+      if (e.key === "Escape") setExpanded(false);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
   return (
     <>
-      <div className={cn(rootClass, className)} data-widget="windchime-speed-dial">
+      <div
+        className={cn(rootClass, className)}
+        data-widget="windchime-speed-dial"
+      >
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          aria-label={expanded ? '收起菜单' : mainAriaLabel}
+          aria-label={expanded ? "收起菜单" : mainAriaLabel}
           aria-expanded={expanded}
           className={th.mainButton}
         >
           <span
             className={th.mainButtonIcon}
             style={{
-              display: 'inline-flex',
-              transform: expanded ? 'rotate(45deg)' : 'rotate(0)',
-              transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.1)',
+              display: "inline-flex",
+              transform: expanded ? "rotate(45deg)" : "rotate(0)",
+              transition: "transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.1)",
             }}
             aria-hidden
           >
@@ -189,7 +195,7 @@ export function WindChimeSpeedDial({
 
       {expanded && !disableScrim && (
         <div
-          className={cn(th.scrim, 'windchime-overlay-enter')}
+          className={cn(th.scrim, "windchime-overlay-enter")}
           onClick={() => setExpanded(false)}
         />
       )}
@@ -197,7 +203,7 @@ export function WindChimeSpeedDial({
   );
 }
 
-WindChimeSpeedDial.displayName = 'WindChimeSpeedDial';
+WindChimeSpeedDial.displayName = "WindChimeSpeedDial";
 
 function SpeedDialItemView({
   item,
@@ -210,7 +216,15 @@ function SpeedDialItemView({
   th: Required<WindChimeSpeedDialTheme>;
   onAfterClick: (closeOnClick: boolean) => void;
 }) {
-  const { icon, label, hint, disabledHint, onClick, disabled, closeOnClick = true } = item;
+  const {
+    icon,
+    label,
+    hint,
+    disabledHint,
+    onClick,
+    disabled,
+    closeOnClick = true,
+  } = item;
 
   const handleClick = () => {
     if (disabled) return;
@@ -218,11 +232,11 @@ function SpeedDialItemView({
     onAfterClick(closeOnClick);
   };
 
-  const visibleHint = disabled ? (disabledHint ?? hint ?? '') : (hint ?? '');
+  const visibleHint = disabled ? (disabledHint ?? hint ?? "") : (hint ?? "");
 
   return (
     <div
-      className={cn(th.itemRoot, 'windchime-dial-item-enter')}
+      className={cn(th.itemRoot, "windchime-dial-item-enter")}
       style={{ animationDelay: `${index * 0.04}s` }}
     >
       <span className={th.itemLabel}>
@@ -232,7 +246,7 @@ function SpeedDialItemView({
       <button
         type="button"
         onClick={handleClick}
-        aria-label={`${label}${visibleHint ? ' · ' + visibleHint : ''}`}
+        aria-label={`${label}${visibleHint ? " · " + visibleHint : ""}`}
         aria-disabled={disabled}
         className={disabled ? th.itemButtonDisabled : th.itemButton}
       >

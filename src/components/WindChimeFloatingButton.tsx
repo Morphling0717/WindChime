@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { WindChimeSender } from "./WindChimeSender";
-import type {
-  WindChimeSenderProps,
-  WindChimeSubmitPayload,
-} from "../types";
+import { WindChimeSender } from "./WindChimeSender.js";
+import type { WindChimeSenderProps, WindChimeSubmitPayload } from "../types.js";
+
+import { createWindChimeClient } from "../client/index.js";
+import { useWindChimeSettings } from "../react/management.js";
 
 /**
  * 浮动风铃按钮：固定在角落，点击弹出留言面板（内嵌 `WindChimeSender`）。
@@ -62,7 +62,10 @@ export type WindChimeFloatingButtonProps = {
   className?: string;
 };
 
-const POSITION_CLASS: Record<NonNullable<WindChimeFloatingButtonProps["position"]>, string> = {
+const POSITION_CLASS: Record<
+  NonNullable<WindChimeFloatingButtonProps["position"]>,
+  string
+> = {
   "bottom-left": "fixed bottom-6 left-6",
   "bottom-right": "fixed bottom-6 right-6",
   "top-left": "fixed top-6 left-6",
@@ -78,8 +81,7 @@ const DEFAULT_THEME: Required<WindChimeFloatingButtonTheme> = {
     "border border-slate-300/70 bg-slate-200/80 shadow-[0_6px_20px_rgba(100,100,120,0.18)] grayscale cursor-not-allowed",
   iconEnabled: "drop-shadow-[0_2px_6px_rgba(249,78,159,0.45)]",
   iconDisabled: "opacity-60",
-  dot:
-    "pointer-events-none absolute -top-1 -right-1 inline-flex h-3 w-3 items-center justify-center",
+  dot: "pointer-events-none absolute -top-1 -right-1 inline-flex h-3 w-3 items-center justify-center",
   overlay:
     "fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4",
   modalWrap: "relative w-full max-w-lg",
@@ -113,34 +115,21 @@ export function WindChimeFloatingButton(props: WindChimeFloatingButtonProps) {
     [theme],
   );
 
-  const [polledEnabled, setPolledEnabled] = useState<boolean | null>(null);
   const controlled = enabledProp !== undefined;
-  const enabled: boolean | null = controlled ? enabledProp ?? null : polledEnabled;
+  const client = useMemo(
+    () => createWindChimeClient({ endpoints: { settings: settingsUrl } }),
+    [settingsUrl],
+  );
+  const settings = useWindChimeSettings(client, {
+    enabled: !controlled && !!settingsUrl,
+    pollIntervalMs,
+  });
+  const enabled: boolean | null = controlled
+    ? (enabledProp ?? null)
+    : (settings.data?.enabled ?? null);
 
   const [open, setOpen] = useState(false);
   const [sway, setSway] = useState(false);
-
-  // 轮询开关
-  useEffect(() => {
-    if (controlled || !settingsUrl) return;
-    let cancelled = false;
-    const refresh = async () => {
-      try {
-        const r = await fetch(settingsUrl, { cache: "no-store" });
-        if (!r.ok) return;
-        const j = (await r.json()) as { enabled?: boolean };
-        if (!cancelled && typeof j.enabled === "boolean") setPolledEnabled(j.enabled);
-      } catch {
-        /* noop */
-      }
-    };
-    void refresh();
-    const id = window.setInterval(refresh, pollIntervalMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [controlled, settingsUrl, pollIntervalMs]);
 
   // 摇曳动画
   useEffect(() => {
@@ -186,12 +175,13 @@ export function WindChimeFloatingButton(props: WindChimeFloatingButtonProps) {
           className,
         )}
         style={
-          sway
-            ? { animation: "windchime-sway 1.2s ease-in-out" }
-            : undefined
+          sway ? { animation: "windchime-sway 1.2s ease-in-out" } : undefined
         }
       >
-        <span aria-hidden className={isDisabled ? th.iconDisabled : th.iconEnabled}>
+        <span
+          aria-hidden
+          className={isDisabled ? th.iconDisabled : th.iconEnabled}
+        >
           {icon}
         </span>
         {!isDisabled && (
@@ -211,19 +201,30 @@ export function WindChimeFloatingButton(props: WindChimeFloatingButtonProps) {
               aria-label="关闭"
               className={th.closeButton}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-5 w-5"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
 
-            {isDisabled && <div className={th.disabledBanner}>{disabledBannerText}</div>}
+            {isDisabled && (
+              <div className={th.disabledBanner}>{disabledBannerText}</div>
+            )}
 
             <div
               className={isDisabled ? th.senderWrapDisabled : undefined}
               aria-disabled={isDisabled}
             >
-              <WindChimeSender {...(senderProps ?? {})} onSubmit={handleSubmit} />
+              <WindChimeSender
+                {...(senderProps ?? {})}
+                onSubmit={handleSubmit}
+              />
             </div>
           </div>
         </div>

@@ -1,48 +1,59 @@
-'use client';
+"use client";
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
+import {
+  filterWindChimeMessages as applyFilter,
+  countWindChimeMessages as computeCounts,
+  useWindChimeSelection,
+} from "../react/inbox.js";
+import { downloadWindChimeCsv } from "../client/csv.js";
 import type {
   WindChimeAdminPanelProps,
   WindChimeAdminTheme,
   WindChimeInboxFilter,
   WindChimeMessageRecord,
-} from '../types';
+} from "../types.js";
 
 function cn(...parts: (string | undefined | false | null)[]) {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 const defaultAdminTheme: Required<WindChimeAdminTheme> = {
-  root: 'w-full max-w-6xl text-slate-800 dark:text-slate-100',
-  toolbar: 'mb-5 flex flex-wrap items-center gap-3',
-  tabs: 'mb-6 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-white/40 bg-white/30 p-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40',
-  tab: 'rounded-full px-5 py-2.5 text-[15px] font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
-  tabActive: 'bg-white text-violet-700 shadow-sm shadow-violet-500/10 dark:bg-slate-800 dark:text-violet-300',
+  root: "w-full max-w-6xl text-slate-800 dark:text-slate-100",
+  toolbar: "mb-5 flex flex-wrap items-center gap-3",
+  tabs: "mb-6 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-white/40 bg-white/30 p-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40",
+  tab: "rounded-full px-5 py-2.5 text-[15px] font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white",
+  tabActive:
+    "bg-white text-violet-700 shadow-sm shadow-violet-500/10 dark:bg-slate-800 dark:text-violet-300",
   button:
-    'rounded-2xl border border-slate-200/80 bg-white/60 px-5 py-2.5 text-[14px] font-semibold text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800',
+    "rounded-2xl border border-slate-200/80 bg-white/60 px-5 py-2.5 text-[14px] font-semibold text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md transition hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800",
   primaryButton:
-    'rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_rgba(167,139,250,0.3)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50',
+    "rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_rgba(167,139,250,0.3)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
   dangerButton:
-    'rounded-2xl border border-red-200/80 bg-red-50/80 px-5 py-2.5 text-[14px] font-semibold text-red-700 shadow-[0_2px_8px_rgba(248,113,113,0.15)] transition hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200',
-  rowSelected: 'ring-2 ring-violet-400/50 dark:ring-violet-500/40',
+    "rounded-2xl border border-red-200/80 bg-red-50/80 px-5 py-2.5 text-[14px] font-semibold text-red-700 shadow-[0_2px_8px_rgba(248,113,113,0.15)] transition hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200",
+  rowSelected: "ring-2 ring-violet-400/50 dark:ring-violet-500/40",
   tableWrap:
-    'overflow-hidden rounded-3xl border border-white/40 bg-white/30 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40',
-  table: 'w-full min-w-[40rem] border-collapse text-left text-[15px]',
-  th: 'border-b border-white/40 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-white/10 dark:text-slate-400',
-  td: 'border-b border-white/20 px-5 py-4 align-top text-slate-700 transition hover:bg-white/40 dark:border-white/5 dark:text-slate-200 dark:hover:bg-slate-800/40',
+    "overflow-hidden rounded-3xl border border-white/40 bg-white/30 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40",
+  table: "w-full min-w-[40rem] border-collapse text-left text-[15px]",
+  th: "border-b border-white/40 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-white/10 dark:text-slate-400",
+  td: "border-b border-white/20 px-5 py-4 align-top text-slate-700 transition hover:bg-white/40 dark:border-white/5 dark:text-slate-200 dark:hover:bg-slate-800/40",
   checkbox:
-    'h-4 w-4 cursor-pointer rounded border-slate-300 text-violet-500 shadow-sm focus:ring-2 focus:ring-violet-400/40 dark:border-slate-600 dark:bg-slate-800',
-  favoriteActive: 'text-amber-500',
-  badge: 'inline-flex items-center rounded-full border border-stone-300/60 bg-stone-50/80 px-2 py-0.5 text-[11px] font-medium text-stone-600',
-  link: 'text-violet-600 underline decoration-violet-400/40 underline-offset-2 hover:text-violet-500 dark:text-violet-300',
-  muted: 'text-xs font-medium tracking-wide text-slate-500 dark:text-slate-400',
-  cardGrid: 'grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3',
-  card: 'group relative flex flex-col overflow-hidden rounded-[2rem] border border-amber-200/60 bg-gradient-to-b from-[#fffaf4] to-[#fdf1e3] shadow-[0_12px_36px_-12px_rgba(120,80,40,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_-12px_rgba(120,80,40,0.32)] dark:border-amber-100/30',
-  cardUnread: 'ring-2 ring-violet-300/60 ring-offset-2 ring-offset-transparent',
-  cardFavorited: 'border-amber-400/80 shadow-[0_12px_36px_-12px_rgba(217,119,6,0.35)]',
+    "h-4 w-4 cursor-pointer rounded border-slate-300 text-violet-500 shadow-sm focus:ring-2 focus:ring-violet-400/40 dark:border-slate-600 dark:bg-slate-800",
+  favoriteActive: "text-amber-500",
+  badge:
+    "inline-flex items-center rounded-full border border-stone-300/60 bg-stone-50/80 px-2 py-0.5 text-[11px] font-medium text-stone-600",
+  link: "text-violet-600 underline decoration-violet-400/40 underline-offset-2 hover:text-violet-500 dark:text-violet-300",
+  muted: "text-xs font-medium tracking-wide text-slate-500 dark:text-slate-400",
+  cardGrid: "grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3",
+  card: "group relative flex flex-col overflow-hidden rounded-[2rem] border border-amber-200/60 bg-gradient-to-b from-[#fffaf4] to-[#fdf1e3] shadow-[0_12px_36px_-12px_rgba(120,80,40,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_-12px_rgba(120,80,40,0.32)] dark:border-amber-100/30",
+  cardUnread: "ring-2 ring-violet-300/60 ring-offset-2 ring-offset-transparent",
+  cardFavorited:
+    "border-amber-400/80 shadow-[0_12px_36px_-12px_rgba(217,119,6,0.35)]",
 };
 
-function mergeAdminTheme(t?: WindChimeAdminTheme): Required<WindChimeAdminTheme> {
+function mergeAdminTheme(
+  t?: WindChimeAdminTheme,
+): Required<WindChimeAdminTheme> {
   return {
     root: t?.root ?? defaultAdminTheme.root,
     toolbar: t?.toolbar ?? defaultAdminTheme.toolbar,
@@ -69,72 +80,22 @@ function mergeAdminTheme(t?: WindChimeAdminTheme): Required<WindChimeAdminTheme>
   };
 }
 
-function toCsv(rows: WindChimeMessageRecord[]): string {
-  const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  const header = ['id', 'createdAt', 'nickname', 'linkUrl', 'senderLabel', 'isRead', 'isFavorited', 'text']
-    .map(esc)
-    .join(',');
-  const lines = rows.map((r) =>
-    [
-      r.id,
-      r.createdAt,
-      r.nickname ?? '',
-      r.linkUrl ?? '',
-      r.senderLabel ?? '',
-      r.isRead ? '1' : '0',
-      r.isFavorited ? '1' : '0',
-      r.text,
-    ]
-      .map((c) => esc(String(c)))
-      .join(','),
-  );
-  return [header, ...lines].join('\n');
-}
-
 const FILTER_META: { key: WindChimeInboxFilter; label: string }[] = [
-  { key: 'all', label: '全部信笺' },
-  { key: 'unread', label: '未读' },
-  { key: 'favorited', label: '红心收藏' },
-  { key: 'flagged', label: '待审核' },
+  { key: "all", label: "全部信笺" },
+  { key: "unread", label: "未读" },
+  { key: "favorited", label: "红心收藏" },
+  { key: "flagged", label: "待审核" },
 ];
-
-function applyFilter(rows: WindChimeMessageRecord[], f: WindChimeInboxFilter) {
-  // 命中审核旗标的消息仅在「待审核」tab 里展示，避免在默认 all/unread
-  // 视图里不经意间把敏感词原文糊到主播脸上（例如直播时切到后台）。
-  if (f === 'flagged') return rows.filter((r) => r.isFlagged);
-  const nonFlagged = rows.filter((r) => !r.isFlagged);
-  if (f === 'all') return nonFlagged;
-  if (f === 'unread') return nonFlagged.filter((r) => !r.isRead);
-  if (f === 'favorited') return nonFlagged.filter((r) => r.isFavorited);
-  return nonFlagged;
-}
-
-function computeCounts(rows: WindChimeMessageRecord[]): Record<WindChimeInboxFilter, number> {
-  let all = 0;
-  let unread = 0;
-  let favorited = 0;
-  let flagged = 0;
-  for (const r of rows) {
-    if (r.isFlagged) {
-      flagged += 1;
-      continue; // 审核旗标消息不计入 all/unread/favorited
-    }
-    all += 1;
-    if (!r.isRead) unread += 1;
-    if (r.isFavorited) favorited += 1;
-  }
-  return { all, unread, favorited, flagged };
-}
 
 export function WindChimeAdminPanel({
   items,
   isLoading,
   error,
-  title = '风铃收件箱',
-  emptyText = '暂无来信。',
+  title = "风铃收件箱",
+  emptyText = "暂无来信。",
   counts,
   filter,
-  defaultFilter = 'all',
+  defaultFilter = "all",
   onFilterChange,
   autoClientFilter = true,
   onReload,
@@ -150,12 +111,14 @@ export function WindChimeAdminPanel({
 }: WindChimeAdminPanelProps) {
   const th = useMemo(() => mergeAdminTheme(theme), [theme]);
   const isControlledFilter = filter !== undefined;
-  const [innerFilter, setInnerFilter] = useState<WindChimeInboxFilter>(defaultFilter);
-  const activeFilter = isControlledFilter ? (filter as WindChimeInboxFilter) : innerFilter;
+  const [innerFilter, setInnerFilter] =
+    useState<WindChimeInboxFilter>(defaultFilter);
+  const activeFilter = isControlledFilter
+    ? (filter as WindChimeInboxFilter)
+    : innerFilter;
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<{ id: string; op: string } | null>(null);
-  const [batchBusy, setBatchBusy] = useState<null | 'delete' | 'read'>(null);
+  const [batchBusy, setBatchBusy] = useState<null | "delete" | "read">(null);
 
   const visibleItems = useMemo(
     () =>
@@ -175,36 +138,22 @@ export function WindChimeAdminPanel({
     };
   }, [items, counts]);
 
-  const visibleIds = useMemo(() => visibleItems.map((r) => r.id), [visibleItems]);
-  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
-  const someSelected = selected.size > 0;
-
+  const visibleIds = useMemo(
+    () => visibleItems.map((r) => r.id),
+    [visibleItems],
+  );
+  const {
+    selectedIds: selected,
+    allSelected,
+    someSelected,
+    clearSelection,
+    toggleSelected: toggleOne,
+    toggleAll: toggleAllVisible,
+  } = useWindChimeSelection(visibleIds, activeFilter);
   const setFilter = (f: WindChimeInboxFilter) => {
     if (!isControlledFilter) setInnerFilter(f);
     onFilterChange?.(f);
-    setSelected(new Set());
-  };
-
-  const toggleOne = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAllVisible = () => {
-    setSelected((prev) => {
-      if (allSelected) {
-        const next = new Set(prev);
-        for (const id of visibleIds) next.delete(id);
-        return next;
-      }
-      const next = new Set(prev);
-      for (const id of visibleIds) next.add(id);
-      return next;
-    });
+    clearSelection();
   };
 
   const run = useCallback(
@@ -224,46 +173,44 @@ export function WindChimeAdminPanel({
       onExportCsv();
       return;
     }
-    const blob = new Blob([toCsv(visibleItems)], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `windchime-messages-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadWindChimeCsv(
+      visibleItems,
+      `windchime-messages-${new Date().toISOString().slice(0, 10)}.csv`,
+    );
   };
 
   const handleDelete = (id: string) => {
     if (!onDelete) return;
-    if (!window.confirm('删除这条留言？')) return;
-    void run(id, 'delete', () => onDelete(id));
+    if (!window.confirm("删除这条留言？")) return;
+    void run(id, "delete", () => onDelete(id));
   };
 
   const handleToggleRead = (row: WindChimeMessageRecord) => {
     if (!onToggleRead) return;
-    void run(row.id, 'read', () => onToggleRead(row.id, !row.isRead));
+    void run(row.id, "read", () => onToggleRead(row.id, !row.isRead));
   };
 
   const handleToggleFav = (row: WindChimeMessageRecord) => {
     if (!onToggleFavorite) return;
-    void run(row.id, 'fav', () => onToggleFavorite(row.id, !row.isFavorited));
+    void run(row.id, "fav", () => onToggleFavorite(row.id, !row.isFavorited));
   };
 
   const handleBlock = (row: WindChimeMessageRecord) => {
     if (!onBlockSender) return;
-    const who = row.senderLabel ? `「${row.senderLabel}」` : '该发送者';
-    if (!window.confirm(`拉黑${who}？未来来自该设备的留言将被直接丢弃。`)) return;
-    void run(row.id, 'block', () => onBlockSender(row.id));
+    const who = row.senderLabel ? `「${row.senderLabel}」` : "该发送者";
+    if (!window.confirm(`拉黑${who}？未来来自该设备的留言将被直接丢弃。`))
+      return;
+    void run(row.id, "block", () => onBlockSender(row.id));
   };
 
   const handleBatchDelete = async () => {
     if (!onBatchDelete || !someSelected) return;
     const ids = Array.from(selected);
     if (!window.confirm(`批量删除 ${ids.length} 条留言？`)) return;
-    setBatchBusy('delete');
+    setBatchBusy("delete");
     try {
       await onBatchDelete(ids);
-      setSelected(new Set());
+      clearSelection();
     } finally {
       setBatchBusy(null);
     }
@@ -272,10 +219,10 @@ export function WindChimeAdminPanel({
   const handleBatchMarkRead = async () => {
     if (!onBatchMarkRead || !someSelected) return;
     const ids = Array.from(selected);
-    setBatchBusy('read');
+    setBatchBusy("read");
     try {
       await onBatchMarkRead(ids);
-      setSelected(new Set());
+      clearSelection();
     } finally {
       setBatchBusy(null);
     }
@@ -298,7 +245,7 @@ export function WindChimeAdminPanel({
               onClick={() => onReload()}
               disabled={!!isLoading}
             >
-              {isLoading ? '加载中…' : '刷新'}
+              {isLoading ? "加载中…" : "刷新"}
             </button>
           )}
           <button
@@ -326,7 +273,9 @@ export function WindChimeAdminPanel({
               onClick={() => setFilter(f.key)}
             >
               {f.label}
-              <span className="ml-1.5 text-xs opacity-70">{mergedCounts[f.key]}</span>
+              <span className="ml-1.5 text-xs opacity-70">
+                {mergedCounts[f.key]}
+              </span>
             </button>
           );
         })}
@@ -337,7 +286,7 @@ export function WindChimeAdminPanel({
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <input
             type="checkbox"
-            className={cn(th.checkbox, 'h-5 w-5 rounded-md')}
+            className={cn(th.checkbox, "h-5 w-5 rounded-md")}
             aria-label="全选可见"
             checked={allSelected}
             onChange={toggleAllVisible}
@@ -353,7 +302,7 @@ export function WindChimeAdminPanel({
               onClick={() => void handleBatchMarkRead()}
               disabled={!someSelected || batchBusy !== null}
             >
-              {batchBusy === 'read' ? '处理中…' : '批量已读'}
+              {batchBusy === "read" ? "处理中…" : "批量已读"}
             </button>
           )}
           {onBatchDelete && (
@@ -363,7 +312,7 @@ export function WindChimeAdminPanel({
               onClick={() => void handleBatchDelete()}
               disabled={!someSelected || batchBusy !== null}
             >
-              {batchBusy === 'delete' ? '删除中…' : '批量删除'}
+              {batchBusy === "delete" ? "删除中…" : "批量删除"}
             </button>
           )}
         </div>
@@ -382,18 +331,18 @@ export function WindChimeAdminPanel({
       {/* Card grid */}
       {visibleItems.length === 0 && !isLoading ? (
         <div className="flex min-h-[300px] items-center justify-center rounded-[2rem] border border-white/20 bg-white/10 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/20">
-          <p className={cn(th.muted, 'text-center text-[15px]')}>{emptyText}</p>
+          <p className={cn(th.muted, "text-center text-[15px]")}>{emptyText}</p>
         </div>
       ) : (
         <div className={th.cardGrid}>
           {visibleItems.map((row) => {
             const isSelected = selected.has(row.id);
             const isBusy = busy?.id === row.id;
-            const fmtTime = new Date(row.createdAt).toLocaleString('zh-CN', {
-              month: 'numeric',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
+            const fmtTime = new Date(row.createdAt).toLocaleString("zh-CN", {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
             });
             return (
               <article
@@ -402,17 +351,18 @@ export function WindChimeAdminPanel({
                   th.card,
                   !row.isRead && th.cardUnread,
                   row.isFavorited && th.cardFavorited,
-                  isSelected && 'ring-2 ring-violet-500/70 ring-offset-2 ring-offset-transparent',
+                  isSelected &&
+                    "ring-2 ring-violet-500/70 ring-offset-2 ring-offset-transparent",
                 )}
               >
                 {/* 顶部色带：收藏态换暖色调 */}
                 <div
                   aria-hidden
                   className={cn(
-                    'h-1.5 w-full',
+                    "h-1.5 w-full",
                     row.isFavorited
-                      ? 'bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400'
-                      : 'bg-gradient-to-r from-violet-400 via-fuchsia-400 to-rose-300',
+                      ? "bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400"
+                      : "bg-gradient-to-r from-violet-400 via-fuchsia-400 to-rose-300",
                   )}
                 />
 
@@ -428,24 +378,31 @@ export function WindChimeAdminPanel({
                 )}
 
                 {/* 信笺主体 */}
-                <div className={cn('flex flex-1 flex-col px-6 pb-4 pt-5', showCheckbox && 'pl-10')}>
+                <div
+                  className={cn(
+                    "flex flex-1 flex-col px-6 pb-4 pt-5",
+                    showCheckbox && "pl-10",
+                  )}
+                >
                   {/* 标题行 */}
                   <div className="mb-1 flex items-baseline justify-between gap-3">
                     <h3 className="font-serif text-base font-semibold tracking-tight text-stone-800">
                       🎐 风铃来信
                     </h3>
-                    <time className="shrink-0 font-serif text-xs text-stone-500">{fmtTime}</time>
+                    <time className="shrink-0 font-serif text-xs text-stone-500">
+                      {fmtTime}
+                    </time>
                   </div>
 
                   {/* 元信息：昵称 · 发送者 · 未读 */}
                   <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
                     {row.nickname?.trim() && (
-                      <span className="font-serif text-sm text-stone-700">{row.nickname}</span>
+                      <span className="font-serif text-sm text-stone-700">
+                        {row.nickname}
+                      </span>
                     )}
                     {row.senderLabel && (
-                      <span className={th.badge}>
-                        {row.senderLabel}
-                      </span>
+                      <span className={th.badge}>{row.senderLabel}</span>
                     )}
                     {!row.isRead && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-violet-100/90 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
@@ -490,25 +447,32 @@ export function WindChimeAdminPanel({
                     <span className="font-serif text-[10px] uppercase tracking-[0.3em] text-amber-500/70">
                       WindChime
                     </span>
-                    <span className="font-serif text-xs italic text-stone-500">— 来自风铃</span>
+                    <span className="font-serif text-xs italic text-stone-500">
+                      — 来自风铃
+                    </span>
                   </div>
                 </div>
 
                 {/* 操作栏 —— 与信笺底色协调的米白条 */}
-                {(onToggleFavorite || onToggleRead || onBlockSender || onDelete) && (
+                {(onToggleFavorite ||
+                  onToggleRead ||
+                  onBlockSender ||
+                  onDelete) && (
                   <div className="flex flex-wrap items-center gap-1.5 border-t border-amber-200/60 bg-amber-50/50 px-5 py-2.5">
                     {onToggleFavorite && (
                       <button
                         type="button"
                         className={cn(
-                          'text-lg leading-none transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50',
-                          row.isFavorited ? 'text-amber-500' : 'text-stone-400 hover:text-amber-400',
+                          "text-lg leading-none transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50",
+                          row.isFavorited
+                            ? "text-amber-500"
+                            : "text-stone-400 hover:text-amber-400",
                         )}
                         onClick={() => handleToggleFav(row)}
                         disabled={isBusy}
-                        title={row.isFavorited ? '取消收藏' : '收藏'}
+                        title={row.isFavorited ? "取消收藏" : "收藏"}
                       >
-                        {row.isFavorited ? '★' : '☆'}
+                        {row.isFavorited ? "★" : "☆"}
                       </button>
                     )}
                     {onToggleRead && (
@@ -518,7 +482,7 @@ export function WindChimeAdminPanel({
                         onClick={() => handleToggleRead(row)}
                         disabled={isBusy}
                       >
-                        {row.isRead ? '标未读' : '标已读'}
+                        {row.isRead ? "标未读" : "标已读"}
                       </button>
                     )}
                     {onBlockSender && (
@@ -529,7 +493,7 @@ export function WindChimeAdminPanel({
                         disabled={isBusy}
                         title="将该发送者加入黑名单"
                       >
-                        {isBusy && busy?.op === 'block' ? '…' : '拉黑'}
+                        {isBusy && busy?.op === "block" ? "…" : "拉黑"}
                       </button>
                     )}
                     {onDelete && (
@@ -539,7 +503,7 @@ export function WindChimeAdminPanel({
                         onClick={() => handleDelete(row.id)}
                         disabled={isBusy}
                       >
-                        {isBusy && busy?.op === 'delete' ? '…' : '删除'}
+                        {isBusy && busy?.op === "delete" ? "…" : "删除"}
                       </button>
                     )}
                   </div>
@@ -553,4 +517,4 @@ export function WindChimeAdminPanel({
   );
 }
 
-WindChimeAdminPanel.displayName = 'WindChimeAdminPanel';
+WindChimeAdminPanel.displayName = "WindChimeAdminPanel";

@@ -8,19 +8,13 @@ import React, { useCallback, useEffect, useMemo } from "react";
  *
  * 可选：若传 `storageKey`，组件会自动把 `value` 同步到 `localStorage`，刷新保留。
  */
-export type WindChimeQrPosterConfig = {
-  heading: string;
-  body: string;
-  footer: string;
-  avatarSrc: string;
-};
-
-export const DEFAULT_POSTER_CONFIG: WindChimeQrPosterConfig = {
-  heading: "",
-  body: "",
-  footer: "",
-  avatarSrc: "",
-};
+import {
+  readWindChimePosterConfig,
+  writeWindChimePosterConfig,
+  type WindChimeQrPosterConfig,
+} from "../media/index.js";
+export { DEFAULT_POSTER_CONFIG } from "../media/index.js";
+export type { WindChimeQrPosterConfig } from "../media/index.js";
 
 export type WindChimeQrPosterEditorTheme = {
   panel?: string;
@@ -79,8 +73,7 @@ const DEFAULT_THEME: Required<WindChimeQrPosterEditorTheme> = {
     "min-h-[60px] resize-y rounded-xl border border-pink-200 bg-white/80 px-3 py-2 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-300/30",
   avatarPreview:
     "flex items-center gap-3 rounded-xl border border-pink-100 bg-pink-50/40 p-2",
-  avatarImg:
-    "h-12 w-12 rounded-full border-2 border-white object-cover shadow",
+  avatarImg: "h-12 w-12 rounded-full border-2 border-white object-cover shadow",
   avatarCaption: "truncate text-xs text-slate-500",
 };
 
@@ -106,15 +99,7 @@ export function WindChimeQrPosterEditor(props: WindChimeQrPosterEditorProps) {
   // 首次挂载时从 localStorage 回读
   useEffect(() => {
     if (!storageKey) return;
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<WindChimeQrPosterConfig>;
-        onChange({ ...value, ...parsed });
-      }
-    } catch {
-      /* noop */
-    }
+    onChange(readWindChimePosterConfig(storageKey, value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
@@ -123,11 +108,7 @@ export function WindChimeQrPosterEditor(props: WindChimeQrPosterEditorProps) {
       const next = { ...value, ...patch };
       onChange(next);
       if (storageKey) {
-        try {
-          window.localStorage.setItem(storageKey, JSON.stringify(next));
-        } catch {
-          /* noop */
-        }
+        writeWindChimePosterConfig(storageKey, next);
       }
     },
     [value, onChange, storageKey],

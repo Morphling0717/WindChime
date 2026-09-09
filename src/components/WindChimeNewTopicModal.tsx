@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useEffect,
@@ -6,21 +6,24 @@ import {
   useState,
   type FormEvent,
   type ReactNode,
-} from 'react';
-import { createPortal } from 'react-dom';
+} from "react";
+import { createPortal } from "react-dom";
 import {
   WIND_CHIME_DEFAULT_TIME_ZONE,
   windChimeLocalToUtcIso,
   windChimeNowAsLocal,
   windChimePlusDaysAsLocal,
-} from '../time';
+} from "../time.js";
 import {
   WIND_CHIME_TOPIC_RESERVED_SLUGS,
   WIND_CHIME_TOPIC_SLUG_REGEX,
   type WindChimeTopic,
   type WindChimeTopicCreateInput,
-} from '../types-topics';
-import '../styles/windchime.css';
+} from "../types-topics.js";
+import "../styles/windchime.css";
+
+import { createWindChimeClient } from "../client/index.js";
+import { validateWindChimeTopicCreate } from "../core/index.js";
 
 /**
  * 新建主题模态。
@@ -43,28 +46,19 @@ import '../styles/windchime.css';
  */
 
 function cn(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 function validateSlugClient(
   slug: string,
   reservedSlugs: readonly string[],
 ): string | null {
-  if (!slug) return 'slug 不能为空';
+  if (!slug) return "slug 不能为空";
   if (!WIND_CHIME_TOPIC_SLUG_REGEX.test(slug)) {
-    return '只能包含 a-z、0-9、短横；1~64 字符；首尾必须是字母/数字';
+    return "只能包含 a-z、0-9、短横；1~64 字符；首尾必须是字母/数字";
   }
   if (reservedSlugs.includes(slug)) return `"${slug}" 是系统保留字`;
   return null;
-}
-
-async function readError(res: Response): Promise<string> {
-  const ct = res.headers.get('content-type') ?? '';
-  if (ct.includes('application/json')) {
-    const j = (await res.json().catch(() => null)) as { error?: string } | null;
-    return j?.error ?? res.statusText;
-  }
-  return (await res.text().catch(() => '')) || res.statusText;
 }
 
 export type WindChimeNewTopicModalTheme = {
@@ -101,53 +95,54 @@ export type WindChimeNewTopicModalTheme = {
 
 const DEFAULT_THEME: Required<WindChimeNewTopicModalTheme> = {
   overlay:
-    'fixed inset-0 z-[1100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md',
-  form:
-    'relative w-full max-w-xl rounded-2xl border border-violet-300/60 bg-white p-6 shadow-[0_10px_40px_rgba(139,92,246,0.2)] dark:border-violet-400/60 dark:bg-slate-900',
+    "fixed inset-0 z-[1100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md",
+  form: "relative w-full max-w-xl rounded-2xl border border-violet-300/60 bg-white p-6 shadow-[0_10px_40px_rgba(139,92,246,0.2)] dark:border-violet-400/60 dark:bg-slate-900",
   closeButton:
-    'absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-violet-300 bg-white/80 text-violet-600 transition hover:bg-violet-500 hover:text-white dark:border-violet-400/60 dark:bg-slate-900/80 dark:text-violet-200',
+    "absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-violet-300 bg-white/80 text-violet-600 transition hover:bg-violet-500 hover:text-white dark:border-violet-400/60 dark:bg-slate-900/80 dark:text-violet-200",
   badge:
-    'mb-1 font-mono text-[11px] tracking-[0.25em] text-violet-600/80 dark:text-violet-300/80',
-  title: 'text-lg font-bold tracking-wide text-violet-800 dark:text-violet-100',
-  fieldList: 'mt-5 space-y-4',
+    "mb-1 font-mono text-[11px] tracking-[0.25em] text-violet-600/80 dark:text-violet-300/80",
+  title: "text-lg font-bold tracking-wide text-violet-800 dark:text-violet-100",
+  fieldList: "mt-5 space-y-4",
   fieldLabel:
-    'mb-1 font-mono text-[11px] uppercase tracking-widest text-violet-600/80 dark:text-violet-300/80',
-  fieldHint: 'mt-1 font-mono text-[11px] text-slate-500 dark:text-slate-400',
+    "mb-1 font-mono text-[11px] uppercase tracking-widest text-violet-600/80 dark:text-violet-300/80",
+  fieldHint: "mt-1 font-mono text-[11px] text-slate-500 dark:text-slate-400",
   input:
-    'w-full rounded-lg border border-violet-300/60 bg-white/80 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-400/20 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100',
+    "w-full rounded-lg border border-violet-300/60 bg-white/80 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-400/20 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100",
   inputError:
-    'w-full rounded-lg border border-rose-400 bg-white/80 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-400/20 dark:border-rose-400/60 dark:bg-slate-900/60 dark:text-slate-100',
-  errLine: 'mt-1 font-mono text-[11px] text-rose-600 dark:text-rose-300',
+    "w-full rounded-lg border border-rose-400 bg-white/80 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-400/20 dark:border-rose-400/60 dark:bg-slate-900/60 dark:text-slate-100",
+  errLine: "mt-1 font-mono text-[11px] text-rose-600 dark:text-rose-300",
   timeWindowWrap:
-    'rounded-lg border border-violet-300/50 bg-violet-50/60 p-3 dark:border-violet-400/30 dark:bg-violet-500/[0.03]',
+    "rounded-lg border border-violet-300/50 bg-violet-50/60 p-3 dark:border-violet-400/30 dark:bg-violet-500/[0.03]",
   timeWindowLabel:
-    'flex items-center gap-2 font-mono text-xs text-violet-800 dark:text-violet-200',
-  timeWindowHint: 'mt-2 font-mono text-[11px] text-amber-700 dark:text-amber-300/80',
-  timeRow: 'mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2',
-  timeLabel: 'mb-1 font-mono text-[11px] text-violet-700/80 dark:text-violet-300/80',
+    "flex items-center gap-2 font-mono text-xs text-violet-800 dark:text-violet-200",
+  timeWindowHint:
+    "mt-2 font-mono text-[11px] text-amber-700 dark:text-amber-300/80",
+  timeRow: "mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2",
+  timeLabel:
+    "mb-1 font-mono text-[11px] text-violet-700/80 dark:text-violet-300/80",
   timeInput:
-    'w-full rounded-lg border border-violet-300/60 bg-white/80 px-3 py-2 font-mono text-xs text-slate-900 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-400/20 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100',
-  permanentWarn: '',
+    "w-full rounded-lg border border-violet-300/60 bg-white/80 px-3 py-2 font-mono text-xs text-slate-900 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-400/20 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100",
+  permanentWarn: "",
   serverError:
-    'mt-4 rounded-lg border border-rose-400 bg-rose-50 px-3 py-2 font-mono text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300',
-  footer: 'mt-5 flex items-center justify-end gap-2',
+    "mt-4 rounded-lg border border-rose-400 bg-rose-50 px-3 py-2 font-mono text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300",
+  footer: "mt-5 flex items-center justify-end gap-2",
   cancelButton:
-    'rounded-lg border border-slate-300 bg-white/80 px-4 py-2 font-mono text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-700/60',
+    "rounded-lg border border-slate-300 bg-white/80 px-4 py-2 font-mono text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-700/60",
   submitButton:
-    'rounded-lg border border-violet-500 bg-violet-500 px-4 py-2 font-mono text-xs font-bold tracking-widest text-white shadow-sm transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-40',
+    "rounded-lg border border-violet-500 bg-violet-500 px-4 py-2 font-mono text-xs font-bold tracking-widest text-white shadow-sm transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-40",
   permanentOverlay:
-    'absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/80 p-6',
+    "absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/80 p-6",
   permanentModal:
-    'max-w-sm rounded-xl border border-amber-400 bg-white p-5 text-center shadow-[0_10px_32px_rgba(251,191,36,0.35)] dark:border-amber-400/60 dark:bg-slate-900',
+    "max-w-sm rounded-xl border border-amber-400 bg-white p-5 text-center shadow-[0_10px_32px_rgba(251,191,36,0.35)] dark:border-amber-400/60 dark:bg-slate-900",
   permanentTitle:
-    'mb-2 text-sm font-bold tracking-wide text-amber-700 dark:text-amber-200',
+    "mb-2 text-sm font-bold tracking-wide text-amber-700 dark:text-amber-200",
   permanentBody:
-    'mb-4 font-mono text-xs leading-relaxed text-amber-800 dark:text-amber-100/80',
-  permanentActions: 'flex items-center justify-center gap-2',
+    "mb-4 font-mono text-xs leading-relaxed text-amber-800 dark:text-amber-100/80",
+  permanentActions: "flex items-center justify-center gap-2",
   permanentKeep:
-    'rounded-lg border border-violet-400 bg-white px-3 py-1.5 font-mono text-xs text-violet-700 transition hover:bg-violet-50 dark:border-violet-400/60 dark:bg-slate-900/60 dark:text-violet-200 dark:hover:bg-violet-400/10',
+    "rounded-lg border border-violet-400 bg-white px-3 py-1.5 font-mono text-xs text-violet-700 transition hover:bg-violet-50 dark:border-violet-400/60 dark:bg-slate-900/60 dark:text-violet-200 dark:hover:bg-violet-400/10",
   permanentConfirm:
-    'rounded-lg border border-amber-500 bg-amber-400 px-3 py-1.5 font-mono text-xs font-bold text-amber-900 transition hover:bg-amber-300',
+    "rounded-lg border border-amber-500 bg-amber-400 px-3 py-1.5 font-mono text-xs font-bold text-amber-900 transition hover:bg-amber-300",
 };
 
 function mergeTheme(
@@ -200,32 +195,31 @@ export type WindChimeNewTopicModalLabels = {
 };
 
 const DEFAULT_LABELS: Required<WindChimeNewTopicModalLabels> = {
-  badge: 'NEW TOPIC · 新建主题',
-  heading: '创建一个活动收件箱',
-  titleField: '主题标题 *',
-  titleHint: '活动期间顶部横幅会显示；可以带 emoji',
-  slugField: 'URL slug *',
-  slugHintTemplate: '访客链接为 /m/{slug}；创建后不可修改',
-  descriptionField: '说明（访客可见）',
-  descriptionHint: '出现在投信页的副标题，简短提示',
-  noteField: '备注（仅主播可见）',
-  noteHint: '给自己记笔记，访客看不到',
-  timeWindowLabel: '启用时间窗（按{zone}理解）',
-  timeWindowKeyword: '北京时间',
-  startsLabel: '开始时间',
-  endsLabel: '结束时间',
-  noTimeWindowHint:
-    '⚠ 无时间窗 = 只要开关开着就一直可投信（≈ 常规信箱）',
-  permanentWarnTitle: '⚠ 永久活动',
+  badge: "NEW TOPIC · 新建主题",
+  heading: "创建一个活动收件箱",
+  titleField: "主题标题 *",
+  titleHint: "活动期间顶部横幅会显示；可以带 emoji",
+  slugField: "URL slug *",
+  slugHintTemplate: "访客链接为 /m/{slug}；创建后不可修改",
+  descriptionField: "说明（访客可见）",
+  descriptionHint: "出现在投信页的副标题，简短提示",
+  noteField: "备注（仅主播可见）",
+  noteHint: "给自己记笔记，访客看不到",
+  timeWindowLabel: "启用时间窗（按{zone}理解）",
+  timeWindowKeyword: "北京时间",
+  startsLabel: "开始时间",
+  endsLabel: "结束时间",
+  noTimeWindowHint: "⚠ 无时间窗 = 只要开关开着就一直可投信（≈ 常规信箱）",
+  permanentWarnTitle: "⚠ 永久活动",
   permanentWarnBody:
-    '不设时间窗 ≈ 常规信箱的平行版，除非你清楚想要这样，否则建议保留时间窗。',
-  permanentKeep: '保留时间窗',
-  permanentConfirm: '我确定要永久活动',
-  cancel: '取消',
-  submit: 'CREATE',
-  submitting: 'CREATING…',
-  titleTooLong: '标题超过 64 字符',
-  timeRangeError: '开始时间不能晚于或等于结束时间',
+    "不设时间窗 ≈ 常规信箱的平行版，除非你清楚想要这样，否则建议保留时间窗。",
+  permanentKeep: "保留时间窗",
+  permanentConfirm: "我确定要永久活动",
+  cancel: "取消",
+  submit: "CREATE",
+  submitting: "CREATING…",
+  titleTooLong: "标题超过 64 字符",
+  timeRangeError: "开始时间不能晚于或等于结束时间",
 };
 
 export type WindChimeNewTopicModalProps = {
@@ -266,15 +260,23 @@ export function WindChimeNewTopicModal({
   theme,
 }: WindChimeNewTopicModalProps) {
   const th = useMemo(() => mergeTheme(theme), [theme]);
+  const client = useMemo(
+    () =>
+      createWindChimeClient({
+        endpoints: { topics: endpoint },
+        getHeaders: () => requestHeaders ?? {},
+      }),
+    [endpoint, requestHeaders],
+  );
   const L = { ...DEFAULT_LABELS, ...(labels ?? {}) };
 
-  const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [note, setNote] = useState('');
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [note, setNote] = useState("");
   const [useTimeWindow, setUseTimeWindow] = useState(true);
-  const [startsLocal, setStartsLocal] = useState('');
-  const [endsLocal, setEndsLocal] = useState('');
+  const [startsLocal, setStartsLocal] = useState("");
+  const [endsLocal, setEndsLocal] = useState("");
   const [showPermanentWarn, setShowPermanentWarn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -282,10 +284,10 @@ export function WindChimeNewTopicModal({
   // 打开时重置表单 + 重置到默认时间窗
   useEffect(() => {
     if (!open) return;
-    setTitle('');
-    setSlug('');
-    setDescription('');
-    setNote('');
+    setTitle("");
+    setSlug("");
+    setDescription("");
+    setNote("");
     setUseTimeWindow(true);
     setStartsLocal(windChimeNowAsLocal(timeZone));
     setEndsLocal(windChimePlusDaysAsLocal(7, timeZone));
@@ -297,13 +299,13 @@ export function WindChimeNewTopicModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
     };
   }, [open, onClose]);
 
@@ -355,14 +357,18 @@ export function WindChimeNewTopicModal({
     setSubmitting(true);
     setServerError(null);
     try {
-      const input: WindChimeTopicCreateInput = {
+      const input = validateWindChimeTopicCreate({
         title: title.trim(),
         slug,
         description: description.trim() || null,
         note: note.trim() || null,
-        startsAt: useTimeWindow ? windChimeLocalToUtcIso(startsLocal, timeZone) : null,
-        endsAt: useTimeWindow ? windChimeLocalToUtcIso(endsLocal, timeZone) : null,
-      };
+        startsAt: useTimeWindow
+          ? windChimeLocalToUtcIso(startsLocal, timeZone)
+          : null,
+        endsAt: useTimeWindow
+          ? windChimeLocalToUtcIso(endsLocal, timeZone)
+          : null,
+      });
 
       if (onSubmit) {
         const topic = await onSubmit(input);
@@ -371,42 +377,36 @@ export function WindChimeNewTopicModal({
         return;
       }
       if (endpoint) {
-        const r = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
-          body: JSON.stringify(input),
-        });
-        if (!r.ok) throw new Error(await readError(r));
-        const topic = (await r.json()) as WindChimeTopic;
+        const topic = await client.topics.create(input);
         onCreated(topic);
         onClose();
         return;
       }
-      throw new Error('未提供 onSubmit / endpoint');
+      throw new Error("未提供 onSubmit / endpoint");
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : '创建失败');
+      setServerError(err instanceof Error ? err.message : "创建失败");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
   if (!open) return null;
 
-  const slugHint = L.slugHintTemplate.replace('{slug}', slug || 'your-slug');
+  const slugHint = L.slugHintTemplate.replace("{slug}", slug || "your-slug");
   const timeWindowLabel = L.timeWindowLabel.replace(
-    '{zone}',
+    "{zone}",
     `「${L.timeWindowKeyword}」`,
   );
 
   return createPortal(
     <div
-      className={cn(th.overlay, 'windchime-overlay-enter')}
+      className={cn(th.overlay, "windchime-overlay-enter")}
       onClick={onClose}
     >
       <form
         onSubmit={doSubmit}
-        className={cn(th.form, 'windchime-modal-enter')}
+        className={cn(th.form, "windchime-modal-enter")}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -473,7 +473,7 @@ export function WindChimeNewTopicModal({
                 type="checkbox"
                 checked={useTimeWindow}
                 onChange={(e) => onToggleTimeWindow(e.target.checked)}
-                style={{ accentColor: '#8b5cf6' }}
+                style={{ accentColor: "#8b5cf6" }}
               />
               {timeWindowLabel}
             </label>
@@ -516,7 +516,11 @@ export function WindChimeNewTopicModal({
           <button type="button" onClick={onClose} className={th.cancelButton}>
             {L.cancel}
           </button>
-          <button type="submit" disabled={!canSubmit} className={th.submitButton}>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className={th.submitButton}
+          >
             {submitting ? L.submitting : L.submit}
           </button>
         </div>
@@ -551,7 +555,7 @@ export function WindChimeNewTopicModal({
   );
 }
 
-WindChimeNewTopicModal.displayName = 'WindChimeNewTopicModal';
+WindChimeNewTopicModal.displayName = "WindChimeNewTopicModal";
 
 function Field({
   label,

@@ -1,28 +1,27 @@
 {
   "name": "windchime-next-sqlite-example",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --port 3010",
-    "build": "next build",
-    "start": "next start --port 3010"
+    "build": "next build --webpack",
+    "start": "node scripts/start.mjs",
+    "typecheck": "tsc --noEmit",
+    "db:init": "node --env-file=.env.local scripts/init-db.mjs",
+    "setup": "node scripts/setup.mjs"
   },
   "dependencies": {
     "@windchime/embed": "file:../..",
-    "better-sqlite3": "^11.8.1",
-    "next": "^15.1.0",
+    "next": "16.2.12",
+    "sqlite3": "6.0.1",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.10.0",
-    "@types/qrcode": "^1.5.6",
+    "@types/node": "^20.19.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.0.0"
   }
 }

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useMemo, type ReactNode } from 'react';
-import type { WindChimeTopic, WindChimeTopicState } from '../types-topics';
-import '../styles/windchime.css';
+import { useMemo, type ReactNode } from "react";
+import type { WindChimeTopic, WindChimeTopicState } from "../types-topics.js";
+import "../styles/windchime.css";
 
 /**
  * 主 Tab 栏：常规信箱 + 活动主题 + 固定动作按钮（往期 / 新建 / 全局设置）。
@@ -19,7 +19,7 @@ import '../styles/windchime.css';
  */
 
 function cn(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 export type WindChimeTopicTabsTheme = {
@@ -40,29 +40,28 @@ export type WindChimeTopicTabsTheme = {
 };
 
 const DEFAULT_THEME: Required<WindChimeTopicTabsTheme> = {
-  root: 'flex flex-wrap items-center gap-2',
+  root: "flex flex-wrap items-center gap-2",
   topicTabBase:
-    'rounded-lg border px-3 py-2 text-xs font-bold tracking-wide transition',
+    "rounded-lg border px-3 py-2 text-xs font-bold tracking-wide transition",
   topicTabActive:
-    'border-violet-500 bg-violet-500/15 text-violet-800 shadow-sm dark:border-violet-400 dark:bg-violet-400/15 dark:text-violet-100',
+    "border-violet-500 bg-violet-500/15 text-violet-800 shadow-sm dark:border-violet-400 dark:bg-violet-400/15 dark:text-violet-100",
   topicTabDefault:
-    'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-800/60',
+    "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-800/60",
   topicTabActiveState:
-    'border-emerald-400/60 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/50 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20',
+    "border-emerald-400/60 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/50 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20",
   topicTabScheduled:
-    'border-dashed border-cyan-400/60 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:border-cyan-400/50 dark:bg-cyan-500/5 dark:text-cyan-200 dark:hover:bg-cyan-500/15',
+    "border-dashed border-cyan-400/60 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:border-cyan-400/50 dark:bg-cyan-500/5 dark:text-cyan-200 dark:hover:bg-cyan-500/15",
   topicTabEnded:
-    'border-slate-400 bg-slate-100 text-slate-500 hover:bg-slate-200 dark:border-slate-600/60 dark:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-slate-500/20',
+    "border-slate-400 bg-slate-100 text-slate-500 hover:bg-slate-200 dark:border-slate-600/60 dark:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-slate-500/20",
   unreadBadge:
-    'ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white',
-  stateLabel: 'ml-1.5 text-[10px] opacity-70',
+    "ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white",
+  stateLabel: "ml-1.5 text-[10px] opacity-70",
   quickArchiveButton:
-    'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-amber-400 bg-white text-[9px] text-amber-600 shadow-sm transition hover:bg-amber-400 hover:text-white dark:bg-slate-900 dark:text-amber-300',
-  separator: 'mx-1 h-6 w-px bg-slate-300/60 dark:bg-violet-400/20',
+    "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-amber-400 bg-white text-[9px] text-amber-600 shadow-sm transition hover:bg-amber-400 hover:text-white dark:bg-slate-900 dark:text-amber-300",
+  separator: "mx-1 h-6 w-px bg-slate-300/60 dark:bg-violet-400/20",
   actionButton:
-    'flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 transition hover:border-violet-500 hover:bg-violet-50 hover:text-violet-700 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-violet-400/10 dark:hover:text-violet-100',
-  hintBanner:
-    'ml-auto text-[11px] text-amber-600 dark:text-amber-300/80',
+    "flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 transition hover:border-violet-500 hover:bg-violet-50 hover:text-violet-700 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-violet-400/10 dark:hover:text-violet-100",
+  hintBanner: "ml-auto text-[11px] text-amber-600 dark:text-amber-300/80",
 };
 
 function mergeTheme(
@@ -139,14 +138,14 @@ export type WindChimeTopicTabsLabels = {
 };
 
 const DEFAULT_LABELS: Required<WindChimeTopicTabsLabels> = {
-  archive: '往期活动',
-  newTopic: '新建主题',
-  globalSettings: '全局设置',
-  stateActive: '进行中',
-  stateScheduled: '未开始',
-  stateEnded: '已结束',
-  quickArchiveTooltip: '一键归档该主题',
-  endedHint: '有 {count} 个已结束的主题，建议逐个点击归档',
+  archive: "往期活动",
+  newTopic: "新建主题",
+  globalSettings: "全局设置",
+  stateActive: "进行中",
+  stateScheduled: "未开始",
+  stateEnded: "已结束",
+  quickArchiveTooltip: "一键归档该主题",
+  endedHint: "有 {count} 个已结束的主题，建议逐个点击归档",
 };
 
 export type WindChimeTopicTabsProps = {
@@ -187,10 +186,10 @@ export function WindChimeTopicTabs({
 
   const visible = useMemo(() => {
     return [...topics]
-      .filter((t) => t.state !== 'archived')
+      .filter((t) => t.state !== "archived")
       .sort((a, b) => {
         const priority = (s: WindChimeTopicState) =>
-          s === 'default' ? 0 : s === 'active' ? 1 : s === 'scheduled' ? 2 : 3;
+          s === "default" ? 0 : s === "active" ? 1 : s === "scheduled" ? 2 : 3;
         const pa = priority(a.state);
         const pb = priority(b.state);
         if (pa !== pb) return pa - pb;
@@ -199,8 +198,8 @@ export function WindChimeTopicTabs({
       });
   }, [topics]);
 
-  const endedCount = visible.filter((t) => t.state === 'ended').length;
-  const archivedCount = topics.filter((t) => t.state === 'archived').length;
+  const endedCount = visible.filter((t) => t.state === "ended").length;
+  const archivedCount = topics.filter((t) => t.state === "archived").length;
 
   return (
     <div className={cn(th.root, className)} data-widget="windchime-topic-tabs">
@@ -228,11 +227,15 @@ export function WindChimeTopicTabs({
         >
           {icons?.archive ?? DEFAULT_ARCHIVE_ICON}
           {L.archive}
-          {archivedCount > 0 ? ` (${archivedCount})` : ''}
+          {archivedCount > 0 ? ` (${archivedCount})` : ""}
         </button>
       )}
       {onOpenNewTopic && (
-        <button type="button" onClick={onOpenNewTopic} className={th.actionButton}>
+        <button
+          type="button"
+          onClick={onOpenNewTopic}
+          className={th.actionButton}
+        >
           {icons?.newTopic ?? DEFAULT_PLUS_ICON}
           {L.newTopic}
         </button>
@@ -250,14 +253,14 @@ export function WindChimeTopicTabs({
 
       {endedCount >= 3 && (
         <div className={th.hintBanner}>
-          ⚠ {L.endedHint.replace('{count}', String(endedCount))}
+          ⚠ {L.endedHint.replace("{count}", String(endedCount))}
         </div>
       )}
     </div>
   );
 }
 
-WindChimeTopicTabs.displayName = 'WindChimeTopicTabs';
+WindChimeTopicTabs.displayName = "WindChimeTopicTabs";
 
 function TopicTabButton({
   topic,
@@ -277,20 +280,20 @@ function TopicTabButton({
   const { title, unreadCount = 0, state } = topic;
 
   const stateClass =
-    state === 'default'
+    state === "default"
       ? th.topicTabDefault
-      : state === 'active'
+      : state === "active"
         ? th.topicTabActiveState
-        : state === 'scheduled'
+        : state === "scheduled"
           ? th.topicTabScheduled
           : /* ended */ th.topicTabEnded;
 
   const stateLabel =
-    state === 'active'
+    state === "active"
       ? labels.stateActive
-      : state === 'scheduled'
+      : state === "scheduled"
         ? labels.stateScheduled
-        : state === 'ended'
+        : state === "ended"
           ? labels.stateEnded
           : null;
 
@@ -299,10 +302,7 @@ function TopicTabButton({
       <button
         type="button"
         onClick={onClick}
-        className={cn(
-          th.topicTabBase,
-          active ? th.topicTabActive : stateClass,
-        )}
+        className={cn(th.topicTabBase, active ? th.topicTabActive : stateClass)}
       >
         <span className="inline-block max-w-[180px] truncate align-middle">
           {title}
@@ -310,12 +310,12 @@ function TopicTabButton({
         {stateLabel && <span className={th.stateLabel}>· {stateLabel}</span>}
         {unreadCount > 0 && (
           <span className={th.unreadBadge}>
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
-      {state === 'ended' && onQuickArchive && (
+      {state === "ended" && onQuickArchive && (
         <button
           type="button"
           onClick={(e) => {

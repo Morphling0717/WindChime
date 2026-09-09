@@ -1,72 +1,27 @@
-# WindChime + SQLite（SQL）示例
+# Next.js + SQLite 完整示例
 
-本目录是一个独立的 Next.js 应用，演示如何把 `@windchime/embed` 的投稿与管理 UI 接到 **SQLite**（单文件 SQL 数据库）。
-
-## 做了什么
-
-- `lib/db.ts`：打开 `data/windchime.db`，执行 `CREATE TABLE` / 索引。
-- `app/api/messages/route.ts`：`GET` 列表、`POST` 新增（参数校验与 `WindChimeMessageRecord` 字段一致）。
-- `app/api/messages/[id]/route.ts`：`DELETE` 单条。
-- `app/page.tsx`：`WindChimeSender` 的 `onSubmit` 调 `POST`，`WindChimeAdminPanel` 调 `GET` / `DELETE`。
-
-## 运行
-
-在仓库根目录先保证 WindChime 包已构建出 `dist/`（安装本示例依赖时会执行上游 `prepare` 脚本，一般会自动 `npm run build`）。
+从仓库根目录执行 `npm ci`，然后：
 
 ```bash
-cd WindChime/examples/next-sqlite
-npm install
+cd examples/next-sqlite
+npm ci --install-links
+npm run setup
+npm run db:init
 npm run dev
 ```
 
-浏览器打开 <http://localhost:3010>。数据库文件会出现在本目录下的 `data/windchime.db`。
+投稿地址 http://localhost:3010，管理地址 http://localhost:3010/admin。setup 只在第一次创建 .env.local，并打印随机管理员密码；再执行不会覆盖已有身份盐和密码。需要时在生成的 `.env.local` 中同时添加 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` 和 `TURNSTILE_SECRET`，更改公开 site key 后重新构建。全部页面 JSX 和 CSS 都在这个示例内；业务使用风铃公开接口，无 Tailwind 依赖。默认 UI 仅在 /ui 演示。
 
-## 说明
+生产验证：`npm run typecheck && npm run build && npm start`。`npm start` 将静态资源和可选的 `public` 目录复制到构建产物，读取示例根目录的 `.env.local`，启动 `.next/standalone/server.js`，退出时同时停止子服务。已设置的环境变量优先于 `.env.local`；相对 `DATABASE_PATH` 以示例根目录为基准，避免启动后误用另一个数据库。默认端口为 3010，可用 `PORT=3013 npm start` 更改，`HOSTNAME` 可设置监听地址。生产登录需要 HTTPS（Secure cookie）。不要把此示例作为无密码开放的管理端。
 
-- `better-sqlite3` 为**原生模块**，需本机可编译（macOS 通常开箱即用；Windows 需 VS Build Tools）。部署到 **Vercel Serverless / Edge** 时不能直接用该驱动，应改用托管数据库或 Edge 兼容方案。
-- 本示例**无登录、无 Turnstile 校验、无限流**；上线前请在服务端补齐。
+`.npmrc` 的 install-links=true 让 file:../.. 安装为普通包副本，避免链接引入重复 React。风铃改变后重跑 npm ci --install-links，或在根目录运行 `npm run dev:sync -- --targets ./examples/next-sqlite`。`dev:sync` 不重启此例的开发服务器，必要时手动重启。版本发布测试仍必须执行根目录 npm run pack:check。
 
-## 1Panel + Docker（Next.js 常驻容器）
+此例默认从同级风铃源码安装包副本。要演练发布文件，在示例目录执行 `npm install /绝对路径/windchime-embed-0.5.0.tgz`，再执行 setup、db:init 和构建；这是有意修改本例的 package.json/lock 来固定演练包，完成后恢复示例原本的 `file:../..` 依赖即可。新网站从压缩包安装时仍要显式安装 sqlite3，需要分享功能时再安装 qrcode。
 
-你的目标形态是：**宿主项目为 Next.js，WindChime 作为依赖嵌入，跑在 1Panel 的 Docker 里**。这与本示例完全兼容，注意以下几点即可。
+**已实际验证 Linux/AMD64 镜像构建、SQLite 初始化、非 root 写入及容器重启持久化。** 从仓库根目录执行 `docker build --platform linux/amd64 -f examples/next-sqlite/Dockerfile -t windchime-example .`，或 `docker compose --env-file examples/next-sqlite/.env.local -f examples/next-sqlite/docker-compose.yaml up --build`。后者显式将 `.env.local` 用于构建参数插值，确保启用 Turnstile 时 site key 进入前端包。先运行本例 setup 生成配置；部署时使用自己的秘密和持久 volume。本轮在 Chrome 的本机回环地址验证了登录；生产管理员登录仍须经过 HTTPS 反向代理，不能将回环测试当作生产 HTTPS 配置验证。生产数据库在 /data/windchime.db。Turnstile site key 是构建参数，secret 仅在运行时配置。
 
-1. **在 Linux 镜像里完成 `next build`**  
-   `better-sqlite3` 的 `.node` 与平台绑定。不要在 macOS 上构建再拷进 Linux 容器；应像本目录 `Dockerfile` 一样在容器内 `npm ci && npm run build`。
+Dockerfile 在 Debian 内从源码编译 sqlite3，避免下载的预编译二进制要求比镜像更新的 glibc。直接在 Linux 安装时，如遇 `GLIBC_* not found`，安装 Python 3、make、g++ 等构建工具后，用 `npm_config_build_from_source=true npm ci --install-links` 重新安装。使用 `docker run --env-file` 时另加 `-e DATABASE_PATH=/data/windchime.db`，覆盖 setup 生成的本地相对路径；Compose 已显式配置该路径。完整命令与验收边界见 [Docker 验证记录](../../docs/DOCKER-VALIDATION.md)。
 
-2. **SQLite 文件要挂卷**  
-   镜像默认 `WINDCHIME_DATA_DIR=/data`，库文件为 `/data/windchime.db`。在 1Panel 里给容器挂载「主机目录 → 容器 `/data`」，避免删容器丢数据。若改路径，设置环境变量 `WINDCHIME_DATA_DIR` 即可。
+本例的 `/admin` 已覆盖投稿管理、已读/收藏、批量、审核原文/放行、词库、屏蔽/解封、默认开关、话题创建/编辑/归档/恢复/永久删除、CSV、二维码及海报。登录和确认弹窗属于本例，业务来自公共 client/Hooks。
 
-3. **构建上下文**  
-   本仓库的 `@windchime/embed` 使用 `file:../..`，因此 **Docker 构建上下文必须是 WindChime 根目录**（与根 `package.json` 同级），命令为：
-
-   ```bash
-   cd WindChime
-   docker build -f examples/next-sqlite/Dockerfile -t windchime-next-sqlite .
-   ```
-
-4. **你自己的 Next 项目**  
-   把 `WindChime` 作为子目录或私有 npm 包引用均可；Dockerfile 中先 `npm run build` 生成 `dist/`，再构建主应用。Tailwind 仍需扫描 `WindChime/dist/**/*.js`（或等价路径），与本地开发一致。
-
-5. **1Panel 网络**  
-   容器内监听 `0.0.0.0:3000`（本镜像已通过 `HOSTNAME` 配置）。在 1Panel 站点/反代中把域名指到该容器端口即可。
-
-### docker compose（可选）
-
-```yaml
-services:
-  web:
-    build:
-      context: ../..
-      dockerfile: examples/next-sqlite/Dockerfile
-    ports:
-      - "3010:3000"
-    volumes:
-      - windchime-sqlite:/data
-    environment:
-      WINDCHIME_DATA_DIR: /data
-
-volumes:
-  windchime-sqlite:
-```
-
-在仓库根 `WindChime` 下执行时，将 `context` 设为当前目录 `.`，`dockerfile` 设为 `examples/next-sqlite/Dockerfile`。
+安装、已有登录接入、完整 API、升级和回滚均见仓库根 README 与 docs。本例 auth.ts 属于宿主登录代码，已有网站直接替换该层；不要复制信箱业务。

@@ -1,16 +1,18 @@
-# 在 WindChime 仓库根目录执行:
-#   docker compose -f examples/next-sqlite/docker-compose.yaml up --build
+# From this directory: docker compose --env-file .env.local up --build
+# --env-file supplies build-argument interpolation; env_file below supplies runtime secrets.
 services:
   web:
     build:
       context: ../..
       dockerfile: examples/next-sqlite/Dockerfile
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
     ports:
       - "3010:3000"
+    env_file: .env.local
     environment:
-      WINDCHIME_DATA_DIR: /data
+      DATABASE_PATH: /data/windchime.db
     volumes:
       - windchime-sqlite:/data
-
 volumes:
   windchime-sqlite:

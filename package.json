@@ -1,7 +1,7 @@
 {
   "name": "@windchime/embed",
-  "version": "0.4.0",
-  "description": "WindChime 匿名提问箱 — 可嵌入的发送组件与管理收件面板（源码或 dist）",
+  "version": "0.5.0",
+  "description": "Headless anonymous inbox for Next.js: React hooks, SQLite, route handlers and optional UI",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,25 +12,77 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./styles/windchime.css": "./dist/styles/windchime.css"
+    "./styles/windchime.css": "./dist/styles/windchime.css",
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js",
+      "default": "./dist/client/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "default": "./dist/react/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite/index.d.ts",
+      "import": "./dist/sqlite/index.js",
+      "default": "./dist/sqlite/index.js"
+    },
+    "./next": {
+      "types": "./dist/next/index.d.ts",
+      "import": "./dist/next/index.js",
+      "default": "./dist/next/index.js"
+    },
+    "./media": {
+      "types": "./dist/media/index.d.ts",
+      "import": "./dist/media/index.js",
+      "default": "./dist/media/index.js"
+    },
+    "./ui": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "src/styles"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs"
   ],
   "sideEffects": [
     "**/*.css"
   ],
   "scripts": {
+    "build": "node scripts/build.mjs",
     "prepare": "npm run build",
-    "build": "tsc -p tsconfig.build.json && mkdir -p dist/styles && cp src/styles/windchime.css dist/styles/windchime.css",
-    "clean": "rm -rf dist"
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run test && npm run pack:check",
+    "pack:check": "node scripts/pack-check.mjs",
+    "dev:consumers": "node scripts/dev-consumers.mjs",
+    "dev:sync": "node scripts/dev-consumers.mjs --sync-only"
   },
   "peerDependencies": {
+    "qrcode": "^1.5.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
-    "tailwindcss": "^3.4.0 || ^4.0.0",
-    "qrcode": "^1.5.0"
+    "sqlite3": "^6.0.1",
+    "tailwindcss": "^3.4.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
     "tailwindcss": {
@@ -38,13 +90,37 @@
     },
     "qrcode": {
       "optional": true
+    },
+    "sqlite3": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@types/node": "^20.19.0",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.6",
     "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-test-renderer": "^19.0.0",
+    "semver": "^7.7.0",
+    "sqlite3": "6.0.1",
     "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Morphling0717/WindChime.git"
+  },
+  "homepage": "https://github.com/Morphling0717/WindChime#readme",
+  "bugs": {
+    "url": "https://github.com/Morphling0717/WindChime/issues"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

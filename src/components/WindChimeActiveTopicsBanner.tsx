@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useEffect,
@@ -6,9 +6,12 @@ import {
   useState,
   type ComponentType,
   type ReactNode,
-} from 'react';
-import type { WindChimeTopic } from '../types-topics';
-import '../styles/windchime.css';
+} from "react";
+import type { WindChimeTopic } from "../types-topics.js";
+import "../styles/windchime.css";
+
+import { createWindChimeClient } from "../client/index.js";
+import { useWindChimeTopics } from "../react/management.js";
 
 /**
  * 主站顶部「活动进行中」公告条。
@@ -30,14 +33,14 @@ import '../styles/windchime.css';
  */
 
 function cn(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 function signatureOf(topics: WindChimeTopic[]): string {
   return topics
     .map((t) => t.slug)
     .sort()
-    .join('|');
+    .join("|");
 }
 
 export type WindChimeActiveTopicsBannerTheme = {
@@ -52,17 +55,16 @@ export type WindChimeActiveTopicsBannerTheme = {
 };
 
 const DEFAULT_THEME: Required<WindChimeActiveTopicsBannerTheme> = {
-  root:
-    'sticky top-0 right-0 left-0 z-40 border-b border-violet-200/60 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 shadow-sm dark:border-violet-400/30 dark:from-violet-500/15 dark:via-slate-950/40 dark:to-fuchsia-500/15',
-  inner: 'mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3 sm:py-2.5',
-  leftSpacer: 'h-7 w-7 shrink-0',
-  link:
-    'flex min-w-0 flex-1 items-center justify-center gap-2 text-[12px] text-violet-800 transition hover:text-violet-900 sm:text-sm dark:text-violet-100 dark:hover:text-white',
-  icon: 'h-4 w-4 shrink-0 text-violet-600 dark:text-violet-300',
-  label: 'truncate tracking-wide',
-  arrow: 'shrink-0 text-violet-500 dark:text-violet-300',
+  root: "sticky top-0 right-0 left-0 z-40 border-b border-violet-200/60 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 shadow-sm dark:border-violet-400/30 dark:from-violet-500/15 dark:via-slate-950/40 dark:to-fuchsia-500/15",
+  inner:
+    "mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3 sm:py-2.5",
+  leftSpacer: "h-7 w-7 shrink-0",
+  link: "flex min-w-0 flex-1 items-center justify-center gap-2 text-[12px] text-violet-800 transition hover:text-violet-900 sm:text-sm dark:text-violet-100 dark:hover:text-white",
+  icon: "h-4 w-4 shrink-0 text-violet-600 dark:text-violet-300",
+  label: "truncate tracking-wide",
+  arrow: "shrink-0 text-violet-500 dark:text-violet-300",
   dismissButton:
-    'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-violet-500/80 transition hover:bg-white/70 hover:text-violet-900 dark:text-violet-200/70 dark:hover:bg-white/10 dark:hover:text-white',
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-violet-500/80 transition hover:bg-white/70 hover:text-violet-900 dark:text-violet-200/70 dark:hover:bg-white/10 dark:hover:text-white",
 };
 
 function mergeTheme(
@@ -149,12 +151,12 @@ const DEFAULT_CLOSE_ICON = (
 export function WindChimeActiveTopicsBanner({
   topics: topicsProp,
   endpoint,
-  linkPrefix = '/m',
-  listHref = '/m',
-  singleLabelTemplate = '{title} · 活动进行中',
-  multipleLabelTemplate = '{count} 个活动进行中 · 查看全部',
+  linkPrefix = "/m",
+  listHref = "/m",
+  singleLabelTemplate = "{title} · 活动进行中",
+  multipleLabelTemplate = "{count} 个活动进行中 · 查看全部",
   icon = DEFAULT_ICON,
-  dismissStorageKey = 'windchime:banner:dismissed',
+  dismissStorageKey = "windchime:banner:dismissed",
   linkAs,
   theme,
   className,
@@ -162,37 +164,26 @@ export function WindChimeActiveTopicsBanner({
   const th = useMemo(() => mergeTheme(theme), [theme]);
   const Link = linkAs ?? DefaultLink;
 
-  const [fetched, setFetched] = useState<WindChimeTopic[] | null>(null);
   const [dismissed, setDismissed] = useState<boolean>(false);
 
   const isControlled = topicsProp !== undefined;
 
-  // 拉取模式
-  useEffect(() => {
-    if (isControlled || !endpoint) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch(endpoint, { cache: 'no-store' });
-        if (!r.ok) return;
-        const j = (await r.json()) as { items?: WindChimeTopic[] };
-        if (!cancelled) {
-          setFetched(j.items ?? []);
-        }
-      } catch {
-        /* 接口失败就当没活动，不阻塞页面渲染 */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isControlled, endpoint]);
-
-  const source = isControlled ? topicsProp! : fetched;
+  const client = useMemo(
+    () => createWindChimeClient({ endpoints: { topics: endpoint } }),
+    [endpoint],
+  );
+  const resource = useWindChimeTopics(client, {
+    enabled: !isControlled && !!endpoint,
+    includeArchived: false,
+    mode: "public",
+  });
+  const source = isControlled ? topicsProp! : (resource.data?.items ?? null);
   // 二次保险：只展示未归档 + `isEnabledNow` 的项
   const topics = useMemo(
     () =>
-      (source ?? []).filter((t) => !t.archivedAt && t.isEnabledNow && !t.isDefault),
+      (source ?? []).filter(
+        (t) => !t.archivedAt && t.isEnabledNow && !t.isDefault,
+      ),
     [source],
   );
 
@@ -231,8 +222,8 @@ export function WindChimeActiveTopicsBanner({
   const single = topics.length === 1 ? topics[0] : null;
   const href = single ? `${linkPrefix}/${single.slug}` : listHref;
   const label = single
-    ? singleLabelTemplate.replace('{title}', single.title)
-    : multipleLabelTemplate.replace('{count}', String(topics.length));
+    ? singleLabelTemplate.replace("{title}", single.title)
+    : multipleLabelTemplate.replace("{count}", String(topics.length));
 
   return (
     <div
@@ -265,4 +256,4 @@ export function WindChimeActiveTopicsBanner({
   );
 }
 
-WindChimeActiveTopicsBanner.displayName = 'WindChimeActiveTopicsBanner';
+WindChimeActiveTopicsBanner.displayName = "WindChimeActiveTopicsBanner";

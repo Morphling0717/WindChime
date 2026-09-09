@@ -9,6 +9,7 @@ declare global {
         el: HTMLElement | string,
         opts: {
           sitekey: string;
+          theme?: 'auto' | 'light' | 'dark';
           callback: (token: string) => void;
           'expired-callback'?: () => void;
           'error-callback'?: () => void;

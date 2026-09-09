@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 /**
  * 通过 className 片段换肤；未传的键会使用内置默认（玻璃拟态 + 柔和渐变）。
@@ -25,66 +25,26 @@ export type WindChimeTheme = {
   turnstileWrap?: string;
 };
 
-/**
- * 客户端滑动窗口限流（localStorage）。防脚本刷接口仍需在服务端限流与鉴权。
- */
-export type WindChimeRateLimit = {
-  max?: number;
-  windowMs?: number;
-  /** 用作 localStorage 的完整键名，默认 `windchime:rl` */
-  storageKey?: string;
-};
-
-export type WindChimeSubmitPayload = {
-  text: string;
-  nickname?: string | null;
-  /** 用户填写的 http(s) 链接，可为空 */
-  linkUrl?: string | null;
-  turnstileToken?: string | null;
-  /** 浏览器侧随机生成并持久化的匿名指纹（用于辅助识别同一设备），可为空 */
-  senderFingerprint?: string | null;
-};
-
-export type WindChimeMessageRecord = {
-  id: string;
-  createdAt: string;
-  text: string;
-  nickname?: string | null;
-  linkUrl?: string | null;
-  /** 收件箱管理状态；后端返回什么组件就展示什么 */
-  isRead?: boolean;
-  isFavorited?: boolean;
-  isReplied?: boolean;
-  replyText?: string | null;
-  /**
-   * 命中敏感词后服务器打的审核旗标；前端默认把这条信折叠在「待审核」tab，
-   * 详情页才展开原文，避免直播过程中不小心拉到后台被敏感词糊脸。
-   * 命中审核旗标的消息不会在 `all/unread/favorited` 默认视图显示。
-   */
-  isFlagged?: boolean;
-  /** 服务器基于 IP+UA+指纹 算出的稳定短标签（如 `User-1A2B`），用于识别刷屏来源 */
-  senderLabel?: string | null;
-  /** 原始 hash（长），可用于拉黑动作。组件不会直接展示 */
-  senderHash?: string | null;
-};
-
-/** 收件箱分类过滤器 */
-export type WindChimeInboxFilter = 'all' | 'unread' | 'favorited' | 'flagged';
-
-/** 黑名单条目 */
-export type WindChimeBlockedSender = {
-  hash: string;
-  label?: string | null;
-  blockedAt: string;
-  /** 可选：展示一条被拉黑时的样例留言，便于主播核对 */
-  sampleText?: string | null;
-};
+import type {
+  WindChimeRateLimit,
+  WindChimeSubmitPayload,
+  WindChimeMessageRecord,
+  WindChimeInboxFilter,
+  WindChimeBlockedSender,
+} from "./core/index.js";
+export type {
+  WindChimeRateLimit,
+  WindChimeSubmitPayload,
+  WindChimeMessageRecord,
+  WindChimeInboxFilter,
+  WindChimeBlockedSender,
+} from "./core/index.js";
 
 export type WindChimeSenderProps = {
   title?: ReactNode;
   statusOpenLabel?: string;
   statusPausedLabel?: string;
-  status?: 'open' | 'paused';
+  status?: "open" | "paused";
   tagline?: string;
   placeholder?: string;
   maxLength?: number;

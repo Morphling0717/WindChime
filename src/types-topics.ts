@@ -8,8 +8,8 @@
  *   ends_at / archived_at` 组合出来），前端拿到就能直接染色 / 分组，不再
  *   自己算时间窗。
  *
- * 这里**只定义类型**，不包含数据库 / API 实现——宿主应用自行在自己的
- * 后端（Next.js Route / Fastify / FastAPI 皆可）落实 CRUD。
+ * 类型由 /core 公开，数据库与业务实现见 /sqlite、/server，Next.js 路由见 /next。
+ * 此文件同时保留旧根入口的兼容类型与可选 UI 标签。
  */
 
 /**
@@ -22,14 +22,11 @@
  * - `archived` 主播手动归档（软删），不进主 tab 栏，往期活动抽屉可见
  */
 export type WindChimeTopicState =
-  | 'default'
-  | 'active'
-  | 'scheduled'
-  | 'ended'
-  | 'archived';
+  "default" | "active" | "scheduled" | "ended" | "archived";
 
 /**
- * 单个主题的完整视图（管理端 / 公开端返回值的 union）。
+ * 兼容旧根入口的主题类型。新接入请使用 /core 的
+ * WindChimePublicTopic / WindChimeAdminTopic 明确区分公开和管理数据。
  *
  * 公开端接口（`GET /api/mail/topics` 无密码）通常只返回 `default` 外的
  * `active` 主题；管理端接口返回全部（`note / unreadCount / flaggedCount`
@@ -114,16 +111,16 @@ export type WindChimeTopicPatchInput = {
 /** 状态 → 中文短标签（tab / 统计面板 / 抽屉复用） */
 export function windChimeTopicStateLabel(state: WindChimeTopicState): string {
   switch (state) {
-    case 'default':
-      return '常规';
-    case 'active':
-      return '进行中';
-    case 'scheduled':
-      return '未开始';
-    case 'ended':
-      return '已结束';
-    case 'archived':
-      return '已归档';
+    case "default":
+      return "常规";
+    case "active":
+      return "进行中";
+    case "scheduled":
+      return "未开始";
+    case "ended":
+      return "已结束";
+    case "archived":
+      return "已归档";
   }
 }
 
@@ -133,7 +130,10 @@ export function windChimeTopicStateLabel(state: WindChimeTopicState): string {
  * 逻辑：非归档 + isEnabled + 在时间窗内。主要用于客户端二次校验
  * （服务端仍是最终真相）。
  */
-export function isWindChimeTopicOpenNow(topic: WindChimeTopic, now = new Date()): boolean {
+export function isWindChimeTopicOpenNow(
+  topic: WindChimeTopic,
+  now = new Date(),
+): boolean {
   if (topic.archivedAt) return false;
   if (!topic.isEnabled) return false;
   const t = now.getTime();
@@ -148,16 +148,17 @@ export function isWindChimeTopicOpenNow(topic: WindChimeTopic, now = new Date())
  * - 字符集 `a-z0-9-`
  * - 首尾必须是字母 / 数字
  */
-export const WIND_CHIME_TOPIC_SLUG_REGEX = /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/;
+export const WIND_CHIME_TOPIC_SLUG_REGEX =
+  /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/;
 
 /**
  * 推荐的 slug 保留字黑名单（与 Next.js / 常见 REST 路径段冲突）。
  * 宿主可以在 `WindChimeNewTopicModal` 的 `reservedSlugs` 里覆盖。
  */
 export const WIND_CHIME_TOPIC_RESERVED_SLUGS: readonly string[] = [
-  'default',
-  'new',
-  'admin',
-  'api',
-  'm',
+  "default",
+  "new",
+  "admin",
+  "api",
+  "m",
 ];

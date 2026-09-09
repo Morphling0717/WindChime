@@ -10,3 +10,6 @@ node_modules
 *.tsbuildinfo
 examples/**/data/
 examples/**/.next/
+
+.windchime-build/
+.validation/

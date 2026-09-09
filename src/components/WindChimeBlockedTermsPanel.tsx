@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useCallback,
@@ -6,8 +6,15 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
-import '../styles/windchime.css';
+} from "react";
+import "../styles/windchime.css";
+
+import {
+  createWindChimeClient,
+  WindChimeClientError,
+} from "../client/index.js";
+import { useWindChimeBlockedTerms } from "../react/management.js";
+import { normalizeWindChimeTerms } from "../core/index.js";
 
 /**
  * 「敏感词」管理面板：提供一个大文本框 + 保存按钮，便于主播 / 管理员在后台
@@ -27,7 +34,7 @@ import '../styles/windchime.css';
  */
 
 function cn(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join(" ");
 }
 
 export type WindChimeBlockedTermsPanelTheme = {
@@ -49,28 +56,28 @@ export type WindChimeBlockedTermsPanelTheme = {
 };
 
 const DEFAULT_THEME: Required<WindChimeBlockedTermsPanelTheme> = {
-  root: 'w-full text-slate-800 dark:text-slate-100',
+  root: "w-full text-slate-800 dark:text-slate-100",
   panel:
-    'rounded-2xl border border-violet-200/50 bg-white/40 p-5 shadow-[0_4px_20px_rgba(139,92,246,0.08)] backdrop-blur-xl sm:p-6 dark:border-violet-400/30 dark:bg-slate-900/40',
-  header: 'mb-4 flex items-baseline justify-between gap-3',
-  title: 'text-sm font-bold tracking-wider text-violet-700 dark:text-violet-200',
-  caption: 'mt-1 text-xs text-slate-500 dark:text-slate-400',
+    "rounded-2xl border border-violet-200/50 bg-white/40 p-5 shadow-[0_4px_20px_rgba(139,92,246,0.08)] backdrop-blur-xl sm:p-6 dark:border-violet-400/30 dark:bg-slate-900/40",
+  header: "mb-4 flex items-baseline justify-between gap-3",
+  title:
+    "text-sm font-bold tracking-wider text-violet-700 dark:text-violet-200",
+  caption: "mt-1 text-xs text-slate-500 dark:text-slate-400",
   textarea:
-    'w-full resize-y rounded-lg border border-violet-300/60 bg-white/70 px-3 py-2 text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-300/40 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100',
-  chipList: 'mt-4 flex flex-wrap gap-1.5',
-  chip:
-    'rounded-md border border-violet-300/60 bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-200',
-  muted: 'mt-2 text-[11px] text-slate-500 dark:text-slate-400',
+    "w-full resize-y rounded-lg border border-violet-300/60 bg-white/70 px-3 py-2 text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-300/40 dark:border-violet-400/30 dark:bg-slate-900/60 dark:text-slate-100",
+  chipList: "mt-4 flex flex-wrap gap-1.5",
+  chip: "rounded-md border border-violet-300/60 bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-200",
+  muted: "mt-2 text-[11px] text-slate-500 dark:text-slate-400",
   error:
-    'mt-3 rounded-lg border border-rose-400 bg-rose-50 px-4 py-2 text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300',
-  savedHint: 'text-[11px] text-emerald-600 dark:text-emerald-300',
+    "mt-3 rounded-lg border border-rose-400 bg-rose-50 px-4 py-2 text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300",
+  savedHint: "text-[11px] text-emerald-600 dark:text-emerald-300",
   primaryButton:
-    'rounded-lg border border-violet-500 bg-violet-500 px-4 py-1.5 text-xs font-bold tracking-wider text-white shadow-sm transition hover:bg-violet-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40',
+    "rounded-lg border border-violet-500 bg-violet-500 px-4 py-1.5 text-xs font-bold tracking-wider text-white shadow-sm transition hover:bg-violet-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
   dangerButton:
-    'rounded-lg border border-rose-400 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300',
+    "rounded-lg border border-rose-400 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300",
   secondaryButton:
-    'rounded-lg border border-slate-300 bg-white/70 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-200',
-  loadingHint: 'text-[10px] text-violet-400/80',
+    "rounded-lg border border-slate-300 bg-white/70 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-200",
+  loadingHint: "text-[10px] text-violet-400/80",
 };
 
 function mergeTheme(
@@ -80,14 +87,7 @@ function mergeTheme(
 }
 
 function parseTermsInput(input: string): string[] {
-  return Array.from(
-    new Set(
-      input
-        .split(/[,，\n]+/)
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  );
+  return normalizeWindChimeTerms(input.split(/[,，\n]+/));
 }
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -96,15 +96,6 @@ function arraysEqual(a: string[], b: string[]): boolean {
     if (a[i] !== b[i]) return false;
   }
   return true;
-}
-
-async function readError(res: Response): Promise<string> {
-  const ct = res.headers.get('content-type') ?? '';
-  if (ct.includes('application/json')) {
-    const j = (await res.json().catch(() => null)) as { error?: string } | null;
-    return j?.error ?? res.statusText;
-  }
-  return (await res.text().catch(() => '')) || res.statusText;
 }
 
 export type WindChimeBlockedTermsPanelProps = {
@@ -143,11 +134,11 @@ export type WindChimeBlockedTermsPanelProps = {
 };
 
 const DEFAULT_LABELS = {
-  save: 'SAVE',
-  saving: 'SAVING…',
-  loading: 'LOADING…',
-  saved: '已保存 ✓',
-  summaryPrefix: '用逗号或换行分隔，大小写不敏感。当前共',
+  save: "SAVE",
+  saving: "SAVING…",
+  loading: "LOADING…",
+  saved: "已保存 ✓",
+  summaryPrefix: "用逗号或换行分隔，大小写不敏感。当前共",
 };
 
 export function WindChimeBlockedTermsPanel({
@@ -156,9 +147,9 @@ export function WindChimeBlockedTermsPanel({
   endpoint,
   requestHeaders,
   onUnauthorized,
-  title = 'BLOCKED_TERMS · 敏感词',
-  caption = '命中任一词的留言会被折叠在「待审核」tab 里，主播点击才能看到原文。不拦截发送。',
-  placeholder = '例如：色情, 赌博, 微信, 加我',
+  title = "BLOCKED_TERMS · 敏感词",
+  caption = "命中任一词的留言会被折叠在「待审核」tab 里，主播点击才能看到原文。不拦截发送。",
+  placeholder = "例如：色情, 赌博, 微信, 加我",
   chipPreviewLimit = 20,
   labels,
   theme,
@@ -169,48 +160,32 @@ export function WindChimeBlockedTermsPanel({
 
   const isControlled = termsProp !== undefined;
 
-  const [internalTerms, setInternalTerms] = useState<string[]>([]);
-  const effectiveTerms = isControlled ? termsProp! : internalTerms;
-
-  const [draft, setDraft] = useState('');
-  const [loading, setLoading] = useState(false);
+  const client = useMemo(
+    () =>
+      createWindChimeClient({
+        endpoints: { blockedTerms: endpoint },
+        getHeaders: () => requestHeaders ?? {},
+      }),
+    [endpoint, requestHeaders],
+  );
+  const resource = useWindChimeBlockedTerms(client, {
+    enabled: !isControlled && !!endpoint,
+  });
+  const effectiveTerms = isControlled ? termsProp! : resource.terms;
+  const [draft, setDraft] = useState("");
+  const loading = resource.isLoading;
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveError, setError] = useState<string | null>(null);
+  const error = saveError ?? resource.error?.message ?? null;
+  useEffect(() => {
+    if (resource.error?.status === 401) onUnauthorized?.();
+  }, [resource.error, onUnauthorized]);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // 同步 effectiveTerms → draft（受控模式下 terms 外部变化时也要跟上）
   useEffect(() => {
-    setDraft(effectiveTerms.join(', '));
+    setDraft(effectiveTerms.join(", "));
   }, [effectiveTerms]);
-
-  // 拉取模式：挂载时 GET
-  const reload = useCallback(async () => {
-    if (!endpoint) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await fetch(endpoint, {
-        headers: requestHeaders,
-        cache: 'no-store',
-      });
-      if (r.status === 401) {
-        onUnauthorized?.();
-        return;
-      }
-      if (!r.ok) throw new Error(await readError(r));
-      const j = (await r.json()) as { terms?: string[] };
-      const list = Array.isArray(j.terms) ? j.terms : [];
-      setInternalTerms(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [endpoint, requestHeaders, onUnauthorized]);
-
-  useEffect(() => {
-    if (!isControlled && endpoint) void reload();
-  }, [isControlled, endpoint, reload]);
 
   const parsed = useMemo(() => parseTermsInput(draft), [draft]);
   const dirty = useMemo(
@@ -228,35 +203,23 @@ export function WindChimeBlockedTermsPanel({
         return;
       }
       if (endpoint) {
-        const r = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(requestHeaders ?? {}),
-          },
-          body: JSON.stringify({ terms: parsed }),
-        });
-        if (r.status === 401) {
-          onUnauthorized?.();
-          return;
-        }
-        if (!r.ok) throw new Error(await readError(r));
-        const j = (await r.json().catch(() => ({ terms: parsed }))) as {
-          terms?: string[];
-        };
-        const list = Array.isArray(j.terms) ? j.terms : parsed;
-        setInternalTerms(list);
+        await resource.save(parsed);
         setSavedAt(Date.now());
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存失败');
+      if (e instanceof WindChimeClientError && e.status === 401)
+        onUnauthorized?.();
+      setError(e instanceof Error ? e.message : "保存失败");
     } finally {
       setSaving(false);
     }
-  }, [endpoint, requestHeaders, onSave, onUnauthorized, parsed]);
+  }, [endpoint, resource.save, onSave, onUnauthorized, parsed]);
 
   return (
-    <div className={cn(th.root, className)} data-widget="windchime-blocked-terms">
+    <div
+      className={cn(th.root, className)}
+      data-widget="windchime-blocked-terms"
+    >
       <div className={th.panel}>
         <div className={th.header}>
           <div>
@@ -311,4 +274,4 @@ export function WindChimeBlockedTermsPanel({
   );
 }
 
-WindChimeBlockedTermsPanel.displayName = 'WindChimeBlockedTermsPanel';
+WindChimeBlockedTermsPanel.displayName = "WindChimeBlockedTermsPanel";
