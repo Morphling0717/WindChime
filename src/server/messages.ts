@@ -15,6 +15,7 @@ import type {
 } from "../sqlite/index.js";
 import { computeWindChimeSenderIdentity } from "./identity.js";
 import { resolveTopic } from "./topics.js";
+import { claimLiveAttachments, validateLiveAttachments, liveHash } from "./live-media.js";
 import {
   boolInput,
   fail,
@@ -130,6 +131,7 @@ export function createMessageOperations(options: MessageOperationOptions) {
       "senderFingerprint",
       "turnstileToken",
       "topicSlug",
+      "attachments",
     ]);
     const normalized = validateWindChimeSubmission(
       input as WindChimeSubmitPayload,
@@ -138,9 +140,18 @@ export function createMessageOperations(options: MessageOperationOptions) {
     const fingerprint = textInput(input.senderFingerprint, 512, "发送者指纹");
     const token = textInput(input.turnstileToken, 4096, "人机校验令牌");
     const slug = textInput(input.topicSlug, 64, "话题") ?? "default";
+    const attachments = validateLiveAttachments(input.attachments);
     await ready();
     await consumeRateLimit(req, fingerprint);
-    await options.verifyTurnstile(req, token);
+    if (attachments.length) {
+      // Upload already verified the single-use challenge. Validate every private receipt
+      // before considering it a replacement; consume them atomically with the message below.
+      await storage.transaction(async (db) => {
+        const topic = await resolveTopic(db, slug, now());
+        for (const a of attachments) if (!(await db.get("SELECT id FROM mail_live_assets WHERE id=? AND topic_id=? AND message_id IS NULL AND receipt_hash=? AND expires_at>?", [a.id, topic.id, liveHash(a.receipt), now()])))
+          fail("INVALID_RECEIPT", "图片上传收据无效", 409);
+      });
+    } else await options.verifyTurnstile(req, token);
     return storage.transaction(async (db) => {
       const topic = await resolveTopic(db, slug, now());
       if (topic.archivedAt) fail("TOPIC_ARCHIVED", "活动已结束", 423);
@@ -161,10 +172,11 @@ export function createMessageOperations(options: MessageOperationOptions) {
       const terms = await options.getBlockedTerms(db);
       const flagged =
         matchWindChimeBlockedTerm(terms, text, nickname, linkUrl) !== null;
+      const messageId = randomUUID();
       await db.run(
         "INSERT INTO mail_messages(id,created_at,text,nickname,link_url,is_flagged,sender_hash,sender_label,topic_id) VALUES(?,?,?,?,?,?,?,?,?)",
         [
-          randomUUID(),
+          messageId,
           new Date(now()).toISOString(),
           text,
           nickname,
@@ -175,6 +187,7 @@ export function createMessageOperations(options: MessageOperationOptions) {
           topic.id,
         ],
       );
+      await claimLiveAttachments(db, attachments, topic.id, messageId, now());
       return { ok: true };
     });
   }

@@ -6,3 +6,5 @@ export const POST = handleMailRequest;
 export const PUT = handleMailRequest;
 export const PATCH = handleMailRequest;
 export const DELETE = handleMailRequest;
+
+export const OPTIONS = handleMailRequest;

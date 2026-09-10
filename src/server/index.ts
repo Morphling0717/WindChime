@@ -11,6 +11,10 @@ import { createTopicOperations } from "./topics.js";
 import { createMessageOperations } from "./messages.js";
 import { getWindChimeClientIp } from "./identity.js";
 import { boolInput, fail } from "./validation.js";
+import { createWindChimeBroadcast } from "./live.js";
+import { cleanupLiveMedia, saveLiveUpload } from "./live-media.js";
+export { readLiveAsset } from "./live-media.js";
+export type { LiveGrantRow, LiveProof } from "./live.js";
 export {
   getWindChimeClientIp,
   computeWindChimeSenderIdentity,
@@ -28,6 +32,8 @@ export type WindChimeServiceOptions = {
   ready?: () => Promise<unknown>;
   fetch?: typeof fetch;
   now?: () => number;
+  /** Test/embedded runtime override. Defaults to a fresh identity per Node process. */
+  runtimeEpoch?: string;
 };
 /** Server-only service. Authorization belongs to the host/route adapter; do not expose methods directly to public server actions. */
 export function createWindChimeService(options: WindChimeServiceOptions) {
@@ -118,6 +124,38 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
     getBlockedTerms: readTerms,
     verifyTurnstile,
   });
+  const live = createWindChimeBroadcast({ storage, ready, now, runtimeEpoch: options.runtimeEpoch });
+  const broadcast = {
+    ...live,
+    upload: async (req: Request, topicId: string, files: Uint8Array[], directory: string, token: string | null) => {
+      if (!files.length || files.length > 3) fail("INVALID_ATTACHMENTS", "每次上传 1 至 3 张图片");
+      await ready();
+      await live.rateLimit("upload:" + getClientIp(req), 10, 60000);
+      await verifyTurnstile(req, token);
+      const topic = (await topics.getTopicById(topicId)) ?? (await topics.getTopicBySlug(topicId));
+      if (!topic || !topic.isEnabledNow) fail("TOPIC_UNAVAILABLE", "当前信箱不接受投稿", 423);
+      await cleanupLiveMedia(storage, directory, now());
+      const attachments = [];
+      for (const bytes of files) attachments.push(await saveLiveUpload(storage, topic.id, bytes, directory, now()));
+      return { ...(attachments.length === 1 ? attachments[0] : {}), attachments };
+    },
+    cleanupMedia: (directory: string) => cleanupLiveMedia(storage, directory, now()),
+    uploadReview: async (req: Request, topicId: string, messageId: string, files: Uint8Array[], directory: string) => {
+      if (!files.length || files.length > 3) fail("INVALID_ATTACHMENTS", "每次上传 1 至 3 张图片");
+      await ready(); await live.rateLimit("review-upload:" + getClientIp(req), 20, 60000);
+      const topic = (await topics.getTopicById(topicId)) ?? (await topics.getTopicBySlug(topicId));
+      if (!topic || topic.archivedAt) fail("TOPIC_UNAVAILABLE", "当前信箱不可编辑", 423);
+      await messages.getMessage(messageId, topic.id);
+      await cleanupLiveMedia(storage, directory, now());
+      const attachments = [];
+      for (const bytes of files) {
+        const { receipt: _receipt, ...asset } = await saveLiveUpload(storage, topic.id, bytes, directory, now(), messageId);
+        attachments.push({ ...asset, caption: "" });
+      }
+      return { ...(attachments.length === 1 ? attachments[0] : {}), attachments };
+    },
+    clientIp: getClientIp,
+  };
   async function getSettings() {
     const topic = await topics.getDefaultTopic();
     if (!topic) fail("NOT_INITIALIZED", "默认主题未初始化", 503);
@@ -168,6 +206,7 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
   }
   return {
     ready,
+    broadcast,
     ...topics,
     ...messages,
     getBlockedTerms,

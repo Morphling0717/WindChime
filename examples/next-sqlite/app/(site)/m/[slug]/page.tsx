@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getService } from "../../../lib/windchime";
+import { getService } from "../../../../lib/windchime";
 import { Sender } from "../../Sender";
 export const dynamic = "force-dynamic";
 export default async function TopicPage({

@@ -1,4 +1,5 @@
 import type { WindChimeSqlExecutor } from "./index.js";
+import { initializeWindChimeLiveSchema } from "./live-schema.js";
 
 // Only mailbox-owned objects. Host schema_migrations, admin sessions and login failures are untouched.
 const columns: Record<string, Record<string, string>> = {
@@ -170,6 +171,7 @@ export async function initializeWindChimeSchema(
         [marker, new Date().toISOString()],
       );
     }
+    await initializeWindChimeLiveSchema(db);
     await db.run("COMMIT");
   } catch (error) {
     await db.run("ROLLBACK").catch(() => undefined);

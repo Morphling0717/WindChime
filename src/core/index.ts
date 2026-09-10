@@ -1,4 +1,5 @@
 /** Runtime-free domain contracts. Importing this entry never imports React or CSS. */
+export * from "./live.js";
 export * from "../types-topics.js";
 export * from "../time.js";
 import type { WindChimeTopic } from "../types-topics.js";
@@ -25,6 +26,7 @@ export type WindChimeSubmitPayload = {
   turnstileToken?: string | null;
   senderFingerprint?: string | null;
   topicSlug?: string | null;
+  attachments?: Array<{ id: string; receipt: string }>;
 };
 export type WindChimeMessageRecord = {
   id: string;

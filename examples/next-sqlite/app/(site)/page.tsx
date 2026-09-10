@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getService } from "../lib/windchime";
+import { getService } from "../../lib/windchime";
 import { Sender } from "./Sender";
 export const dynamic = "force-dynamic";
 export default async function Page() {

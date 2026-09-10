@@ -1,4 +1,6 @@
 import { WindChimeError, isWindChimeInboxFilter } from "../core/index.js";
+export { createWindChimeLiveRouteHandlers, verifyWindChimeGatewayProof } from "./live.js";
+export type { WindChimeLiveRouteOptions } from "./live.js";
 import type { WindChimeService } from "../server/index.js";
 import {
   boolInput,

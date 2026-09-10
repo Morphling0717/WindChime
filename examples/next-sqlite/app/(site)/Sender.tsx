@@ -4,7 +4,9 @@ import { createWindChimeClient } from "@windchime/embed/client";
 import {
   useWindChimeSubmission,
   useWindChimeTurnstile,
+  useWindChimeAttachments,
 } from "@windchime/embed/react";
+import { WindChimeAttachmentInput } from "@windchime/embed";
 
 // Labels belong to this example. The headless hook exposes codes and values for any UI.
 const errors: Record<string, string> = {
@@ -28,8 +30,10 @@ export function Sender({
 }) {
   const client = useMemo(() => createWindChimeClient(), []);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const attachments = useWindChimeAttachments(slug);
   const form = useWindChimeSubmission({
     client,
+    onSubmit: async payload => { await client.messages.submit(await attachments.attach(payload)); attachments.clear(); },
     topicSlug: slug,
     enabled,
     requireTurnstile: !!siteKey,
@@ -74,6 +78,7 @@ export function Sender({
           disabled={form.sending || !enabled}
         />
       </label>
+      <WindChimeAttachmentInput files={attachments.files} onChange={attachments.setFiles} disabled={form.sending || !enabled} />
       <label>
         链接（可选）
         <input

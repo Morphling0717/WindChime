@@ -1,6 +1,6 @@
 {
   "name": "@windchime/embed",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Headless anonymous inbox for Next.js: React hooks, SQLite, route handlers and optional UI",
   "license": "MIT",
   "type": "module",
@@ -48,6 +48,11 @@
       "import": "./dist/media/index.js",
       "default": "./dist/media/index.js"
     },
+    "./broadcast": {
+      "types": "./dist/broadcast/index.d.ts",
+      "import": "./dist/broadcast/index.js",
+      "default": "./dist/broadcast/index.js"
+    },
     "./ui": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
@@ -78,6 +83,7 @@
     "dev:sync": "node scripts/dev-consumers.mjs --sync-only"
   },
   "peerDependencies": {
+    "sharp": "^0.35.4",
     "qrcode": "^1.5.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
@@ -85,6 +91,9 @@
     "tailwindcss": "^3.4.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    },
     "tailwindcss": {
       "optional": true
     },
@@ -106,6 +115,7 @@
     "react-dom": "^19.0.0",
     "react-test-renderer": "^19.0.0",
     "semver": "^7.7.0",
+    "sharp": "^0.35.4",
     "sqlite3": "6.0.1",
     "typescript": "^5.0.0"
   },

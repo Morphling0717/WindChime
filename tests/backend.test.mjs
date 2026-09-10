@@ -34,7 +34,9 @@ async function fixture(
     filename = join(dir, "test.sqlite");
   if (legacy) await rawDb(filename, legacy);
   const storage = createWindChimeSqlite({ filename });
+  const extraStorages = [];
   t.after(async () => {
+    await Promise.all(extraStorages.map((item) => item.close()));
     await storage.close();
     await rm(dir, { recursive: true, force: true });
   });
@@ -72,7 +74,7 @@ async function fixture(
     });
   const call = (path, method = "GET", payload, admin = true, ip) =>
     handlers[method](request(path, method, payload, admin, ip));
-  return { dir, filename, storage, service, request, call, handlers };
+  return { dir, filename, storage, service, request, call, handlers, trackStorage: (item) => { extraStorages.push(item); return item; } };
 }
 const earlierSchema = `
 CREATE TABLE host_users(id TEXT PRIMARY KEY,password_hash TEXT);INSERT INTO host_users VALUES('admin','keep-me');
@@ -96,7 +98,7 @@ test("new database initializes default and independent migration record; service
   assert.equal((await f.service.getSettings()).enabled, true);
   assert.equal(
     (await f.storage.all("SELECT * FROM windchime_migrations")).length,
-    1,
+    2,
   );
   assert.ok(hostReadyCalls >= 3);
   assert.equal(
@@ -143,7 +145,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   await second.ready;
   assert.equal(
     (await second.all("SELECT * FROM windchime_migrations")).length,
-    1,
+    2,
   );
   assert.equal(
     (await second.all("SELECT * FROM mail_rate_limit_hits")).length,
@@ -589,7 +591,7 @@ test("transactions roll back failed archive, block and purge without partial wri
 test("concurrent submissions enforce exact durable limits across eight independent connections", async (t) => {
   const f = await fixture(t);
   const others = Array.from({ length: 7 }, () =>
-    createWindChimeSqlite({ filename: f.filename }),
+    f.trackStorage(createWindChimeSqlite({ filename: f.filename })),
   );
   t.after(async () => {
     await Promise.all(others.map((storage) => storage.close()));
@@ -786,7 +788,7 @@ test("eight independent connections can initialize the same brand new schema con
   );
   assert.equal(
     (await connections[7].all("SELECT id FROM windchime_migrations")).length,
-    1,
+    2,
   );
 });
 

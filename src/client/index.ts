@@ -10,6 +10,7 @@ import type {
   WindChimePublicTopic,
   WindChimeAdminTopic,
 } from "../core/index.js";
+export * from './live.js';
 import { WindChimeError, toWindChimePublicTopic } from "../core/index.js";
 export type { WindChimeCounts, WindChimeMessageList } from "../core/index.js";
 import type { WindChimeMessageList } from "../core/index.js";

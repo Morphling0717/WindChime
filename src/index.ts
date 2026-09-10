@@ -2,6 +2,7 @@
  *  核心组件
  * ============================================================ */
 export { WindChimeSender } from "./components/WindChimeSender";
+export { WindChimeAttachmentInput } from "./components/WindChimeAttachments.js";
 export { WindChimeAdminPanel } from "./components/WindChimeAdminPanel";
 export { WindChimeBlocklistPanel } from "./components/WindChimeBlocklistPanel";
 

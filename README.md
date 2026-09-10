@@ -2,7 +2,17 @@
 
 风铃是面向 Next.js 的独立匿名信箱库。投稿、信件管理、审核、话题、归档和屏蔽规则由库维护；网站拥有页面 HTML、布局、样式、文案、图标、动画、数据库路径和管理员登录。
 
-**0.5.0 为待发布版本。** 当前不要求 npm registry 已有该版本；可以从本仓库构建 `.tgz` 安装。源码与 ESM 产物均按职责分文件。默认 UI 是可选入口，完全不使用它也能使用全部功能。
+**0.6.0 为待发布版本。** 当前使用本仓库构建的 `.tgz` 安装。新增独立播出批准、上屏稿和图片审核、每话题待播排序、只读展示授权，以及 Windows 桌面控制端和独立展示窗口。默认 UI 是可选入口，其他 Next.js 网站仍可完全独立使用。
+
+[直播功能与运行指南](docs/LIVE.md) · [桌面运行与打包](apps/desktop/README.md) · [验收记录](docs/LIVE-VALIDATION.md) · [可选 B 站官方接入模块](docs/BILIBILI-LIVE.md) · [迁移说明](docs/MIGRATION.md)
+
+## Windows 桌面与直播采集
+
+当前默认流程是启动本地桌面程序，通过浏览器授权直接连接已有风铃站点，在私人控制台审信、批准和手动上屏，再让直播姬或 OBS 采集 **WindChime Display** 独立窗口。不要采集审核控制台。审核和待播规则仍由联网的站点服务器统一执行，网页与桌面共享同一份数据；桌面版不是离线收件箱。
+
+在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 发行包。完整站点启动、0.6.0 升级和操作步骤见[运行指南](docs/LIVE.md)，具体产物及安装步骤见[桌面 README](apps/desktop/README.md)。这些命令是操作说明，实际测试范围以注明日期的验收记录为准。
+
+这个流程不依赖 B 站官方启动、平台密钥、项目 ID、H5 或上架审核。`apps/live-gateway` 的普通浏览器展示、H5 和平台生命周期适配继续保留为可选模块；已有平台项目与私有配置无需更改。旧平台联调报告记录当时的工作范围，不构成本地桌面交付的前置条件。
 
 ## 从可运行示例开始
 
@@ -28,18 +38,20 @@ npm run dev
 未公开发布时，在风铃目录执行 `npm pack`，在网站目录安装生成的包：
 
 ```bash
-npm install /你的路径/WindChime/windchime-embed-0.5.0.tgz sqlite3@6.0.1
+npm install /你的路径/WindChime/windchime-embed-0.6.0.tgz sqlite3@6.0.1
+# 需要粉丝图片和主播替换图片时
+npm install sharp@0.35.4
 # 需要二维码和海报时
 npm install qrcode
 ```
 
-正式发布后可替换为 `npm install --save-exact @windchime/embed@0.5.0`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
+正式发布后可替换为 `npm install --save-exact @windchime/embed@0.6.0`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
 
 ```ts
 // next.config.ts
 const nextConfig = {
   transpilePackages: ["@windchime/embed"],
-  serverExternalPackages: ["sqlite3"],
+  serverExternalPackages: ["sqlite3", "sharp"],
 };
 export default nextConfig;
 ```
@@ -165,13 +177,13 @@ export function Compose({ topicSlug = "default" }) {
 }
 ```
 
-这段代码无需 CSS 或默认组件。昵称、链接、Turnstile 的完整例子见 [Sender.tsx](examples/next-sqlite/app/Sender.tsx)。错误提供 `code/status/retryAfterMs`，网站可按 code 显示自己的文案。`submit()` 捕获错误并返回 false；管理写入方法则继续抛出错误，需要 catch。Hooks 不弹确认框、不导航、不播放音效。成功动画与音效在网站收到 `submit()` 的 true 结果后执行。
+这段代码无需 CSS 或默认组件。昵称、链接、Turnstile 的完整例子见 [Sender.tsx](examples/next-sqlite/app/(site)/Sender.tsx)。错误提供 `code/status/retryAfterMs`，网站可按 code 显示自己的文案。`submit()` 捕获错误并返回 false；管理写入方法则继续抛出错误，需要 catch。Hooks 不弹确认框、不导航、不播放音效。成功动画与音效在网站收到 `submit()` 的 true 结果后执行。
 
 ### 自己编写管理界面
 
 用同一个稳定 client 实例调用 `useWindChimeInbox(client, {topicId})`、`useWindChimeTopics(client)`、`useWindChimeReview`、`useWindChimeBlocklist`、`useWindChimeBlockedTerms`、`useWindChimeSettings`。数据更新会通知同一 client 实例下的相关 Hooks 重新加载；过期请求不会覆盖新话题。`useWindChimeTopics` 默认读取管理数据，公开页面使用 `{mode:"public"}`，或直接调用 `client.topics.listPublic()`。不同标签页或客户端实例之间需要主动刷新或配置轮询。
 
-完整 [管理页面](examples/next-sqlite/app/admin/page.tsx) 提供登录、筛选、选择、已读/收藏、批量操作、审核、屏蔽、话题编辑/归档/恢复/永久删除、CSV 和海报。所有确认、HTML 与文案都由这个页面定义，业务不复制到示例里。
+完整 [管理页面](examples/next-sqlite/app/(site)/admin/page.tsx) 提供登录、筛选、选择、已读/收藏、批量操作、审核、屏蔽、话题编辑/归档/恢复/永久删除、CSV 和海报。所有确认、HTML 与文案都由这个页面定义，业务不复制到示例里。
 
 待审核信件列表中正文为空、昵称和链接为 null；管理员显式调用详情后才能展开信件原文。公开 SSR 使用 `service.listPublicTopics()` 和 `service.getPublicTopic(idOrSlug)`，不要把内部 `getTopicById` 的管理员对象传入 Client Component。
 

@@ -1,5 +1,7 @@
 import { createWindChimeSqlite } from "@windchime/embed/sqlite";
 import { createWindChimeService } from "@windchime/embed/server";
+import path from "node:path";
+import { createWindChimeLiveRouteHandlers } from "@windchime/embed/next";
 import { createWindChimeRouteHandlers } from "@windchime/embed/next";
 import { authorizeAdmin, hasAdminAccess } from "./auth";
 
@@ -25,7 +27,9 @@ export function getService() {
   return cached.exampleWindChime;
 }
 export function handleMailRequest(req: Request) {
-  const handlers = createWindChimeRouteHandlers({
+  const handlers = new URL(req.url).pathname.startsWith("/api/mail/live/")
+    ? createWindChimeLiveRouteHandlers({service:getService(),authorizeAdmin,hasAdminAccess,mediaDirectory:path.resolve(process.env.WINDCHIME_MEDIA_DIRECTORY || "data/mail-media")})
+    : createWindChimeRouteHandlers({
     service: getService(),
     authorizeAdmin,
     hasAdminAccess,

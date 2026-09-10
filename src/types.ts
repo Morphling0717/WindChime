@@ -53,6 +53,10 @@ export type WindChimeSenderProps = {
   pausedMessage?: string;
   rateLimit?: WindChimeRateLimit | false;
   onSubmit: (payload: WindChimeSubmitPayload) => Promise<void>;
+  /** Optional private image upload; requires the host's /api/mail/live endpoint. */
+  enableImages?: boolean;
+  topicSlug?: string;
+  liveBaseUrl?: string;
   successAudioSrc?: string;
   enableSwayAnimation?: boolean;
   theme?: WindChimeTheme;

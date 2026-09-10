@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const config: NextConfig = {
   transpilePackages: ["@windchime/embed"],
-  serverExternalPackages: ["sqlite3"],
+  serverExternalPackages: ["sqlite3", "sharp"],
   output: "standalone",
   outputFileTracingRoot: root,
   turbopack: { root },

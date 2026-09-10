@@ -1,0 +1,11 @@
+**/node_modules
+**/data
+**/.env*
+!**/.env.example
+**/*.log
+.git
+.validation
+.windchime-build
+**/.next
+dist
+*.tgz

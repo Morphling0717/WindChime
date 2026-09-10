@@ -13,3 +13,17 @@ examples/**/.next/
 
 .windchime-build/
 .validation/
+
+# Local credentials, signing material and runtime databases.
+.env
+.env.local
+.env.*.local
+*.enc
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.pfx
+*.p12
