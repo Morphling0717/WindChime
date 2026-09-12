@@ -307,7 +307,9 @@ async function openDisplay() {
 async function start() {
   vaultPath = path.join(app.getPath('userData'), 'devices.v1.enc'); await readVault();
   const partition = 'windchime-private';
-  controlWindow = new BrowserWindow({ width: 1440, height: 1000, minWidth: 760, minHeight: 620, title: '风铃 · 私人控制台', icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: '#10171f', webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
+  controlWindow = new BrowserWindow({ width: 1440, height: 1000, minWidth: 760, minHeight: 620, title: '风铃 · 私人控制台', icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: '#e9f1f5',
+    ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: '#46616f', height: 48 }, autoHideMenuBar: true } : {}),
+    webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
   handle('sites:list', 'control', () => ({ items: state.sites.map(publicSite), selectedId: state.selected }));

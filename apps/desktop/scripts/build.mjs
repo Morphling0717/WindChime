@@ -3,9 +3,11 @@ import { mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildIcons } from './build-icons.mjs';
+import { buildInstallArt } from './build-install-art.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 await mkdir(path.join(root, 'build'), { recursive: true });
 await buildIcons(root);
+await buildInstallArt(root);
 // One shared parser serves the browser UI and the isolated Node main process.
 await build({ absWorkingDir: root, entryPoints: ['../../src/core/connection-key.ts'], outfile: 'build/connection-key.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node22' });
 await build({

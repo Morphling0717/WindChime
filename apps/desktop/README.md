@@ -1,4 +1,4 @@
-# 风铃桌面控制台 0.6.1（Windows x64）
+# 风铃桌面控制台 0.6.2（Windows x64）
 
 主播在私人控制台审信，OBS 或直播姬只捕获 **WindChime Display** 窗口。程序直接连接兼容的风铃网站，不需要 B 站项目、密钥、主播身份码或接入网关。
 
@@ -6,9 +6,21 @@
 
 0.6.1 默认使用网页生成的风铃连接密钥：粘贴一次即可连接指定网站和话题，无需在桌面再次填写网站地址。这里的连接密钥是风铃控制授权，与 B 站开放平台密钥无关。旧版浏览器配对保留为备用方式。
 
+0.6.2 更新桌面与安装视觉，网站继续使用风铃共享库 0.6.1，无需为本次换肤升级网站或迁移数据。
+
+## 液态玻璃界面
+
+采用冰蓝、薄荷渐变、磨砂透明面板、细亮边与柔和反光。左侧分为“来信工作台”“信箱连接”“展示外观”；窄窗口使用图标导航，上方仍可切换信箱。切换导航保留未保存稿，切换信箱仍遵循原来的清屏流程。
+
+“一键隐藏”和“结束展示”固定在顶栏，长信滚动时仍可操作。“一键隐藏”也保留托盘与快捷键入口；快捷键被其他程序占用时，私人界面会明确提示。
+
+玻璃效果在应用内部渲染，不透出其他桌面应用。减少动态效果、减少透明度和系统高对比度偏好有对应样式。换肤仅作用于私人控制台，观众展示窗口继续使用主播配置的字体、颜色、布局和透明背景。
+
+安装包使用同一 Logo 与配套玻璃风格循环动画。Squirrel 安装器支持 GIF 画面，不能实时模糊桌面；动画表示正在安装，不显示虚构百分比。Windows 权限与安全弹窗由系统呈现。
+
 ## 安装和运行
 
-发行包使用 `out/installers/WindChime-Setup.exe` 安装，或解压 `WindChime-win32-x64-0.6.1.zip` 后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt`。当前没有 Windows 代码签名或自动更新；本文列出目标产物和操作方法，是否已生成及完成安装往返以对应版本验收记录为准。
+发行包使用 `out/installers/WindChime-Setup.exe` 安装，或解压 `WindChime-win32-x64-0.6.2.zip` 后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt`。当前没有 Windows 代码签名或自动更新；是否完成安装往返以对应版本验收记录为准。
 
 从源码运行：先在 WindChime 仓库根目录执行 `npm ci`，再执行：
 
@@ -18,9 +30,11 @@ npm ci
 npm run dev
 ```
 
-`npm run build` 构建界面及图标；`npm run make` 生成 Windows x64 安装包、ZIP、RELEASES 与 nupkg。构建使用 Electron Forge，Squirrel 的中间输出放在英文临时目录；若临时目录含非 ASCII 字符，可设置 `WINDCHIME_BUILD_ROOT=C:\WindChimeBuild`。
+`npm run build` 构建界面、图标及安装动画；`npm run make` 生成 Windows x64 安装包、ZIP、RELEASES 与 nupkg。构建使用 Electron Forge，Squirrel 的中间输出放在英文临时目录；若临时目录含非 ASCII 字符，可设置 `WINDCHIME_BUILD_ROOT=C:\WindChimeBuild`。
 
 图标源是 `assets/branding/windchime-logo-v1-master.png`；构建自动导出 16–256 像素 ICO、界面 PNG 与托盘 PNG，复用同一 Logo。
+
+打包后可运行 `node scripts/verify-package.cjs <make 输出的临时目录>`，只读核对运行文件、发行校验和，以及 Setup 内嵌的安装动画；该命令不执行安装器。
 
 ## 使用连接密钥
 
@@ -86,7 +100,10 @@ npm run dev
 ```powershell
 npm test
 npm run test:smoke
+npm run test:visual
 ```
+
+`test:visual` 使用真实 Electron 界面和 IPC，连接一次性本机模拟站点，输出宽屏、窄屏、连接、审阅与外观截图到 `out/glass-preview`。测试配置和信件与日常数据隔离，完整密钥只存在于测试进程内存与系统加密凭据中；不连接生产网站，不采集 OBS 或直播姬。
 
 真实两站联调先启动独立验收站点，再运行：
 
@@ -112,4 +129,4 @@ npm run test:keys
 
 实际 OBS 窗口采集脚本为 `scripts/capture-window.cjs`，需已有受密码保护的独立便携 OBS 实例；它使用真实网站的合成话题和桌面主程序，通过 OBS 正式 API 选择展示窗口并验证采集。脚本禁止启动推流、录制、虚拟摄像头或回放缓存。
 
-0.6.1 连接密钥协议与使用说明见 [CONNECTION-KEYS.md](../../docs/CONNECTION-KEYS.md)，本轮通过项和环境阻塞见 [KEYS-VALIDATION.md](../../docs/KEYS-VALIDATION.md)。[VALIDATION.md](./VALIDATION.md) 和 [独立桌面版验收](../../docs/DESKTOP-LOCAL-VALIDATION.md) 保留各自版本的测试结果、失败原因、安装与采集边界；旧版结果不替代本轮验收。
+0.6.2 视觉与回归结果见 [GLASS-VALIDATION.md](../../docs/GLASS-VALIDATION.md)。0.6.1 连接密钥协议与验收分别见 [CONNECTION-KEYS.md](../../docs/CONNECTION-KEYS.md) 和 [KEYS-VALIDATION.md](../../docs/KEYS-VALIDATION.md)。[VALIDATION.md](./VALIDATION.md) 和 [独立桌面版验收](../../docs/DESKTOP-LOCAL-VALIDATION.md) 保留各自版本结果；旧版结果不替代本轮验收。
