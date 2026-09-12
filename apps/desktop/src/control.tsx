@@ -195,13 +195,15 @@ function App() {
       </div>
       <aside className="desktop-sidebar glass-surface">
         <div className="desktop-brand">
-          <div className="brand-icon">
-            <img src="icon.png" width={44} height={44} alt="" />
-          </div>
-          <div>
-            <strong>风铃</strong>
-            <span>WindChime</span>
-          </div>
+          <picture className="brand-mark">
+            <source media="(max-width: 960px)" srcSet="brand-symbol.svg" />
+            <img
+              src="brand-header.svg"
+              width={486}
+              height={94}
+              alt="风铃 WindChime"
+            />
+          </picture>
         </div>
         <div className="sidebar-label">你的创作空间</div>
         <nav aria-label="桌面导航">

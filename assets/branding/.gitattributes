@@ -1,0 +1,4 @@
+# Preserve the approved delivery byte-for-byte across platform checkouts.
+windchime_logo/** -text
+windchime_logo/**/*.pdf -diff
+windchime_logo/File_Manifest.csv whitespace=trailing-space,space-before-tab,cr-at-eol

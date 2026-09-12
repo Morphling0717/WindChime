@@ -98,6 +98,8 @@ async function capture(name, width, height, { select = false, focusSelector } = 
       horizontalOverflow:document.documentElement.scrollWidth > width + 1,
       overflowingElements:[...document.querySelectorAll('main,section,aside,input,select,textarea,button,img')].flatMap(node => {const box=node.getBoundingClientRect();return box.width && (box.right > width + 2 || box.left < -2) ? [{tag:node.tagName,className:node.className,label:node.getAttribute('aria-label'),left:Math.round(box.left),right:Math.round(box.right)}] : []}).slice(0,20),
       images:[...document.images].map(image=>({alt:image.alt,width:image.naturalWidth,height:image.naturalHeight})),
+      brandLoaded:!!document.querySelector('.brand-mark img')?.naturalWidth,
+      brandAsset:document.querySelector('.brand-mark img')?.currentSrc.split('/').at(-1),
       alertCount:document.querySelectorAll('[role=alert]').length,
       alerts:[...document.querySelectorAll('[role=alert]')].map(node=>node.textContent),
       emergencyHideVisible:!!hide && hide.top>=0 && hide.bottom<=innerHeight && hide.left>=0 && hide.right<=width,
@@ -191,7 +193,7 @@ async function run() {
   }
   assert.equal(unexpectedRequests.length, 0, 'Visual fixture must not receive unsupported mutations');
   const report = {
-    passed: consoleErrors.length === 0 && pageErrors.length === 0 && captures.every(item => !item.horizontalOverflow && item.keyFieldEmpty && item.emergencyHideVisible && item.emergencyHideClickable && item.endDisplayClickable !== false),
+    passed: consoleErrors.length === 0 && pageErrors.length === 0 && captures.every(item => item.brandLoaded && !item.horizontalOverflow && item.keyFieldEmpty && item.emergencyHideVisible && item.emergencyHideClickable && item.endDisplayClickable !== false),
     scenario, electron: process.versions.electron, platform: process.platform, capturedAt: new Date().toISOString(),
     captures, consoleErrors, pageErrors, requestCount: requests.length, actions,
     checks: ['temporary userData', 'real password form and connect button through main-process import and encrypted vault', 'successful form clears the key', 'loopback-only synthetic website', 'real private UI and shared review components', 'original image and preview image share bytes', 'no display opened or letter approved', 'wide/medium/minimum window layouts', 'studio/connection/appearance navigation', 'unsaved private draft preserved through navigation', 'emergency hide and end-display stay visible and clickable when scrolling', 'existing end-display and emergency-hide handlers reach server'],

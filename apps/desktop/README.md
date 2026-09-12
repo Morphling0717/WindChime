@@ -1,4 +1,4 @@
-# 风铃桌面控制台 0.6.2（Windows x64）
+# 风铃桌面控制台 0.6.3（Windows x64）
 
 主播在私人控制台审信，OBS 或直播姬只捕获 **WindChime Display** 窗口。程序直接连接兼容的风铃网站，不需要 B 站项目、密钥、主播身份码或接入网关。
 
@@ -7,6 +7,8 @@
 0.6.1 默认使用网页生成的风铃连接密钥：粘贴一次即可连接指定网站和话题，无需在桌面再次填写网站地址。这里的连接密钥是风铃控制授权，与 B 站开放平台密钥无关。旧版浏览器配对保留为备用方式。
 
 0.6.2 更新桌面与安装视觉，网站继续使用风铃共享库 0.6.1，无需为本次换肤升级网站或迁移数据。
+
+0.6.3 使用已确认的琉璃风铃品牌文件，分别适配应用图标、托盘、导航和安装画面。更新只涉及桌面品牌资源；已有连接、审核及数据保持兼容。
 
 ## 液态玻璃界面
 
@@ -20,7 +22,7 @@
 
 ## 安装和运行
 
-发行包使用 `out/installers/WindChime-Setup.exe` 安装，或解压 `WindChime-win32-x64-0.6.2.zip` 后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt`。当前没有 Windows 代码签名或自动更新；是否完成安装往返以对应版本验收记录为准。
+发行包使用 `out/installers/WindChime-Setup.exe` 安装，或解压 `WindChime-win32-x64-0.6.3.zip` 后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt`。当前没有 Windows 代码签名或自动更新；是否完成安装往返以对应版本验收记录为准。
 
 从源码运行：先在 WindChime 仓库根目录执行 `npm ci`，再执行：
 
@@ -32,7 +34,7 @@ npm run dev
 
 `npm run build` 构建界面、图标及安装动画；`npm run make` 生成 Windows x64 安装包、ZIP、RELEASES 与 nupkg。构建使用 Electron Forge，Squirrel 的中间输出放在英文临时目录；若临时目录含非 ASCII 字符，可设置 `WINDCHIME_BUILD_ROOT=C:\WindChimeBuild`。
 
-图标源是 `assets/branding/windchime-logo-v1-master.png`；构建自动导出 16–256 像素 ICO、界面 PNG 与托盘 PNG，复用同一 Logo。
+图标源为 `assets/branding/windchime_logo` 内的用户确认资产。大尺寸使用玻璃应用图，16–32 像素图标和托盘使用同源简化图形；导航 SVG 原样复制，安装动画保留完整琉璃中英组合。具体映射见 [品牌说明](../../assets/branding/README.md)，本次验收见 [BRAND-VALIDATION.md](../../docs/BRAND-VALIDATION.md)。
 
 打包后可运行 `node scripts/verify-package.cjs <make 输出的临时目录>`，只读核对运行文件、发行校验和，以及 Setup 内嵌的安装动画；该命令不执行安装器。
 

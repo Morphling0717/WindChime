@@ -1,6 +1,24 @@
-# 风铃 Logo 初稿
+# 风铃品牌资产
 
-为 B 站 H5 插件项目登记生成，尚未替换网站或桌面应用的现有资源。
+当前使用用户于 2026-09-13 确认的 [windchime_logo](./windchime_logo/) 整套文件。原始来源为用户下载目录中的同名文件夹；复制入仓库的 82 个文件、9,627,889 字节已逐一核对 SHA256，内容保持一致。索引、品牌说明、各场景版本和参考原稿一并保留。
+
+桌面 0.6.3 按场景使用文件，而非把同一张复杂大图用于全部尺寸：
+
+| 场景 | 文件（相对 windchime_logo） | 构建输出 |
+| --- | --- | --- |
+| 应用图标 48/64/128/256 px | `05_App_Icons/WindChime_app_dark_1024.png` | ICO 对应尺寸、`build/icon.png` |
+| 16/24/32 px 图标及托盘 | `04_Monochrome/WindChime_symbol_small_white.svg` | 等比缩放后置于品牌深蓝 `#263A58` 底板；`build/tray.png` 为 32 px |
+| 宽窗口侧栏 | `02_Lockups/WindChime_header_navy.svg` | 原样复制为 `build/brand-header.svg` |
+| 窄窗口侧栏 | `04_Monochrome/WindChime_symbol_small_navy.svg` | 原样复制为 `build/brand-symbol.svg` |
+| 安装动画 | `02_Lockups/WindChime_horizontal_glass_light.png` | 保留完整琉璃主图、中英字标和比例，嵌入安装画面 |
+
+正式资产未重绘、变色或覆盖；缩放和小尺寸底板只存在于构建产物。显示用 SVG 为自包含路径，没有脚本、外链或字体依赖。琉璃主图为原稿分离的位图，单色 SVG 为同源简化路径，不宣称具备原生 3D 工程。其他网站可继续按包内索引选择 favicon、横版标志、字标及社交素材，本轮未修改宿主网站。
+
+`windchime-logo-v1-*` 是早期已停用的历史文件；本地 `concepts/` 为被否决的候选，不进入默认构建或发行包。
+
+## 历史初稿记录
+
+以下为早期平台登记阶段的原始记录，不代表当前品牌或桌面接入方式。
 
 - `windchime-logo-v1-master.png`：内置 image_gen 工具生成的原始图片。
 - `windchime-logo-v1-200.png`：平台上传版，200×200 PNG，小于 1 MiB；使用 Sharp 等比缩放导出。

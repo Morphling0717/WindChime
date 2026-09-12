@@ -15,6 +15,7 @@ const runtimeFiles = [
   'build/control.js', 'build/control.css', 'build/control.html',
   'build/display.js', 'build/display.html', 'build/connection-key.cjs',
   'build/icon.ico', 'build/icon.png', 'build/tray.png',
+  'build/brand-header.svg', 'build/brand-symbol.svg',
   'build/installer-loading.gif', 'build/installer-preview.png',
 ];
 

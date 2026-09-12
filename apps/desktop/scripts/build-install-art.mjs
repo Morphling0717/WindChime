@@ -31,9 +31,6 @@ function installerFrame(logo, frame) {
       <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
         <stop stop-color="#ffffff"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0.28"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.88"/>
       </linearGradient>
-      <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-        <stop stop-color="#ffffff" stop-opacity="0.87"/><stop offset="0.6" stop-color="#ddf5f1" stop-opacity="0.45"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.82"/>
-      </linearGradient>
       <filter id="ambient" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="33"/></filter>
       <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#40818d" flood-opacity="0.11"/></filter>
       <clipPath id="window"><rect x="8" y="8" width="624" height="384" rx="32"/></clipPath>
@@ -53,13 +50,9 @@ function installerFrame(logo, frame) {
       <text x="72" y="77" fill="#63818b" font-family="Segoe UI, sans-serif" font-size="10" font-weight="600" letter-spacing="2.1">WINDCHIME DESKTOP</text>
       <rect x="499" y="58" width="69" height="25" rx="12.5" fill="#ffffff" fill-opacity="0.70" stroke="#ffffff"/>
       <text x="533.5" y="74.5" text-anchor="middle" fill="#5c7b86" font-family="Segoe UI, sans-serif" font-size="10.5">Windows</text>
-      <rect x="75" y="109" width="164" height="164" rx="37" fill="url(#tile)" stroke="url(#edge)" stroke-width="1.5" filter="url(#shadow)"/>
-      <path d="M100 110H212" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-      <image x="89" y="121" width="137" height="137" xlink:href="data:image/png;base64,${logo}"/>
-      <text x="272" y="164" fill="#214351" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="36" font-weight="600" letter-spacing="3">风铃</text>
-      <text x="273" y="199" fill="#38717d" font-family="Segoe UI, sans-serif" font-size="23" font-weight="400" letter-spacing="0.4">WindChime</text>
-      <text x="274" y="239" fill="#597885" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="13">让每封来信，从容上场。</text>
-      <path d="M72 292H568" stroke="#aac8ce" stroke-opacity="0.33"/>
+      <image x="100" y="83" width="440" height="227.34" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,${logo}"/>
+      <text x="299" y="284" fill="#597885" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="12">让每封来信，从容上场。</text>
+      <path d="M72 309H568" stroke="#aac8ce" stroke-opacity="0.33"/>
       <circle cx="80" cy="324" r="4" fill="#54a89f"/>
       <text x="95" y="329" fill="#416572" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="12">正在安装风铃，请稍候</text>
       ${dots}
@@ -71,7 +64,9 @@ function installerFrame(logo, frame) {
 export async function buildInstallArt(root) {
   const output = path.join(root, 'build');
   await mkdir(output, { recursive: true });
-  const logo = (await readFile(path.resolve(root, '../../assets/branding/windchime-logo-v1-master.png'))).toString('base64');
+  // Use the delivered horizontal lockup intact: it includes the glass chime
+  // and both approved wordmarks, with their intended proportions and spacing.
+  const logo = (await readFile(path.resolve(root, '../../assets/branding/windchime_logo/02_Lockups/WindChime_horizontal_glass_light.png'))).toString('base64');
   const frames = [];
   // Bound rasterization concurrency so ordinary UI builds do not fan out into
   // dozens of large SVG / PNG decoders on a developer's machine.

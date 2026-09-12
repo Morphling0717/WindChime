@@ -144,27 +144,16 @@ button svg {
   gap: 11px;
   padding: 0 8px 34px;
 }
-.brand-icon {
-  width: 49px;
+.brand-mark {
+  display: block;
+  width: 100%;
   height: 53px;
-  display: grid;
-  place-items: center;
 }
-.brand-icon img {
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-}
-.desktop-brand strong {
-  display: block;
-  font-size: 24px;
-  letter-spacing: 0.14em;
-  font-weight: 600;
-}
-.desktop-brand span {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.09em;
-  color: #6a818a;
-  margin-top: 1px;
 }
 .sidebar-label {
   font-size: 10px;
@@ -1121,7 +1110,9 @@ button svg {
   .desktop-brand {
     padding: 0 3px 26px;
   }
-  .desktop-brand > div:last-child,
+  .brand-mark {
+    width: 44px;
+  }
   .desktop-sidebar > .sidebar-label,
   .desktop-sidebar nav button > span,
   .nav-dot,
