@@ -1,4 +1,12 @@
 import type { WindChimeLiveAction, WindChimeLiveControlState, WindChimeLiveFrame, WindChimeLiveGrant } from '../core/live.js';
+import type { WindChimeConnectionIdentity } from '../core/connection-key.js';
+
+export type WindChimeLiveCapabilities = {
+  protocolVersion: number; siteId: string; basePath: string;
+  features: { connectionKeys?: boolean; images?: boolean; pairing?: boolean; broadcast?: boolean };
+  pollIntervalMs: number; leaseMs: number;
+};
+export type { WindChimeConnectionIdentity } from '../core/connection-key.js';
 
 /** A desktop may inject this restricted transport without exposing credentials. */
 export type WindChimeLiveRequest = { path: string; method: 'GET' | 'POST' | 'DELETE'; body?: unknown; signal?: AbortSignal };
@@ -38,6 +46,9 @@ const scope = (topicId: string) => `topicId=${encodeURIComponent(topicId)}`;
 export function createWindChimeLiveClient(options: WindChimeLiveOptions = {}) {
   const { request, asset } = makeTransport(options, 'same-origin');
   return {
+    capabilities: (signal?: AbortSignal) => request<WindChimeLiveCapabilities>({ path: '/capabilities', method: 'GET', signal }),
+    /** The server accepts only a control Bearer grant here, never an admin cookie. */
+    identity: (signal?: AbortSignal) => request<WindChimeConnectionIdentity>({ path: '/control/identity', method: 'GET', signal }),
     state: (topicId: string, signal?: AbortSignal) => request<WindChimeLiveControlState>({ path: `/control/state?${scope(topicId)}`, method: 'GET', signal }),
     action: (body: WindChimeLiveAction) => request<WindChimeLiveControlState>({ path: '/control/action', method: 'POST', body }),
     message: (topicId: string, messageId: string, patch: { isRead?: boolean; isFavorited?: boolean }) => request<WindChimeLiveControlState>({ path: '/control/message', method: 'POST', body: { topicId, messageId, ...patch } }),

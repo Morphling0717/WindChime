@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 contextBridge.exposeInMainWorld('windchimeDesktop', Object.freeze({
   sites: () => invoke('sites:list'),
+  importKey: (key) => invoke('sites:import-key', key),
   pair: (input) => invoke('sites:pair', input),
   pairingStatus: (id) => invoke('sites:pair-status', id),
   cancelPairing: (id) => invoke('sites:pair-cancel', id),

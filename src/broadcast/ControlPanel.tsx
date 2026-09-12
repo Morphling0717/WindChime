@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { WindChimeLiveClient } from '../client/live.js';
+import { encodeWindChimeConnectionKey } from '../core/connection-key.js';
 import type { WindChimeLiveAppearance, WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
 import { useWindChimeLiveControl } from '../react/live.js';
 import { WindChimeLiveCard } from './Display.js';
@@ -101,27 +102,85 @@ function AppearanceEditor({ studio }: { studio: Studio }) {
     <label>内边距<input type="number" min={0} max={100} value={appearance.padding} onChange={e => change('padding', Number(e.target.value))} /></label>
   </div><label className="wc-checkbox"><input type="checkbox" checked={appearance.transparent} onChange={e => change('transparent', e.target.checked)} />透明背景</label><button disabled={studio.pending || !studio.connected} onClick={() => void studio.act({ action: 'appearance', appearance })}>应用外观</button></div>;
 }
-function Connections({ client, topicId, displayUrl, onOpenDisplay, onCopyDisplayLink, onBindGateway, deviceCode, canApproveDevices = true, enablePlatformIntegration = false }: Pick<WindChimeLiveControlPanelProps, 'client' | 'topicId' | 'displayUrl' | 'onOpenDisplay' | 'onCopyDisplayLink' | 'onBindGateway' | 'deviceCode' | 'canApproveDevices' | 'enablePlatformIntegration'>) {
+type ConnectionsProps = Pick<WindChimeLiveControlPanelProps, 'client' | 'topicId' | 'displayUrl' | 'onOpenDisplay' | 'onCopyDisplayLink' | 'onBindGateway' | 'deviceCode' | 'canApproveDevices' | 'enablePlatformIntegration'>;
+function Connections(props: ConnectionsProps) {
+  const [owner, setOwner] = useState({ client: props.client, topicId: props.topicId, generation: 0 });
+  // Reset during render, before a different client can commit the previous credential.
+  if (owner.client !== props.client || owner.topicId !== props.topicId) {
+    setOwner({ client: props.client, topicId: props.topicId, generation: owner.generation + 1 });
+    return null;
+  }
+  return <ConnectionControls key={`${owner.generation}:${props.canApproveDevices !== false}`} {...props} />;
+}
+function ConnectionControls({ client, topicId, displayUrl, onOpenDisplay, onCopyDisplayLink, onBindGateway, deviceCode, canApproveDevices = true, enablePlatformIntegration = false }: ConnectionsProps) {
   const [grants, setGrants] = useState<WindChimeLiveGrant[]>([]);
   const [url, setUrl] = useState(''); const [code, setCode] = useState(deviceCode ?? '');
   const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const [proof, setProof] = useState(''); const [challenge, setChallenge] = useState('');
+  const [label, setLabel] = useState('');
+  const [connectionKey, setConnectionKey] = useState<{ value: string; grantId: string; label: string; expiresAt: string } | null>(null);
+  const alive = useRef(true); const running = useRef(false); const refreshSequence = useRef(0);
   const canCreateDisplayLink = Boolean(displayUrl || onCopyDisplayLink);
-  async function refresh() { const result = await client.grants(topicId); setGrants(result.items); }
-  useEffect(() => { void refresh().catch(() => {}); /* current topic owns connection metadata */ }, [client, topicId]);
-  const run = async (operation: () => Promise<unknown>, message = '') => { setBusy(true); setError(''); setNotice(''); try { await operation(); if (message) setNotice(message); await refresh(); } catch (e) { setError(e instanceof Error ? e.message : '操作失败'); } finally { setBusy(false); } };
+  async function refresh() {
+    const sequence = ++refreshSequence.current;
+    const result = await client.grants(topicId);
+    if (!alive.current || sequence !== refreshSequence.current) return;
+    const items = result.items.filter(grant => grant.topicId === topicId);
+    setGrants(items);
+    setConnectionKey(current => current && items.some(grant => grant.id === current.grantId && !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now()) ? current : null);
+  }
+  useEffect(() => {
+    alive.current = true; void refresh().catch(() => {});
+    return () => { alive.current = false; };
+    // Connections remounts this component when its client, topic or authority changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { setCode(deviceCode ?? ''); }, [deviceCode]);
+  const run = async (operation: () => Promise<unknown>, message = '') => {
+    if (!alive.current || running.current) return;
+    running.current = true; ++refreshSequence.current; setBusy(true); setError(''); setNotice('');
+    try { await operation(); if (!alive.current) return; if (message) setNotice(message); await refresh(); }
+    catch (e) { if (alive.current) setError(e instanceof Error ? e.message : '操作失败'); }
+    finally { running.current = false; if (alive.current) setBusy(false); }
+  };
+  const createConnectionKey = async () => {
+    const name = label.trim();
+    if (!canApproveDevices || !name) throw new Error('请先填写连接名称');
+    setConnectionKey(null);
+    const origin = window.location.origin;
+    const capabilities = await client.capabilities();
+    if (!alive.current) return;
+    if (capabilities.protocolVersion !== 1 || !capabilities.features.connectionKeys || !capabilities.siteId) throw new Error('本站尚不支持连接密钥，请先升级风铃');
+    const grant = await client.createGrant(topicId, 'control', name);
+    if (!alive.current) return;
+    if (grant.topicId !== topicId || grant.kind !== 'control') throw new Error('授权返回的信箱不一致，请刷新授权列表后重试');
+    const value = encodeWindChimeConnectionKey({ origin, siteId: capabilities.siteId, token: grant.token });
+    setConnectionKey({ value, grantId: grant.id, label: name, expiresAt: grant.expiresAt });
+  };
+  const copyConnectionKey = async () => {
+    if (!canApproveDevices || !connectionKey) return;
+    try { await navigator.clipboard.writeText(connectionKey.value); }
+    catch { throw new Error('未能复制，请手动选中并复制当前连接密钥'); }
+  };
+  const revoke = async (id: string) => {
+    await client.revokeGrant(topicId, id);
+    if (alive.current) setConnectionKey(current => current?.grantId === id ? null : current);
+  };
   const createLink = async () => {
-    if (onCopyDisplayLink) { await onCopyDisplayLink(); setNotice('展示链接已复制；只读授权由桌面主进程保管。'); return; }
+    if (onCopyDisplayLink) { await onCopyDisplayLink(); if (alive.current) setNotice('展示链接已复制；只读授权由桌面主进程保管。'); return; }
     if (!displayUrl) throw new Error('宿主尚未配置独立展示地址');
     const grant = await client.createGrant(topicId, 'display', '直播展示页');
+    if (!alive.current) return;
     const target = new URL(displayUrl, window.location.origin);
     target.hash = new URLSearchParams({ siteBaseUrl: `${window.location.origin}/api/mail/live`, token: grant.token }).toString(); setUrl(target.href);
   };
   return <div className="wc-stack"><div className="wc-actions">{onOpenDisplay ? <button disabled={busy} onClick={() => void run(onOpenDisplay)}>打开独立展示窗口</button> : null}{canCreateDisplayLink ? <button disabled={busy} onClick={() => void run(createLink)}>生成只读展示链接</button> : null}</div>
     {canCreateDisplayLink && url ? <div className="wc-stack"><p className="wc-grant-url">{url}</p><button onClick={() => void run(() => navigator.clipboard.writeText(url), '展示链接已复制')}>复制展示链接</button><p className="wc-muted">此链接可读取当前播出内容，请只粘贴到直播软件的浏览器源。</p></div> : null}
-    {canApproveDevices ? <><div className="wc-rule" /><label>桌面设备配对码<input value={code} placeholder="在桌面端发起连接后填写" maxLength={32} onChange={e => setCode(e.target.value)} /></label><button disabled={busy || !code.trim()} onClick={() => void run(() => client.approveDevice(code.trim(), topicId), '已批准该设备控制当前信箱')}>批准此设备连接当前信箱</button></> : null}
+    {canApproveDevices ? <><div className="wc-rule" /><h3>桌面连接密钥</h3><p className="wc-muted">当前话题：{topicId}。填写名称后生成密钥，复制到桌面端即可连接。默认有效期 30 天，可在多台电脑重复使用；撤销此授权会让共用密钥的所有电脑断开。</p><label>连接名称<input value={label} maxLength={100} autoComplete="off" placeholder="例如：家里的直播电脑" onChange={e => setLabel(e.target.value)} /></label><button disabled={busy || !label.trim()} onClick={() => void run(createConnectionKey)}>生成桌面连接密钥</button>
+      {connectionKey ? <div className="wc-stack"><p>{connectionKey.label} · 话题：{topicId} · 到期 {new Date(connectionKey.expiresAt).toLocaleString('zh-CN')}</p><textarea readOnly rows={4} autoComplete="off" spellCheck={false} aria-label="桌面连接密钥" value={connectionKey.value} /><button disabled={busy} onClick={() => void run(copyConnectionKey, '连接密钥已复制')}>复制连接密钥</button><button className="wc-subtle" onClick={() => setConnectionKey(null)}>隐藏本页密钥</button><p className="wc-muted">此密钥允许查看原文和管理当前话题，请妥善保管。只在本页显示，刷新或关闭后不再显示；隐藏文本不会撤销授权。</p></div> : null}
+      <details open={Boolean(deviceCode)}><summary>旧版设备配对</summary><div className="wc-stack"><label>桌面设备配对码<input value={code} placeholder="在桌面端发起连接后填写" maxLength={32} onChange={e => setCode(e.target.value)} /></label><button disabled={busy || !code.trim()} onClick={() => void run(() => client.approveDevice(code.trim(), topicId), '已批准该设备控制当前信箱')}>批准此设备连接当前信箱</button></div></details></> : null}
     {enablePlatformIntegration ? <details><summary>连接 B 站启动网关</summary><div className="wc-stack"><p className="wc-muted">需要部署平台接入网关，并在网站配置其公钥。平台密钥由网关保管。</p>{onBindGateway ? <button disabled={busy} onClick={() => void run(onBindGateway)}>连接 B 站会话</button> : null}<button disabled={busy} onClick={() => void run(async () => setChallenge(JSON.stringify(await client.bindingChallenge(topicId))))}>生成绑定挑战</button>{challenge ? <textarea readOnly aria-label="绑定挑战" value={challenge} /> : null}<label>网关签名绑定凭证<textarea rows={3} value={proof} onChange={e => setProof(e.target.value)} /></label><button disabled={busy || !proof} onClick={() => void run(() => client.bind(topicId, proof), '信箱与平台会话已绑定')}>确认绑定</button><button disabled={busy} onClick={() => void run(() => client.unbind(topicId), '平台绑定已解除，相关展示授权已撤销')}>解除平台绑定</button></div></details> : null}
-    <details><summary>管理授权（{grants.filter(g => !g.revokedAt).length}）</summary><div className="wc-stack">{grants.map(g => <div key={g.id} className="wc-actions"><span className="wc-muted" style={{ flex: 1 }}>{g.label || (g.kind === 'display' ? '展示端' : '控制设备')} · {g.revokedAt ? '已撤销' : `到期 ${new Date(g.expiresAt).toLocaleDateString('zh-CN')}`}</span>{!g.revokedAt ? <button disabled={busy} onClick={() => void run(() => client.revokeGrant(topicId, g.id), '授权已撤销')}>撤销</button> : null}</div>)}</div></details>
+    <details><summary>管理授权（{grants.filter(g => !g.revokedAt && Date.parse(g.expiresAt) > Date.now()).length}）</summary><div className="wc-stack"><button disabled={busy} onClick={() => void run(async () => {}, '授权列表已刷新')}>刷新授权列表</button>{grants.map(g => <div key={g.id} className="wc-actions"><span className="wc-muted" style={{ flex: 1 }}>{g.label || (g.kind === 'display' ? '展示端' : '控制设备')} · {g.kind === 'display' ? '只读展示' : '控制授权'} · 话题：{g.topicId} · 到期 {new Date(g.expiresAt).toLocaleString('zh-CN')} · {g.revokedAt ? '已撤销' : Date.parse(g.expiresAt) <= Date.now() ? '已到期' : '有效'}</span>{!g.revokedAt ? <button disabled={busy} aria-label={`撤销授权 ${g.label || g.id}`} onClick={() => void run(() => revoke(g.id), '授权已撤销，使用此授权的所有电脑将断开')}>撤销</button> : null}</div>)}</div></details>
     {error ? <p className="wc-error" role="alert">{error}</p> : null}{notice ? <p className="wc-notice" role="status">{notice}</p> : null}
   </div>;
 }

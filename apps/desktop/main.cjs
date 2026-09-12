@@ -4,9 +4,12 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { performance } = require('node:perf_hooks');
 const { normalizeOrigin, validateRequest, restoreSite, verifier, challenge, publicSite } = require('./security.cjs');
+const { parseWindChimeConnectionKey } = require('./build/connection-key.cjs');
 const state = { sites: [], selected: null, pairings: new Map(), output: null, connectionError: '' };
 let controlWindow, displayWindow, tray, quitting = false, vaultPath;
 let selectionVersion = 0, outputVersion = 0, switching = false;
+let importVersion = 0;
+let connectionCommit = null;
 let writeTail = Promise.resolve(), vaultTail = Promise.resolve();
 let outputDeadline = 0, outputHeld = false, pendingOutputClears = 0;
 let outputReceiverVersion = 0, outputReceiverId = null, outputEpoch = null, outputSnapshotId = null;
@@ -36,11 +39,38 @@ else {
 }
 function selected() { return state.sites.find(site => site.id === state.selected); }
 function connectionError(message) { state.connectionError = [state.connectionError, message].filter(Boolean).join('\n'); }
-function saveVault() {
+function encryptVault(sites, selectedId) {
   if (!safeStorage.isEncryptionAvailable()) throw new Error('系统凭据加密暂不可用，无法保存设备授权');
-  const ciphertext = safeStorage.encryptString(JSON.stringify({ version: 1, sites: state.sites, selected: state.selected }));
-  const write = vaultTail.then(async () => { const temporary = `${vaultPath}.tmp`; await fs.writeFile(temporary, ciphertext); await fs.rename(temporary, vaultPath); });
+  return safeStorage.encryptString(JSON.stringify({ version: 1, sites, selected: selectedId }));
+}
+function queueVault(operation) {
+  const write = vaultTail.then(operation);
   vaultTail = write.catch(() => {}); return write;
+}
+function saveVault() {
+  const ciphertext = encryptVault(state.sites, state.selected);
+  return queueVault(async () => { const temporary = `${vaultPath}.tmp`; await fs.writeFile(temporary, ciphertext); await fs.rename(temporary, vaultPath); });
+}
+async function waitForConnectionCommit() { while (connectionCommit) await connectionCommit; }
+function persistImportedSite(site, assertAttempt) {
+  return queueVault(async () => {
+    assertAttempt();
+    const sites = state.sites.some(item => item.id === site.id) ? state.sites.map(item => item.id === site.id ? site : item) : [...state.sites, site];
+    const temporary = `${vaultPath}.tmp`;
+    try { await fs.writeFile(temporary, encryptVault(sites, site.id)); }
+    catch { throw Object.assign(new Error(), { code: 'CREDENTIAL_SAVE_FAILED' }); }
+    // Any newer selection/import/list edit during the write cancels this candidate.
+    assertAttempt();
+    let release;
+    connectionCommit = new Promise(resolve => { release = resolve; });
+    try {
+      try { await fs.rename(temporary, vaultPath); }
+      catch { throw Object.assign(new Error(), { code: 'CREDENTIAL_SAVE_FAILED' }); }
+      // Other connection mutations wait through the atomic rename and publication.
+      state.sites = sites;
+      return { transition: selectSite(site.id, { persist: false }) };
+    } finally { connectionCommit = null; release(); }
+  });
 }
 async function readVault() {
   try {
@@ -59,15 +89,63 @@ async function http(base, relative, method = 'GET', body, token, { binary = fals
   try {
     const headers = { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) };
     const response = await fetch(`${base}${relative}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal, cache: 'no-store', redirect: 'error' });
-    if (!response.ok) { const data = await response.json().catch(() => ({})); const e = new Error(data.error || '远端请求失败'); e.status = response.status; e.code = data.code || 'REMOTE_ERROR'; throw e; }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const fallback = response.status === 404 ? '未找到风铃接口（HTTP 404），请检查网站地址和部署版本' : response.status === 401 ? '授权无效、已过期或已撤销，请在网页重新生成连接密钥' : response.status === 403 ? '此授权没有执行该操作的权限' : `网站请求失败（HTTP ${response.status}）`;
+      const e = new Error(response.status === 404 ? fallback : data.error || fallback); e.status = response.status; e.code = data.code || 'REMOTE_ERROR'; throw e;
+    }
     if (binary) {
       const mimeType = response.headers.get('content-type')?.split(';')[0];
       if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType)) throw new Error('图片格式无效');
       const bytes = Buffer.from(await response.arrayBuffer()); if (bytes.length > 5 * 1024 * 1024) throw new Error('图片过大');
       return { image: bytes.toString('base64'), mimeType };
     }
-    return await response.json();
+    try { return await response.json(); } catch { throw Object.assign(new Error('网站返回了无法识别的响应，请检查网站地址和部署版本'), { code: 'REMOTE_INVALID_RESPONSE', status: response.status }); }
+  } catch (error) {
+    if (error.code && typeof error.status === 'number') throw error;
+    if (controller.signal.aborted) throw Object.assign(new Error('连接网站超时，请检查网络后重试'), { code: 'REMOTE_TIMEOUT', status: 0 });
+    throw Object.assign(new Error('无法连接网站，请检查网络、HTTPS 证书和网站地址'), { code: 'REMOTE_UNREACHABLE', status: 0 });
   } finally { clearTimeout(timer); }
+}
+function connectionFailure(error) {
+  const messages = {
+    CONNECTION_KEY_INVALID: '连接密钥无效，请从网页重新复制完整密钥',
+    CONNECTION_KEY_EXPIRED: '连接密钥已过期，请在网页生成新的密钥',
+    CONNECTION_KEY_REVOKED: '连接密钥已被撤销，请在网页生成新的密钥',
+    CONNECTION_CHANGED: '信箱选择已更新，旧连接请求已取消',
+    CONNECTION_KEYS_UNSUPPORTED: '此网站尚未支持密钥连接，请先部署风铃 0.6.1 或使用旧版浏览器配对',
+    CONNECTION_SITE_MISMATCH: '此密钥不属于当前网站实例，请从正确的网站重新生成',
+    CREDENTIAL_ENCRYPTION_UNAVAILABLE: '系统凭据加密暂不可用，无法保存连接，请稍后重试',
+    CREDENTIAL_SAVE_FAILED: '无法保存加密连接，原有连接未更改，请检查磁盘空间和目录权限后重试',
+    REMOTE_INVALID_RESPONSE: '网站返回了无法识别的响应，请检查网站地址和部署版本',
+    REMOTE_TIMEOUT: '连接网站超时，请检查网络后重试',
+    REMOTE_UNREACHABLE: '无法连接网站，请检查网络、HTTPS 证书和网站地址',
+  };
+  const code = typeof error.code === 'string' && Object.prototype.hasOwnProperty.call(messages, error.code) ? error.code : 'CONNECTION_FAILED';
+  const message = messages[code] || (error.status === 404 ? '未找到风铃接口（HTTP 404），请检查网站地址和部署版本' : error.status === 401 ? '连接密钥无效、已过期或已撤销，请在网页重新生成' : error.status === 403 ? '此密钥没有管理信箱的权限' : error.status === 429 ? '连接过于频繁，请稍后重试' : '连接失败，请检查网站状态后重试');
+  return Object.assign(new Error(message), { code, status: error.status || 0 });
+}
+async function importConnectionKey(input) {
+  let key;
+  try { key = parseWindChimeConnectionKey(input); } catch { throw Object.assign(new Error('连接密钥格式无效或版本不支持，请复制网页生成的完整密钥'), { code: 'CONNECTION_KEY_INVALID', status: 0 }); }
+  await waitForConnectionCommit();
+  const attempt = ++importVersion, selectedVersion = selectionVersion, sites = state.sites;
+  const assertAttempt = () => { if (attempt !== importVersion || selectedVersion !== selectionVersion || sites !== state.sites || switching) throw Object.assign(new Error(), { code: 'CONNECTION_CHANGED' }); };
+  try {
+    if (!safeStorage.isEncryptionAvailable()) throw Object.assign(new Error(), { code: 'CREDENTIAL_ENCRYPTION_UNAVAILABLE' });
+    const capability = await http(`${key.origin}/api/mail/live`, '/capabilities'); assertAttempt();
+    if (capability.protocolVersion !== 1 || capability.features?.connectionKeys !== true) throw Object.assign(new Error(), { code: 'CONNECTION_KEYS_UNSUPPORTED' });
+    if (capability.siteId !== key.siteId) throw Object.assign(new Error(), { code: 'CONNECTION_SITE_MISMATCH' });
+    const identity = await http(`${key.origin}/api/mail/live`, '/control/identity', 'GET', undefined, key.token); assertAttempt();
+    if (identity.siteId !== key.siteId) throw Object.assign(new Error(), { code: 'CONNECTION_SITE_MISMATCH' });
+    for (const field of ['topicId', 'grantId', 'topicTitle', 'label']) if (typeof identity[field] !== 'string' || identity[field].length > 200 || (field === 'topicId' && !identity[field])) throw Object.assign(new Error(), { code: 'REMOTE_INVALID_RESPONSE' });
+    if (!Number.isFinite(Date.parse(identity.expiresAt)) || Date.parse(identity.expiresAt) <= Date.now()) throw Object.assign(new Error(), { code: 'CONNECTION_KEY_EXPIRED' });
+    const existing = state.sites.find(site => site.origin === key.origin && site.siteId === key.siteId && site.token === key.token && site.topicId === identity.topicId);
+    const site = restoreSite({ id: existing?.id ?? crypto.randomUUID(), origin: key.origin, siteId: identity.siteId, topicId: identity.topicId, token: key.token, label: identity.label || identity.topicTitle, expiresAt: identity.expiresAt });
+    const committed = await persistImportedSite(site, assertAttempt);
+    await committed.transition;
+    return publicSite(site);
+  } catch (error) { throw connectionFailure(error); }
 }
 function requireSite() { if (switching) throw new Error('正在切换信箱，请稍候'); const site = selected(); if (!site) throw new Error('请先连接并选择信箱'); return site; }
 function context() { return { site: requireSite(), version: selectionVersion }; }
@@ -185,14 +263,14 @@ function hideSite(site) {
   if (!site) return Promise.resolve();
   return writeCommand(() => siteRequest(site, { path: '/control/action', method: 'POST', body: { topicId: site.topicId, action: 'hide', expectedRevision: 0, operationId: crypto.randomUUID() } }));
 }
-async function selectSite(id) {
+async function selectSite(id, { persist = true } = {}) {
   if (id !== null && !state.sites.some(site => site.id === id)) throw new Error('信箱不存在');
   if (!switching && state.selected === id) return selected() ? publicSite(selected()) : null;
   const oldSite = selected();
   const version = ++selectionVersion; switching = true; closeOutput(); state.selected = id;
   await hideSite(oldSite).catch(() => {});
-  if (version !== selectionVersion) throw new Error('信箱选择已更新');
-  switching = false; await saveVault();
+  if (version !== selectionVersion) throw Object.assign(new Error('信箱选择已更新'), { code: 'CONNECTION_CHANGED' });
+  switching = false; if (persist) await saveVault();
   return selected() ? publicSite(selected()) : null;
 }
 async function hide() {
@@ -233,6 +311,7 @@ async function start() {
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
   handle('sites:list', 'control', () => ({ items: state.sites.map(publicSite), selectedId: state.selected }));
+  handle('sites:import-key', 'control', importConnectionKey);
   handle('sites:pair', 'control', async input => {
     const origin = normalizeOrigin(input.origin); const label = String(input.label || new URL(origin).hostname).slice(0, 80);
     const capability = await http(`${origin}/api/mail/live`, '/capabilities'); if (capability.protocolVersion !== 1) throw new Error('此网站尚未升级风铃直播功能');
@@ -246,12 +325,13 @@ async function start() {
     const result = await http(`${pairing.origin}/api/mail/live`, '/devices/poll', 'POST', { deviceCode: pairing.deviceCode, verifier: pairing.verifier });
     if (result.status !== 'approved') return { status: result.status };
     const site = { id: crypto.randomUUID(), label: pairing.label, origin: pairing.origin, siteId: pairing.siteId, topicId: result.topicId, token: result.token, expiresAt: result.expiresAt };
+    await waitForConnectionCommit();
     if (state.pairings.get(id) !== pairing) return { status: 'expired' };
     state.sites.push(site); state.pairings.delete(id); await selectSite(site.id); return { status: 'approved', site: publicSite(site) };
   });
   handle('sites:pair-cancel', 'control', id => { state.pairings.delete(id); });
-  handle('sites:select', 'control', selectSite);
-  handle('sites:forget', 'control', async id => { if (id === state.selected) await selectSite(state.sites.find(site => site.id !== id)?.id ?? null); state.sites = state.sites.filter(site => site.id !== id); await saveVault(); });
+  handle('sites:select', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); return selectSite(id); });
+  handle('sites:forget', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); if (id === state.selected) await selectSite(state.sites.find(site => site.id !== id)?.id ?? null); if (connectionCommit) await waitForConnectionCommit(); state.sites = state.sites.filter(site => site.id !== id); await saveVault(); });
   handle('control:request', 'control', async input => {
     const scope = context(), site = scope.site; const request = validateRequest(input, 'control', site.topicId);
     try {

@@ -119,7 +119,14 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
       const path = url.pathname.slice(base.length).replace(/^\/+|\/+$/g, "");
       if (req.method === "OPTIONS") { checkOrigin(req); return new Response(null, { status: 204 }); }
       if (req.method !== "GET") checkOrigin(req);
-      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
+      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true, connectionKeys: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
+      if (path === "control/identity") {
+        if (req.method !== "GET") return json({ code: "METHOD_NOT_ALLOWED", error: "此接口只支持 GET" }, 405);
+        const token = /^Bearer (wc_ctl_[A-Za-z0-9_-]{43})$/.exec(req.headers.get("authorization") ?? "")?.[1];
+        if (!token) fail("CONNECTION_KEY_INVALID", "需要有效的控制连接密钥", 401);
+        if (url.search) fail("INVALID_QUERY", "身份查询不接受范围参数", 400);
+        return json(await live.controlIdentity(token!));
+      }
       if (path === "upload" && req.method === "POST") {
         if (!options.mediaDirectory) fail("IMAGES_DISABLED", "此站点尚未配置图片存储", 503);
         const { topicId, token, files } = await uploadBody(req);

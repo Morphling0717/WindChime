@@ -4,9 +4,12 @@ Mount `createWindChimeLiveRouteHandlers({service, authorizeAdmin, hasAdminAccess
 
 Control requests use the host's existing admin cookie OR `Authorization: Bearer wc_ctl_...`. Display requests ONLY accept `Bearer wc_disp_...` and never elevate from cookies. Grants bind exactly one topic; they cannot override their scope with another topicId. Host cookie writes require a matching Origin when Origin is present; explicit cross-site origins require allowlisting. Desktop main-process requests can omit Origin.
 
+Package 0.6.1 adds reusable connection-key encoding and a control-Bearer-only identity endpoint. It reuses the existing 30-day control grants and requires no new database schema. The host must deploy 0.6.1 before clients use the new capability; installing a newer desktop does not upgrade the host.
+
 ## Endpoints
 
-- `GET /capabilities` → `{protocolVersion:1,siteId,basePath,features:{images:boolean,pairing:true,broadcast:true},pollIntervalMs:1000,leaseMs:3000}`. siteId is a persistent random database identity.
+- `GET /capabilities` → `{protocolVersion:1,siteId,basePath,features:{images:boolean,pairing:true,broadcast:true,connectionKeys:true},pollIntervalMs:1000,leaseMs:3000}`. siteId is a persistent random database identity. `connectionKeys` is absent on 0.6.0 hosts; clients must check it before importing a connection key.
+- `GET /control/identity` requires exactly `Authorization: Bearer wc_ctl_...`. It never accepts an admin cookie, a display token, a query parameter or a caller-selected topic. Returns `{siteId,topicId,topicTitle,label,expiresAt,grantId}` from the grant's actual scope, without a token or inbox content. `CONNECTION_KEY_INVALID`, `CONNECTION_KEY_EXPIRED` and `CONNECTION_KEY_REVOKED` are HTTP 401; any query returns `INVALID_QUERY` 400 after valid Bearer syntax, and non-GET requests return 405.
 - `GET /control/state?topicId=default` → `WindChimeLiveControlState` from `/core`: `{topicId,revision,epoch,messages,queue,current,appearance,receivers}`. messages contain private source + editable draft + review status. queue is ordered message IDs. current is null or `{messageId,snapshotId}`. receivers is the online count. No read/favorite/flagged value grants broadcast approval.
 - `POST /control/action` → updated control state. Body `{topicId,action,messageId?,expectedRevision,expectedDraftRevision?,operationId,draft?,order?,appearance?}`. Actions: `draft`, `approve`, `reject`, `revoke`, `show`, `next`, `hide`, `end`, `reorder`, `appearance`. operationId is an arbitrary unique 8–128 character command identifier. `hide`/`end`/`revoke`/`reject` supersede stale control revisions; other actions reject stale revisions with 409 `REVISION_CONFLICT`. Draft/approval also require `expectedDraftRevision`. Draft is `{text,nickname,linkUrl,assets:[{id,caption}]}`. Approval only queues. show requires an online receiver; no receiver → 409 `DISPLAY_NOT_READY`. Queue retains ALL approved messages in their full order after showing/closing. `next` advances after lastShown without looping; exhaustion blanks. Hide retains the private cursor; end/restart resets cursor but preserves approvals/order.
 - `POST /control/message` body `{topicId,messageId,isRead?,isFavorited?}` delegates existing scoped message mutations and returns updated control state. These flags do not affect approval.
@@ -24,6 +27,18 @@ Control requests use the host's existing admin cookie OR `Authorization: Bearer 
 Rendering must immediately blank on explicit errors and within 3 seconds of a lost lease; never accept stale epoch/receiver/revision or delayed image decode. Start/refresh/reconnect blank. Clear on sleep/page restore. Preview is a separate control-auth surface. Outbound HTTP/link previews and remote image loading are absent from display.
 
 Appearance is the `/core` `WindChimeLiveAppearance` type: safe font name, fontSize12–96, hex colors, transparent, layout card/letter/minimal, imageLayout row/column/grid (default column), animation none/fade/slide, padding/borderRadius0–100. No arbitrary CSS, HTML or remote URLs are accepted by configuration. Developers may provide their own renderer with only the filtered snapshot contract.
+
+## Reusable connection keys (0.6.1)
+
+`@windchime/embed/core` exports `encodeWindChimeConnectionKey({origin,siteId,token,v?:1})` and `parseWindChimeConnectionKey(unknown)`. The wire format is `wc_conn_v1.<base64url UTF-8 JSON>`, whose payload contains exactly `{v:1,origin,siteId,token}`. The complete input is limited to 4096 characters. Unknown fields, unsupported versions, invalid UTF-8/base64url, and non-control tokens are rejected with local `CONNECTION_KEY_INVALID` 400. Control tokens must match `wc_ctl_` followed by exactly 43 base64url characters.
+
+The codec normalizes an HTTPS origin, or HTTP on exact loopback hosts `localhost`, `127.0.0.1` and `[::1]`. It rejects credentials, non-root paths, query strings and fragments. The key is an encoding of a reusable control credential, not encrypted storage; never put it in a public URL, repository, log or capture surface.
+
+A website administrator creates the underlying grant with `POST /control/grants` and `{topicId,kind:"control",label}`. Encoding uses the current website origin and capability siteId. The raw grant is returned only when created; subsequent grant lists contain metadata. Its fixed 30-day expiry is not extended by importing or querying identity. Existing control Bearers cannot issue another control grant.
+
+On import, the desktop parses locally, checks `features.connectionKeys`, compares the capability siteId with the encoded siteId, then queries `/control/identity` using the encoded token. It saves only the verified scope and credentials using OS-backed encryption. The key cannot choose a different topic via payload or identity query. Clients must not persist an unverified credential or show an old connection's content while changing scope.
+
+Import is repeatable and does not consume the grant. Several computers may share one key; revoking its grant invalidates all of those connections and child display grants. Issue separate keys for independent revocation. The old one-time PKCE device pairing endpoints remain supported and separate from this import flow.
 
 ## Gateway binding
 

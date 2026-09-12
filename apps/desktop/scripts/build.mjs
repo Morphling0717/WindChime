@@ -6,6 +6,8 @@ import { buildIcons } from './build-icons.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 await mkdir(path.join(root, 'build'), { recursive: true });
 await buildIcons(root);
+// One shared parser serves the browser UI and the isolated Node main process.
+await build({ absWorkingDir: root, entryPoints: ['../../src/core/connection-key.ts'], outfile: 'build/connection-key.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node22' });
 await build({
   absWorkingDir: root,
   entryPoints: ['src/control.tsx', 'src/display.tsx'],

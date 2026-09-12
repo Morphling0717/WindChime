@@ -3,6 +3,7 @@ type Result<T> = { ok: true; data: T } | { ok: false; error: string; code: strin
 export type Site = { id: string; label: string; origin: string; siteId: string; topicId: string; expiresAt: string };
 type Bridge = {
   sites(): Promise<Result<{ items: Site[]; selectedId: string | null }>>;
+  importKey(key: string): Promise<Result<Site>>;
   pair(input: { origin: string; label: string }): Promise<Result<{ id: string; userCode: string; expiresAt: string }>>;
   pairingStatus(id: string): Promise<Result<{ status: string; site?: Site }>>;
   cancelPairing(id: string): Promise<Result<void>>;

@@ -8,6 +8,7 @@ import {
 import { fail, objectInput, onlyFields, textInput, linkInput } from "./validation.js";
 import { resolveTopic } from "./topics.js";
 import { liveHash, liveSecret, liveAssetDto, type LiveAssetRow } from "./live-media.js";
+import type { WindChimeConnectionIdentity } from "../core/connection-key.js";
 
 const LEASE_MS = 3000;
 const runtime = globalThis as typeof globalThis & { __windchimeLiveEpoch?: string };
@@ -182,6 +183,22 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
     const rows = await storage.all<LiveGrantRow>("SELECT * FROM mail_live_grants WHERE topic_id=? ORDER BY expires_at DESC", [t.id]);
     return rows.map((g) => ({ id: g.id, kind: g.kind, topicId: g.topic_id, label: g.label, expiresAt: new Date(g.expires_at).toISOString(), revokedAt: g.revoked_at ? new Date(g.revoked_at).toISOString() : null }));
   }
+  async function controlIdentity(token: string): Promise<WindChimeConnectionIdentity> {
+    if (typeof token !== "string" || !/^wc_ctl_[A-Za-z0-9_-]{43}$/.test(token)) fail("CONNECTION_KEY_INVALID", "连接密钥无效", 401);
+    await ready();
+    // Read the identity and authorization together; never resolve a caller-provided topic.
+    const row = await storage.get<{
+      id: string; topic_id: string; title: string; label: string; site_id: string;
+      expires_at: number; revoked_at: number | null;
+    }>(`SELECT g.id,g.topic_id,t.title,g.label,i.site_id,g.expires_at,g.revoked_at
+      FROM mail_live_grants g JOIN mail_topics t ON t.id=g.topic_id
+      JOIN mail_live_identity i ON i.id=1 WHERE g.token_hash=? AND g.kind='control'`, [liveHash(token)]);
+    if (!row) fail("CONNECTION_KEY_INVALID", "连接密钥无效", 401);
+    if (row!.revoked_at !== null) fail("CONNECTION_KEY_REVOKED", "连接密钥已撤销，请在网站后台重新生成", 401);
+    if (row!.expires_at <= now()) fail("CONNECTION_KEY_EXPIRED", "连接密钥已过期，请在网站后台重新生成", 401);
+    return { siteId: row!.site_id, topicId: row!.topic_id, topicTitle: row!.title, label: row!.label,
+      expiresAt: new Date(row!.expires_at).toISOString(), grantId: row!.id };
+  }
   async function revokeGrant(id: string, topicId: string) {
     await ready(); const t = await storage.transaction((db) => topic(db, topicId));
     const result = await storage.run("UPDATE mail_live_grants SET revoked_at=? WHERE id=? AND topic_id=?", [now(), id, t.id]);
@@ -323,5 +340,5 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
       await db.run("DELETE FROM mail_live_bindings WHERE topic_id=?", [t.id]); return { ok: true as const };
     });
   }
-  return { siteId, state, action, createGrant, authenticate, listGrants, revokeGrant, open, frame, displayAsset, controlAsset, rateLimit, requestDevice, approveDevice, pollDevice, bindingChallenge, bind, exchange, validateLease, unbind, epoch, leaseMs: LEASE_MS };
+  return { siteId, state, action, createGrant, authenticate, listGrants, controlIdentity, revokeGrant, open, frame, displayAsset, controlAsset, rateLimit, requestDevice, approveDevice, pollDevice, bindingChallenge, bind, exchange, validateLease, unbind, epoch, leaseMs: LEASE_MS };
 }

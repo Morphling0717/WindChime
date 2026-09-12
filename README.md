@@ -2,15 +2,19 @@
 
 风铃是面向 Next.js 的独立匿名信箱库。投稿、信件管理、审核、话题、归档和屏蔽规则由库维护；网站拥有页面 HTML、布局、样式、文案、图标、动画、数据库路径和管理员登录。
 
-**0.6.0 为待发布版本。** 当前使用本仓库构建的 `.tgz` 安装。新增独立播出批准、上屏稿和图片审核、每话题待播排序、只读展示授权，以及 Windows 桌面控制端和独立展示窗口。默认 UI 是可选入口，其他 Next.js 网站仍可完全独立使用。
+**0.6.1 为待发布版本。** 当前使用本仓库构建的 `.tgz` 安装。新增网页生成、有效期 30 天且可重复导入的桌面连接密钥。独立播出批准、上屏稿和图片审核、每话题待播排序、只读展示授权，以及 Windows 桌面控制端和独立展示窗口继续保留。默认 UI 是可选入口，其他 Next.js 网站仍可完全独立使用。
 
-[直播功能与运行指南](docs/LIVE.md) · [桌面运行与打包](apps/desktop/README.md) · [验收记录](docs/LIVE-VALIDATION.md) · [可选 B 站官方接入模块](docs/BILIBILI-LIVE.md) · [迁移说明](docs/MIGRATION.md)
+[连接密钥与 0.6.1 升级](docs/CONNECTION-KEYS.md) · [直播功能与运行指南](docs/LIVE.md) · [桌面运行与打包](apps/desktop/README.md) · [连接密钥验收](docs/KEYS-VALIDATION.md) · [可选 B 站官方接入模块](docs/BILIBILI-LIVE.md) · [迁移说明](docs/MIGRATION.md)
 
 ## Windows 桌面与直播采集
 
-当前默认流程是启动本地桌面程序，通过浏览器授权直接连接已有风铃站点，在私人控制台审信、批准和手动上屏，再让直播姬或 OBS 采集 **WindChime Display** 独立窗口。不要采集审核控制台。审核和待播规则仍由联网的站点服务器统一执行，网页与桌面共享同一份数据；桌面版不是离线收件箱。
+当前默认流程是在网站的 `/mail/live` 选择话题、生成桌面连接密钥，复制到本地桌面程序导入，在私人控制台审信、批准和手动上屏，再让直播姬或 OBS 采集 **WindChime Display** 独立窗口。不要采集审核控制台。审核和待播规则仍由联网的站点服务器统一执行，网页与桌面共享同一份数据；桌面版需要连接站点服务器。
 
-在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 发行包。完整站点启动、0.6.0 升级和操作步骤见[运行指南](docs/LIVE.md)，具体产物及安装步骤见[桌面 README](apps/desktop/README.md)。这些命令是操作说明，实际测试范围以注明日期的验收记录为准。
+连接密钥自生成起有效 30 天，可在有效期内重复导入，也可由多台电脑共用。共用同一密钥的电脑拥有相同话题权限；撤销该密钥会使这些连接及其展示授权全部失效。需要分别撤销设备时，为每台电脑生成独立密钥。旧浏览器配对流程作为备用入口保留。
+
+网站必须安装并实际部署 0.6.1 才能生成和验证连接密钥；只更新桌面程序或仓库依赖不会升级正在运行的网站。本轮代码交付不包含 UliUli、Mia 或其他网站的生产部署。
+
+在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 发行包。0.6.1 升级和密钥操作步骤见[连接说明](docs/CONNECTION-KEYS.md)，通用站点启动见[运行指南](docs/LIVE.md)，具体产物及安装步骤见[桌面 README](apps/desktop/README.md)。这些命令是操作说明，实际测试范围以注明日期的验收记录为准。
 
 这个流程不依赖 B 站官方启动、平台密钥、项目 ID、H5 或上架审核。`apps/live-gateway` 的普通浏览器展示、H5 和平台生命周期适配继续保留为可选模块；已有平台项目与私有配置无需更改。旧平台联调报告记录当时的工作范围，不构成本地桌面交付的前置条件。
 
@@ -38,14 +42,14 @@ npm run dev
 未公开发布时，在风铃目录执行 `npm pack`，在网站目录安装生成的包：
 
 ```bash
-npm install /你的路径/WindChime/windchime-embed-0.6.0.tgz sqlite3@6.0.1
+npm install /你的路径/WindChime/windchime-embed-0.6.1.tgz sqlite3@6.0.1
 # 需要粉丝图片和主播替换图片时
 npm install sharp@0.35.4
 # 需要二维码和海报时
 npm install qrcode
 ```
 
-正式发布后可替换为 `npm install --save-exact @windchime/embed@0.6.0`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
+正式发布后可替换为 `npm install --save-exact @windchime/embed@0.6.1`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
 
 ```ts
 // next.config.ts

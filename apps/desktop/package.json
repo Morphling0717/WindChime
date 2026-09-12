@@ -1,7 +1,7 @@
 {
   "name": "windchime-desktop",
   "productName": "WindChime",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "风铃直播信箱 · 私人审核与播出控制台",
   "author": "WindChime contributors",
   "license": "MIT",
@@ -13,9 +13,10 @@
     "start": "npm run build && electron-forge start",
     "package": "npm run build && electron-forge package --platform=win32 --arch=x64",
     "make": "npm run build && node scripts/make.cjs",
-    "test": "node --test tests/*.test.cjs",
+    "test": "npm run build && node --test tests/*.test.cjs",
     "test:smoke": "npm run build && electron scripts/smoke.cjs",
-    "test:sites": "npm run build && node scripts/run-site-smoke.cjs"
+    "test:sites": "npm run build && node scripts/run-site-smoke.cjs",
+    "test:keys": "npm run build && node scripts/run-key-smoke.cjs"
   },
   "config": { "forge": "./forge.config.cjs" },
   "devDependencies": {

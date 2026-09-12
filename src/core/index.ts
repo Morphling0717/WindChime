@@ -1,5 +1,6 @@
 /** Runtime-free domain contracts. Importing this entry never imports React or CSS. */
 export * from "./live.js";
+export * from "./connection-key.js";
 export * from "../types-topics.js";
 export * from "../time.js";
 import type { WindChimeTopic } from "../types-topics.js";

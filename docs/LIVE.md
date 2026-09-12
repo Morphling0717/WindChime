@@ -1,6 +1,8 @@
-# 风铃 0.6.0 直播审核、展示与桌面运行指南
+# 风铃 0.6.1 直播审核、展示与桌面运行指南
 
 当前交付采用 **本地 Windows 桌面程序直接连接风铃站点，直播姬或 OBS 采集独立展示窗口**。启动桌面程序不经过 B 站官方入口，不需要平台密钥、项目 ID、H5 发布或上架审核。网关和 H5 代码保留为可选模块，已有平台项目与私有配置无需改动。
+
+0.6.1 默认在网页生成有效期 30 天、可重复导入的桌面连接密钥，旧浏览器配对作为备用。完整生成、导入、多台共用与撤销步骤见 [CONNECTION-KEYS.md](CONNECTION-KEYS.md)。网站必须实际部署 0.6.1 才能支持新密钥流程；本轮不进行生产部署。0.6.1 的实际验收单独见 [KEYS-VALIDATION.md](KEYS-VALIDATION.md)。
 
 0.6.0 把「审核批准」和「上屏」分成两个服务端操作。网页后台、桌面控制端和直播展示共用 `service.broadcast`；未审核原文只进入私人控制台。审核生成固定版本的正文、昵称、链接文字和图片快照，展示接口只返回当前被手动选中的获准快照。
 
@@ -12,13 +14,13 @@
 
 | 部分 | 代码/入口 | 职责 |
 | --- | --- | --- |
-| 独立通用库 | `@windchime/embed@0.6.0`，`core`、`server`、`sqlite`、`next`、`client`、可选 `broadcast` 子入口 | 审核、队列、版本、隔离授权、图片快照、断线安全规则 |
+| 独立通用库 | `@windchime/embed@0.6.1`，`core`、`server`、`sqlite`、`next`、`client`、可选 `broadcast` 子入口 | 审核、队列、版本、隔离授权、图片快照、断线安全规则 |
 | UliUli / Mia | 两站 `/mail/live`；原 `/mail` 保留 | 私人审信、修改展示稿、批准/拒绝、排序、预览、上屏和外观 |
-| 桌面控制端 | `apps/desktop`；在原站点 `/mail/live` 批准设备 | 直接连接站点、共用审信工作台、多站点/话题切换、快捷隐藏 |
+| 桌面控制端 | `apps/desktop`；在原站点 `/mail/live` 生成连接密钥 | 直接连接站点、共用审信工作台、多站点/话题切换、快捷隐藏 |
 | 桌面独立展示 | **WindChime Display** 窗口 | 直播软件采集此窗口；只读获取当前获准画面，不含登录或管理界面 |
 | 无 B 站完整示例 | `examples/next-sqlite` 的 `/admin/live`、独立 `/display` | 其他 Next.js 网站的可运行接入范例 |
 
-先备份并升级站点到同一 0.6.0 包，再运行桌面并通过原网站批准设备，最后打开独立窗口进行本地采集验收。平台配置不参与这个顺序。网关 `/display` 浏览器源、`/h5` 官方启动和站点 `/mail/connect` 平台绑定属于后文的可选模块。
+先备份并升级站点到同一 0.6.1 包，在原网站生成连接密钥并导入桌面，最后打开独立窗口进行本地采集验收。平台配置不参与这个顺序。网关 `/display` 浏览器源、`/h5` 官方启动和站点 `/mail/connect` 平台绑定属于后文的可选模块。
 
 ## 本地启动
 
@@ -32,7 +34,7 @@ npm ci
 npm run build
 ```
 
-**两个现有站点**已经固定到各自 `vendor/windchime-embed-0.6.0.tgz`。在每站运行 `npm ci`，保留既有 `.env.local`、数据库路径、登录配置和身份盐，再增加以下配置。例如 UliUli 本地端口选用 3401：
+**两个现有站点**固定到各自 `vendor/windchime-embed-0.6.1.tgz`。在每站运行 `npm ci`，保留既有 `.env.local`、数据库路径、登录配置和身份盐，再增加以下配置。例如 UliUli 本地端口选用 3401：
 
 ```dotenv
 WINDCHIME_SITE_ORIGIN=http://localhost:3401
@@ -89,9 +91,9 @@ npm start
 npm run make
 ```
 
-桌面中输入站点地址及连接名称，点击浏览器授权；在原网站登录、选择话题并核对配对码后批准设备。桌面不要求输入网站管理员密码，设备授权限制到一个站点/话题。支持多个连接，切换连接清空输出。**Ctrl+Shift+H** 和托盘菜单均可一键隐藏；关闭控制台窗口保留托盘，使用「退出并结束展示」结束程序。这里使用风铃设备授权，不使用 B 站身份码或平台登录。
+在原网站登录、选择话题并生成桌面连接密钥，复制到桌面导入。密钥有效 30 天，可重复使用；共用同一密钥的电脑会在撤销后一起失效，详细说明见 [CONNECTION-KEYS.md](CONNECTION-KEYS.md)。原浏览器配对保留为备用入口。桌面不要求输入网站管理员密码，控制授权限制到一个站点/话题。支持多个连接，切换连接清空输出。**Ctrl+Shift+H** 和托盘菜单均可一键隐藏；关闭控制台窗口保留托盘，使用「退出并结束展示」结束程序。这里使用风铃设备授权，不使用 B 站身份码或平台登录。
 
-`make` 的目标产物位于 `apps/desktop/out/installers/`：`WindChime-Setup.exe` 和 `WindChime-win32-x64-0.6.0.zip`，另有 Squirrel 更新文件。ZIP 解压后运行 `WindChime.exe`。默认未做 Windows 代码签名；签名证书可通过构建环境单独配置。具体 ASCII 暂存目录、签名变量、设备凭据和测试命令见 [桌面 README](../apps/desktop/README.md)。是否已生成、安装及实机验证应以本轮验证记录为准，不能仅因有 `make` 命令就视为安装验收通过。
+`make` 的目标产物位于 `apps/desktop/out/installers/`：`WindChime-Setup.exe` 和 `WindChime-win32-x64-0.6.1.zip`，另有 Squirrel 更新文件。ZIP 解压后运行 `WindChime.exe`。默认未做 Windows 代码签名；签名证书可通过构建环境单独配置。具体 ASCII 暂存目录、签名变量、设备凭据和测试命令见 [桌面 README](../apps/desktop/README.md)。是否已生成、安装及实机验证应以本轮验证记录为准，不能仅因有 `make` 命令就视为安装验收通过。
 
 默认外观支持透明背景、字体、字号、文字/背景颜色、圆角、间距、布局、图片排列和动画。开发者可从 `@windchime/embed/broadcast` 导入 `WindChimeLiveDisplay`，提供稳定的只读 `client` 和自定义 `render({snapshot, appearance, assetUrls})`；只有服务端批准的快照及固定图片能进入该组件。`@windchime/embed/client` 提供 `createWindChimeDisplayClient`。自定义页面应继续使用接收器的连接、清屏和图片校验规则，并保持独立文档/窗口；库的其他子入口仍能在无 B 站、无桌面的 Next.js 网站中独立使用。
 

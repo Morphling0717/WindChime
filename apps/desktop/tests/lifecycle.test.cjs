@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 async function harness(options={}) {
   const deferredCrash=options.deferredCrash;
-  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],shortcuts=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0;
+  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault;
   const app=new EventEmitter();Object.assign(app,{requestSingleInstanceLock:()=>true,whenReady:async()=>{},getPath:()=>'/fixture',getName:()=> 'Fixture',quit:()=>{quitCount++;}});
   class Window extends EventEmitter {
     constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isCrashed:()=>!!this.crashed,reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
@@ -18,12 +18,13 @@ async function harness(options={}) {
     show(){}showInactive(){this.showCount++;}focus(){}hide(){this.hideCount++;}isDestroyed(){return !!this.destroyed;}
     close(){this.closeRequested=true;}finishClose(){this.destroyed=true;this.emit('closed');}
   }
-  const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>Buffer.from(s),decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutResult??true;},unregisterAll:()=>{}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
+  const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutResult??true;},unregisterAll:()=>{}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
   const fetch=async(url,options)=>{
     const request={url,body:options.body?JSON.parse(options.body):null,method:options.method,headers:options.headers};requests.push(request);
     const intercepted=route?.(request);if(intercepted)return intercepted;
     let value={};
-    if(url.endsWith('/capabilities'))value={protocolVersion:1,siteId:new URL(url).port};
+    if(url.endsWith('/capabilities'))value={protocolVersion:1,siteId:new URL(url).port,features:{connectionKeys:true}};
+    if(url.endsWith('/control/identity'))value={siteId:new URL(url).port,topicId:new URL(url).port,topicTitle:'Topic '+new URL(url).port,label:'Shared key',expiresAt:'2099-01-01T00:00:00.000Z',grantId:'grant-'+new URL(url).port};
     if(url.endsWith('/devices/request'))value={deviceCode:'private',userCode:'CODE'+sequence,expiresAt:'future'};
     if(url.endsWith('/devices/poll'))value={status:'approved',topicId:new URL(url).port,token:'wc_ctl_private',expiresAt:'future'};
     if(url.endsWith('/control/grants'))value={token:'wc_disp_private',id:'grant'};
@@ -31,14 +32,14 @@ async function harness(options={}) {
     if(url.endsWith('/display/open'))value={receiverId:'r',epoch:'epoch',leaseMs:3000};
     return Response.json(value);
   };
-  const fileSystem={readFile:async()=>{if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(_path,bytes)=>{vaultWrites.push(JSON.parse(bytes.toString()));},rename:async()=>{}};
+  const fileSystem={readFile:async()=>{if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(_path,bytes)=>{const candidate=JSON.parse(bytes.toString());await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async()=>{await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
-  wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name==='./security.cjs'?require('../security.cjs'):require(name),path.join(__dirname,'..'));
+  wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
   async function pair(port){const pending=await invoke('sites:pair',[{origin:`http://localhost:${port}`,label:`Site ${port}`}]);assert(pending.ok);const result=await invoke('sites:pair-status',[pending.data.id]);assert(result.ok,result.error);return result.data.site;}
-  return {windows,requests,invoke,pair,handlers,app,vaultWrites,shortcuts,powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
+  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
 }
 test('completing a new pairing clears the old output; its delayed close cannot hide the new mailbox',async()=>{
   const h=await harness();await h.pair(3011);assert((await h.invoke('display:open')).ok);const old=h.output;
@@ -234,4 +235,122 @@ test('failed blank compositor creation closes the output instead of revealing a 
   h.setBlankLoadGate(()=>Promise.reject(new Error('renderer unavailable')));
   await h.invoke('control:hide');await flush();assert(output.closeRequested);assert.equal((await h.invoke('app:status')).data.displayOpen,false);
   assert.equal(output.showCount,1);assert.equal(h.requests.filter(r=>r.url.endsWith('/display/open')).length,1);
+});
+
+const { encodeWindChimeConnectionKey } = require('../build/connection-key.cjs');
+const keyFor = (port, seed = 5) => encodeWindChimeConnectionKey({ origin: `http://localhost:${port}`, siteId: String(port), token: 'wc_ctl_' + Buffer.alloc(32,seed).toString('base64url') });
+test('connection key validates identity before selection, saves v1 encrypted credentials and returns no token',async()=>{
+  const h=await harness();const key=keyFor(3011);
+  const first=await h.invoke('sites:import-key',[key]);assert(first.ok,first.error);
+  assert.equal(first.data.topicId,'3011');assert.equal(first.data.label,'Shared key');assert(!('token' in first.data));
+  assert.deepEqual(h.requests.map(r=>new URL(r.url).pathname),['/api/mail/live/capabilities','/api/mail/live/control/identity']);
+  assert(!h.requests[0].headers.authorization);assert(h.requests[1].headers.authorization.startsWith('Bearer wc_ctl_'));
+  assert(h.requests.every(r=>!r.url.includes('wc_ctl_')&&!r.url.includes('wc_conn_')));
+  assert.equal(h.vaultWrites.at(-1).version,1);assert.equal(h.vaultWrites.at(-1).sites.length,1);
+  assert.equal(h.output,undefined,'connection cannot automatically create output');
+  const again=await h.invoke('sites:import-key',[key]);assert(again.ok,again.error);assert.equal(again.data.id,first.data.id);
+  assert.equal(again.data.expiresAt,first.data.expiresAt,'import never extends server expiry');
+  assert.equal((await h.invoke('sites:list')).data.items.length,1);
+});
+test('malformed key and a different site instance never receive an authenticated request',async()=>{
+  const h=await harness();assert.equal((await h.invoke('sites:import-key',['not-a-key'])).ok,false);assert.equal(h.requests.length,0);
+  h.setRoute(r=>r.url.endsWith('/capabilities')?Promise.resolve(Response.json({protocolVersion:1,siteId:'other',features:{connectionKeys:true}})):null);
+  const result=await h.invoke('sites:import-key',[keyFor(3011)]);assert.equal(result.code,'CONNECTION_SITE_MISMATCH');
+  assert.equal(h.requests.length,1);assert(!h.requests[0].headers.authorization);assert.equal(h.vaultWrites.length,0);
+});
+test('unsupported sites and an HTML 404 have actionable private errors',async()=>{
+  for(const mode of ['old','404','html']){
+    const h=await harness();h.setRoute(r=>r.url.endsWith('/capabilities')?Promise.resolve(mode==='old'?Response.json({protocolVersion:1,siteId:'3011',features:{pairing:true}}):new Response('<html>not a compatible API</html>',{status:mode==='404'?404:200,headers:{'content-type':'text/html'}})):null);
+    const result=await h.invoke('sites:import-key',[keyFor(3011)]);assert.equal(result.ok,false);assert(!result.error.includes('<html>'));
+    assert.match(result.error,mode==='old'?/0\.6\.1/:mode==='404'?/HTTP 404/:/无法识别/);assert.equal(h.vaultWrites.length,0);
+  }
+  const h=await harness();h.setRoute(()=>Promise.resolve(new Response('Missing',{status:404})));
+  const result=await h.invoke('sites:pair',[{origin:'http://localhost:3011',label:'Old pairing'}]);assert.match(result.error,/HTTP 404/);
+});
+test('revoked or expired keys and connection failures preserve the selected mailbox and hide remote response secrets',async()=>{
+  for(const code of ['CONNECTION_KEY_INVALID','CONNECTION_KEY_REVOKED','CONNECTION_KEY_EXPIRED']){
+    const h=await harness();const old=await h.pair(3011);await h.invoke('display:open');const output=h.output,stored=h.vaultWrites.length;
+    h.setRoute(r=>r.url.endsWith('/control/identity')?Promise.resolve(Response.json({code,error:keyFor(3012)},{status:401})):null);
+    const result=await h.invoke('sites:import-key',[keyFor(3012)]);assert.equal(result.code,code);assert(!result.error.includes('wc_conn_'));assert(!result.error.includes('wc_ctl_'));
+    assert.equal((await h.invoke('sites:list')).data.selectedId,old.id);assert.equal(h.vaultWrites.length,stored);assert.equal(output.hideCount,0);
+  }
+  const h=await harness();h.setRoute(()=>Promise.reject(new TypeError('fetch failed')));
+  assert.equal((await h.invoke('sites:import-key',[keyFor(3012)])).code,'REMOTE_UNREACHABLE');assert.equal(h.vaultWrites.length,0);
+});
+test('successful key import uses the existing switch guard; stale identity cannot select an old site',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const old=h.output;
+  assert((await h.invoke('sites:import-key',[keyFor(3012)])).ok);assert(old.closeRequested);assert(old.hideCount>0);
+  await h.invoke('display:open');const current=h.output,hideCount=h.requests.filter(r=>r.body?.action==='hide').length;
+  old.finishClose();await flush();assert.equal(h.requests.filter(r=>r.body?.action==='hide').length,hideCount);assert.equal(current.hideCount,0);
+  const gate=deferred();h.setRoute(r=>r.url.includes(':3011/api/mail/live/control/identity')?gate.promise:null);
+  const pending=h.invoke('sites:import-key',[keyFor(3011)]);await flush();
+  const selected=await h.invoke('sites:import-key',[keyFor(3012)]);assert(selected.ok);
+  gate.resolve(Response.json({siteId:'3011',topicId:'3011',topicTitle:'Old',label:'Old',expiresAt:'2099-01-01T00:00:00.000Z',grantId:'old'}));
+  assert.equal((await pending).code,'CONNECTION_CHANGED');assert.equal((await h.invoke('sites:list')).data.selectedId,selected.data.id);
+});
+test('display cannot import a control key; encryption failure never sends the key to a website',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const before=h.requests.length;
+  assert.equal((await h.invoke('sites:import-key',[keyFor(3012)],h.output)).ok,false);assert.equal(h.requests.length,before);
+  const unavailable=await harness({encryptionAvailable:false});assert.equal((await unavailable.invoke('sites:import-key',[keyFor(3011)])).code,'CREDENTIAL_ENCRYPTION_UNAVAILABLE');assert.equal(unavailable.requests.length,0);
+});
+
+test('encryption, write and rename failures leave the old connection, vault and live output intact',async()=>{
+  for(const stage of ['encrypt','write','rename']) {
+    const h=await harness(),old=await h.pair(3011);await h.invoke('display:open');const output=h.output;
+    const before=(await h.invoke('sites:list')).data,committed=h.vaultCommits.at(-1),commitCount=h.vaultCommits.length;
+    h.setPersistence({[stage]:()=>{throw new Error('SECRET_STORAGE_DETAILS');}});
+    const result=await h.invoke('sites:import-key',[keyFor(3012)]);
+    assert.equal(result.ok,false);assert.equal(result.code,'CREDENTIAL_SAVE_FAILED');assert(!JSON.stringify(result).includes('SECRET_STORAGE_DETAILS'));
+    assert.deepEqual((await h.invoke('sites:list')).data,before);assert.equal((await h.invoke('sites:list')).data.selectedId,old.id);
+    assert.equal(h.vaultCommits.length,commitCount);assert.deepEqual(h.vaultCommits.at(-1),committed);
+    assert.equal(output.hideCount,0);assert(!output.closeRequested);assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  }
+});
+
+test('failed reimport cannot replace current connection metadata or close its output',async()=>{
+  const h=await harness(),first=await h.invoke('sites:import-key',[keyFor(3011)]);assert(first.ok);await h.invoke('display:open');const output=h.output;
+  const before=(await h.invoke('sites:list')).data,committed=h.vaultCommits.at(-1);
+  h.setRoute(r=>r.url.endsWith('/control/identity')?Promise.resolve(Response.json({siteId:'3011',topicId:'3011',topicTitle:'Changed title',label:'Changed label',expiresAt:'2099-01-01T00:00:00.000Z',grantId:'grant-3011'})):null);
+  h.setPersistence({rename:()=>{throw new Error('EACCES');}});
+  assert.equal((await h.invoke('sites:import-key',[keyFor(3011)])).code,'CREDENTIAL_SAVE_FAILED');
+  assert.deepEqual((await h.invoke('sites:list')).data,before);assert.deepEqual(h.vaultCommits.at(-1),committed);assert.equal(output.hideCount,0);
+});
+
+test('a newer selection during candidate disk write cancels import before it can overwrite the vault',async()=>{
+  const h=await harness(),a=await h.pair(3011),b=await h.pair(3012);await h.invoke('sites:select',[a.id]);await h.invoke('display:open');const output=h.output;
+  const gate=deferred();let writing=false;
+  h.setPersistence({write:candidate=>{if(candidate.sites.some(site=>site.topicId==='3013')){writing=true;return gate.promise;}}});
+  const importing=h.invoke('sites:import-key',[keyFor(3013)]);await flush();await flush();assert(writing);assert.equal(output.hideCount,0);
+  const selecting=h.invoke('sites:select',[b.id]);await flush();assert.equal((await h.invoke('sites:list')).data.selectedId,b.id);
+  gate.resolve();assert.equal((await importing).code,'CONNECTION_CHANGED');assert((await selecting).ok);
+  assert.equal(h.vaultCommits.at(-1).selected,b.id);assert(!h.vaultCommits.some(v=>v.sites.some(site=>site.topicId==='3013')));
+  assert(!(await h.invoke('sites:list')).data.items.some(site=>site.topicId==='3013'));
+});
+
+test('forgetting an unselected mailbox during import cannot be undone by its pending vault candidate',async()=>{
+  const h=await harness(),a=await h.pair(3011),b=await h.pair(3012),gate=deferred();let writing=false;
+  h.setPersistence({write:candidate=>{if(candidate.sites.some(site=>site.topicId==='3013')){writing=true;return gate.promise;}}});
+  const importing=h.invoke('sites:import-key',[keyFor(3013)]);await flush();await flush();assert(writing);
+  const forgetting=h.invoke('sites:forget',[a.id]);await flush();assert.equal((await h.invoke('sites:list')).data.items.length,1);
+  gate.resolve();assert.equal((await importing).code,'CONNECTION_CHANGED');assert((await forgetting).ok);
+  const final=(await h.invoke('sites:list')).data;assert.equal(final.selectedId,b.id);assert.deepEqual(Array.from(final.items,site=>site.id),[b.id]);
+  assert.deepEqual(h.vaultCommits.at(-1).sites.map(site=>site.id),[b.id]);
+});
+
+test('selection arriving during atomic rename runs after import publication and owns the final vault',async()=>{
+  const h=await harness(),a=await h.pair(3011),b=await h.pair(3012);await h.invoke('sites:select',[a.id]);await h.invoke('display:open');const output=h.output;
+  const gate=deferred();let renaming=false;
+  h.setPersistence({rename:candidate=>{if(!renaming&&candidate.sites.some(site=>site.topicId==='3013')){renaming=true;return gate.promise;}}});
+  const importing=h.invoke('sites:import-key',[keyFor(3013)]);await flush();await flush();assert(renaming);assert.equal(output.hideCount,0);
+  const selecting=h.invoke('sites:select',[b.id]);await flush();assert.equal((await h.invoke('sites:list')).data.selectedId,a.id);
+  gate.resolve();const imported=await importing;if(!imported.ok)assert.equal(imported.code,'CONNECTION_CHANGED');assert((await selecting).ok);
+  assert.equal((await h.invoke('sites:list')).data.selectedId,b.id);assert.equal(h.vaultCommits.at(-1).selected,b.id);
+  assert(h.vaultCommits.at(-1).sites.some(site=>site.topicId==='3013'));assert(output.closeRequested);
+});
+
+test('untrusted remote error codes cannot echo a connection key or prototype properties into IPC',async()=>{
+  const h=await harness();for(const code of [keyFor(3012),'wc_ctl_'+ 'A'.repeat(43),'constructor','__proto__',{secret:keyFor(3012)}]) {
+    h.setRoute(r=>r.url.endsWith('/control/identity')?Promise.resolve(Response.json({code,error:keyFor(3012)},{status:401})):null);
+    const result=await h.invoke('sites:import-key',[keyFor(3012)]);assert.equal(result.ok,false);assert.equal(result.code,'CONNECTION_FAILED');assert(!/wc_ctl_|wc_conn_/.test(JSON.stringify(result)));
+  }
 });
