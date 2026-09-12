@@ -4,9 +4,9 @@
 
 ## 先升级网站
 
-网站必须安装并实际运行 `@windchime/embed` 0.6.1，桌面应用也使用 0.6.1。旧站点没有新接口；仅更新安装包、修改仓库依赖或打开新网页标签，不会替换正在运行的旧服务。
+网站必须安装并实际运行 `@windchime/embed` 0.6.1，桌面应用使用 0.6.1 或兼容新版（当前桌面 0.6.3）。旧站点没有新接口；仅更新安装包、修改仓库依赖或打开新网页标签，不会替换正在运行的旧服务。
 
-尚未公开发布到 npm 时，在 WindChime 仓库构建 `windchime-embed-0.6.1.tgz`，由网站固定安装同一文件并提交其 `package.json`、lockfile 和 vendor 校验记录。UliUli 与 Mia 的接入步骤见各站 `docs/WINDCHIME-LIVE.md`。本轮没有部署生产站点，也没有读取或改动真实平台密钥、生产数据库和匿名身份盐。
+尚未公开发布到 npm 时，在 WindChime 仓库构建 `windchime-embed-0.6.1.tgz`，由网站固定安装同一文件并提交其 `package.json`、lockfile 和 vendor 校验记录。UliUli 与 Mia 的接入步骤见各站 `docs/WINDCHIME-LIVE.md`。UliUli 已于 2026-09-13 经授权部署，并保留原数据库内容、资源和匿名身份盐；见 [生产部署记录](https://github.com/Morphling0717/Next_UliUli/blob/codex/windchime-desktop-v0.6.0/docs/WINDCHIME-PRODUCTION-20260913.md)。Mia 本次未部署，真实平台密钥未作修改。
 
 升级前保留原数据库、私有图片目录、配置和旧版本代码的可恢复备份。先用数据库副本完成初始化或迁移、构建和回归，再安排站点的实际部署。继续保留 `DATABASE_PATH` 与 `WINDCHIME_HASH_SALT` 的原值；已存在的信件、话题、审核记录和设备配对不需要为密钥功能重新创建。
 
