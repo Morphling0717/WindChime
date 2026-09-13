@@ -1,0 +1,112 @@
+{
+  "testedAt": "2026-09-13T06:19:07.897Z",
+  "site": "https://uliuli.cn",
+  "deploymentCommitReportedByDeployer": "fc16de50011227cd69fba064b541a38f85cf76d9",
+  "visual": {
+    "pages": [
+      {
+        "url": "https://uliuli.cn/app",
+        "status": 200,
+        "title": "UliUli App Hub",
+        "h1": [
+          "ULIULI APP"
+        ]
+      },
+      {
+        "url": "https://uliuli.cn/",
+        "status": 200,
+        "title": "丝瓜Uli | UliUli 主站",
+        "h1": [
+          "蝴蝶梦中歌唱，彼方沉眠"
+        ]
+      }
+    ],
+    "errors": [],
+    "screenshots": [
+      "uliuli-production-browser-home.png",
+      "uliuli-production-browser-app.png"
+    ]
+  },
+  "anonymousHttp": {
+    "testedAt": "2026-09-13T06:16:47.913Z",
+    "method": "Browser-owned Node fetch without Cookie or Authorization; public read-only HTTP.",
+    "checks": [
+      {
+        "path": "/",
+        "status": 200,
+        "location": null,
+        "contentType": "text/html; charset=utf-8",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "title": "丝瓜Uli | UliUli 主站",
+        "hasAdminKeyField": false
+      },
+      {
+        "path": "/app",
+        "status": 200,
+        "location": null,
+        "contentType": "text/html; charset=utf-8",
+        "cacheControl": "s-maxage=31536000",
+        "title": "UliUli App Hub",
+        "hasAdminKeyField": false
+      },
+      {
+        "path": "/mail",
+        "status": 200,
+        "location": null,
+        "contentType": "text/html; charset=utf-8",
+        "cacheControl": "s-maxage=31536000",
+        "title": "丝瓜Uli | UliUli 主站",
+        "hasAdminKeyField": false
+      },
+      {
+        "path": "/mail/live?topicId=default",
+        "status": 307,
+        "location": "/mail?topicId=default",
+        "contentType": "text/html; charset=utf-8",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/api/mail/live/capabilities",
+        "status": 200,
+        "location": null,
+        "contentType": "application/json",
+        "cacheControl": "no-store",
+        "protocolVersion": 1,
+        "features": {
+          "siteControl": true,
+          "mailManagement": true,
+          "keywordFilterToggle": true
+        }
+      },
+      {
+        "path": "/api/mail/live/control/identity",
+        "status": 401,
+        "location": null,
+        "contentType": "application/json",
+        "cacheControl": "no-store",
+        "unauthenticatedRejected": true
+      }
+    ]
+  },
+  "authentication": {
+    "existingMailSessionCookiePresent": true,
+    "loginPerformed": false,
+    "cookieStoreModified": false,
+    "requestHeadersRewritten": false,
+    "productionMailPageOpened": false,
+    "privateMessagesRead": false,
+    "keysCreated": false,
+    "managementMutations": false
+  },
+  "limitations": [
+    "Production /mail login UI was not visually retested. Existing browser mail session was retained; anonymous browser context creation was rejected by Tabbit and was not bypassed.",
+    "Production /mail and legacy redirect were checked only by read-only browser-owned Node HTTP fetch with no Cookie or Authorization. Both local websites previously passed 17 real-browser checks independently.",
+    "Public homepage and /app were rendered in real Tabbit with the existing browser context. No management page was opened.",
+    "Existing PWA update banner was visible; it was not clicked."
+  ],
+  "checks": {
+    "homeTitleCorrect": true,
+    "appHubDistinct": true,
+    "consoleAndPageErrorCount": 0
+  }
+}
