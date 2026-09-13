@@ -75,6 +75,7 @@ let keywordEnabled = false,
   control,
   userData,
   confirmResponse = 1,
+  confirmCalls = 0,
   revision = 1;
 let blocklist = [],
   extraGrantRevokedAt = null;
@@ -84,6 +85,7 @@ const requests = [],
   errors = [],
   opened = [],
   savedFiles = [],
+  topicPickerLayouts = [],
   approved = new Set();
 const appearance = {
   fontFamily: "system-ui",
@@ -327,6 +329,75 @@ async function input(selector, value) {
   );
   await pause(80);
 }
+async function assertVisiblePicker(selector, label) {
+  const geometry = await evaluate(
+    `(()=>{const node=document.querySelector(${JSON.stringify(selector)});if(!node)return {missing:true};const rect=node.getBoundingClientRect(),style=getComputedStyle(node),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);return {count:document.querySelectorAll(${JSON.stringify(selector)}).length,display:style.display,visibility:style.visibility,disabled:node.disabled,x:rect.x,y:rect.y,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight,hit:hit===node||node.contains(hit)};})()`,
+  );
+  assert.equal(geometry.missing, undefined, label + " exists");
+  assert.equal(geometry.count, 1, label + " has no duplicate selector");
+  assert.notEqual(geometry.display, "none", label + " is displayed");
+  assert.equal(geometry.visibility, "visible", label + " is visible");
+  assert.equal(geometry.disabled, false, label + " is enabled");
+  assert(geometry.width > 40 && geometry.height > 20, label + " has a usable target");
+  assert(geometry.x >= 0 && geometry.y >= 48, label + " is below the title bar");
+  assert(
+    geometry.right <= geometry.viewportWidth &&
+      geometry.bottom <= geometry.viewportHeight,
+    label + " fits inside the viewport: " + JSON.stringify(geometry),
+  );
+  assert.equal(geometry.hit, true, label + " is not covered by another element");
+  return geometry;
+}
+async function selectTopic(topicId, label) {
+  await until(
+    () => evaluate('!!document.querySelector("#desktop-topic")&&!document.querySelector("#desktop-topic").disabled'),
+    label + " topic picker ready",
+  );
+  await assertVisiblePicker("#desktop-topic", label);
+  await input("#desktop-topic", topicId);
+}
+async function assertTopicContent(view, topicId) {
+  const selector = view === "inbox" ? ".inbox-row" : ".wc-mail";
+  const expected = topicId === "general" ? "纸飞机" : "夜猫";
+  const excluded = topicId === "general" ? "夜猫" : "纸飞机";
+  await until(async () => {
+    const state = await evaluate(
+      `({topic:document.querySelector('#desktop-topic')?.value,rows:Array.from(document.querySelectorAll(${JSON.stringify(selector)})).map(node=>node.textContent).join('\\n')})`,
+    );
+    return state.topic === topicId && state.rows.includes(expected) && !state.rows.includes(excluded);
+  }, view + " isolates " + topicId + " messages");
+  const metadata = await evaluate("window.windchimeDesktop.sites()");
+  assert.equal(
+    metadata.data.items.find((site) => site.id === metadata.data.selectedId).selectedTopicId,
+    topicId,
+    "main-process topic selection matches visible content",
+  );
+}
+async function verifyTopicPickerLayouts() {
+  const sizes = [[1200, 620], [1366, 768], [960, 700], [961, 700], [760, 900]];
+  for (const [view, label] of [["inbox", "收件箱"], ["studio", "直播工作台"]]) {
+    await nav(view, label);
+    for (const [width, height] of sizes) {
+      control.setSize(width, height);
+      await evaluate("window.scrollTo(0,0)");
+      await pause(300);
+      const name = `${view}-${width}x${height}`;
+      const website = await assertVisiblePicker("#desktop-mailbox", name + " website picker");
+      const topic = await assertVisiblePicker("#desktop-topic", name + " topic picker");
+      await selectTopic("general", name);
+      await assertTopicContent(view, "general");
+      await selectTopic("event-a", name);
+      await assertTopicContent(view, "event-a");
+      topicPickerLayouts.push({ view, requestedSize: [width, height], website, topic });
+      if (width === 1200 || width === 961)
+        await capture(name, width, height);
+    }
+  }
+  checks.push(
+    "inbox and studio website/topic pickers are unique, visible, inside the viewport and unobstructed at 1200x620, 1366x768, 960x700, 961x700 and 760x900; both topic selections isolate their own messages",
+  );
+  await nav("inbox", "收件箱");
+}
 async function nav(view, label) {
   await click(label);
   await until(
@@ -354,10 +425,10 @@ async function run() {
   userData = await fs.mkdtemp(path.join(os.tmpdir(), "windchime-management-"));
   app.setPath("userData", userData);
   await fs.mkdir(results, { recursive: true });
-  dialog.showMessageBox = async () => ({
-    response: confirmResponse,
-    checkboxChecked: false,
-  });
+  dialog.showMessageBox = async () => {
+    confirmCalls++;
+    return { response: confirmResponse, checkboxChecked: false };
+  };
   dialog.showSaveDialog = async (_window, options) => {
     const filePath = path.join(userData, path.basename(options.defaultPath));
     savedFiles.push(filePath);
@@ -393,6 +464,12 @@ async function run() {
     );
     return control;
   }, "private window");
+  control.show();
+  control.focus();
+  await until(
+    () => evaluate('document.visibilityState==="visible"'),
+    "visible test window enables normal topic polling",
+  );
   await until(
     () => evaluate('!!document.querySelector("input[type=password]")'),
     "key form",
@@ -463,11 +540,11 @@ async function run() {
   await until(
     () =>
       evaluate(
-        'document.querySelectorAll("#desktop-mailbox option").length>0&&Array.from(document.querySelectorAll(".sidebar-topic option")).some(o=>o.value==="new-live")',
+        'document.querySelectorAll("#desktop-mailbox option").length>0&&Array.from(document.querySelectorAll("#desktop-topic option")).some(o=>o.value==="new-live")',
       ),
     "new topic polling",
   );
-  await input(".sidebar-topic select", "event-a");
+  await selectTopic("event-a", "new topic synchronization");
   await until(
     () =>
       evaluate(
@@ -478,6 +555,7 @@ async function run() {
   checks.push(
     "new website activity appears within polling; topic switch isolates messages",
   );
+  await verifyTopicPickerLayouts();
   await nav("topics", "话题管理");
   await capture("topics-wide");
   await click("新建话题");
@@ -673,6 +751,16 @@ async function run() {
   );
   await input(".desktop-studio textarea[maxlength]", "这是一份未保存的稿件");
   confirmResponse = 0;
+  await evaluate("window.scrollTo(0,0)");
+  const canceledTopicConfirm = confirmCalls;
+  await selectTopic("general", "dirty studio topic change");
+  await until(() => confirmCalls > canceledTopicConfirm, "topic change asks about dirty draft");
+  await assertTopicContent("studio", "event-a");
+  assert.equal(
+    await evaluate('document.querySelector(".desktop-studio textarea[maxlength]").value'),
+    "这是一份未保存的稿件",
+    "canceling topic change preserves the unsaved draft",
+  );
   await click("收件箱");
   assert.equal(
     await evaluate('document.querySelector(".wc-desktop").dataset.view'),
@@ -685,9 +773,20 @@ async function run() {
     "这是一份未保存的稿件",
   );
   confirmResponse = 1;
+  const acceptedTopicConfirm = confirmCalls;
+  await selectTopic("general", "confirmed studio topic change");
+  await until(() => confirmCalls > acceptedTopicConfirm, "confirmed topic change prompts first");
+  await assertTopicContent("studio", "general");
+  assert.equal(
+    await evaluate('Array.from(document.querySelectorAll(".desktop-studio textarea")).some(node=>node.value==="这是一份未保存的稿件")'),
+    false,
+    "confirmed topic change discards the previous topic draft",
+  );
   await nav("inbox", "收件箱");
+  await selectTopic("event-a", "restore poster preference fixture topic");
+  await assertTopicContent("inbox", "event-a");
   checks.push(
-    "canceling native unsaved-draft confirmation preserves studio and draft",
+    "canceling topic or page changes preserves the studio topic and dirty draft; confirming a topic change selects the new topic and removes the previous unsaved draft",
   );
   await evaluate('document.querySelector(".desktop-hide").click()');
   await until(
@@ -705,6 +804,7 @@ async function run() {
     electron: process.versions.electron,
     checks,
     screenshots,
+    topicPickerLayouts,
     savedFiles: await Promise.all(
       savedFiles.map(async (file) => ({
         path: file,
@@ -731,12 +831,22 @@ async function run() {
 }
 run().catch(async (error) => {
   await fs.mkdir(results, { recursive: true });
+  let rendererState = null;
+  if (control && !control.isDestroyed()) {
+    try {
+      rendererState = await evaluate(`({view:document.querySelector('.wc-desktop')?.dataset.view,visibility:document.visibilityState,text:document.body.innerText,topic:document.querySelector('#desktop-topic')?.value,keyLength:document.querySelector('input[type=password]')?.value.length})`);
+      await fs.writeFile(path.join(results, "failure.png"), (await control.webContents.capturePage()).toPNG());
+    } catch {}
+  }
   await fs.writeFile(
     path.join(results, "failure.json"),
     JSON.stringify({
       passed: false,
       error: error.message,
       checks,
+      topicPickerLayouts,
+      rendererState,
+      requests,
       consoleErrors: errors,
     }),
   );

@@ -232,14 +232,42 @@
   display: block;
   border-radius: 15px;
 }
-.sidebar-topic {
-  display: block;
-  color: #748892;
-  font-size: 10px;
-  margin-top: 16px;
+/* A single visible picker serves every view, including short/wide windows. */
+.desktop-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 20px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border-radius: 20px;
 }
-.sidebar-topic select {
-  margin-top: 6px;
+.context-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: #607780;
+  font-size: 11px;
+}
+.context-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #ffffffdf;
+  border-radius: 12px;
+  background: #ffffffa1;
+  color: #365863;
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+.context-field select:disabled {
+  color: #758992;
+  opacity: 1;
+}
+.context-field small {
+  font-size: 10px;
+  color: #748892;
+  overflow-wrap: anywhere;
 }
 .wc-desktop[data-view="settings"] .desktop-studio .wc-settings {
   display: grid;
@@ -280,8 +308,9 @@
   }
 }
 @media (max-width: 960px) {
-  .sidebar-topic {
-    display: none;
+  .desktop-context {
+    padding: 14px;
+    gap: 12px;
   }
   .management-toolbar > input {
     margin-left: 0;

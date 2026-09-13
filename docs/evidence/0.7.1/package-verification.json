@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-13T07:54:43.719Z",
+  "version": "0.7.1",
+  "passed": true,
+  "archive": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-make-4YAN55\\WindChime-win32-x64\\resources\\app.asar",
+  "entryCount": 19,
+  "runtimeAllowlist": true,
+  "noCredentialLiterals": true,
+  "matchedFiles": [
+    "main.cjs",
+    "security.cjs",
+    "preload-control.cjs",
+    "preload-display.cjs",
+    "build/control.js",
+    "build/control.css",
+    "build/control.html",
+    "build/display.js",
+    "build/display.html",
+    "build/connection-key.cjs",
+    "build/icon.ico",
+    "build/icon.png",
+    "build/tray.png",
+    "build/brand-header.svg",
+    "build/brand-symbol.svg",
+    "build/installer-loading.gif",
+    "build/installer-preview.png"
+  ],
+  "installerArtwork": {
+    "entry": "background.gif",
+    "bytes": 1631200,
+    "sha256": "F7B4A67ADFA2ADCBC4D21F1257F7747FB11A04BB6C39C1007BD29881D99DE183",
+    "matchesBuild": true
+  },
+  "checksumManifest": "SHA256SUMS.txt",
+  "releasesVerified": true,
+  "hashes": [
+    {
+      "name": "WindChime-Setup.exe",
+      "bytes": 157377536,
+      "sha256": "156B589BCD884C0BDA9C18F50D81CB94526FBF1F9E3B7CFB0F8EFB3A2D499777"
+    },
+    {
+      "name": "WindChime-win32-x64-0.7.1.zip",
+      "bytes": 160161502,
+      "sha256": "952AE1BD9565DFF00A7621D2FAA127605E3009723FD63E2BC68F16D2AAF0A585"
+    },
+    {
+      "name": "RELEASES",
+      "bytes": 80,
+      "sha256": "4782ABF78CB877695D581FC6D780894D018EFA0B799D92994C86D88BA1BAA7ED"
+    },
+    {
+      "name": "WindChime-0.7.1-full.nupkg",
+      "bytes": 154913613,
+      "sha256": "820DC9E50AF4DC94A32332215C539378CF7214FB19936FE420BB6E6C9A7236E1",
+      "sha1": "D8B8EC057A7D11AAFEDFA0DAD8D5BC06C8526C34"
+    }
+  ],
+  "executedInstaller": false
+}

@@ -85,6 +85,9 @@ function Icon({
 function App() {
   const [view, setView] = useState<View>("inbox");
   const [topics, setTopics] = useState<WindChimeAdminTopic[]>([]);
+  const [topicListStatus, setTopicListStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [keywordEnabled, setKeywordEnabled] = useState(false);
   const [studioDirty, setStudioDirty] = useState(false),
     [topicDirty, setTopicDirty] = useState(false),
@@ -183,6 +186,7 @@ function App() {
   }, [mailClient, selectedId]);
   useEffect(() => {
     setTopics([]);
+    setTopicListStatus("loading");
     setKeywordEnabled(false);
     setStudioDirty(false);
     setTopicDirty(false);
@@ -194,6 +198,7 @@ function App() {
     const load = async () => {
       if (polling || document.visibilityState === "hidden") return;
       polling = true;
+      let topicsLoaded = false;
       const keywordVersion = keywordRevision.current;
       try {
         const result = await mailClient.topics.listAdmin({
@@ -202,6 +207,8 @@ function App() {
         });
         if (disposed) return;
         setTopics(result.items);
+        setTopicListStatus("ready");
+        topicsLoaded = true;
         if (selected?.scope === "site" && !topicId && result.items.length) {
           await unwrap(
             bridge.selectTopic(
@@ -230,12 +237,14 @@ function App() {
             );
         }
       } catch (e) {
-        if (!disposed)
+        if (!disposed) {
+          if (!topicsLoaded) setTopicListStatus("error");
           setError(
             e instanceof Error
               ? e.message
               : "无法读取话题，请确认网站已升级风铃 0.7.0",
           );
+        }
       } finally {
         polling = false;
       }
@@ -404,68 +413,6 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-mailbox">
-          <div className="sidebar-label">当前网站连接</div>
-          <label className="sr-only" htmlFor="desktop-mailbox">
-            当前信箱
-          </label>
-          <select
-            id="desktop-mailbox"
-            value={selectedId ?? ""}
-            disabled={busy || !sites.length}
-            onChange={(e) =>
-              void change(() => unwrap(bridge.selectSite(e.target.value)))
-            }
-          >
-            <option value="" disabled>
-              尚未连接信箱
-            </option>
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.label}
-              </option>
-            ))}
-          </select>
-          {selected ? (
-            <span className="sidebar-origin">
-              {new URL(selected.origin).host}
-            </span>
-          ) : (
-            <span className="sidebar-origin">从网页复制密钥，即可连接</span>
-          )}
-          {selected && topics.length > 0 && (
-            <label className="sidebar-topic">
-              当前话题
-              <select
-                aria-label="当前话题"
-                value={topicId}
-                disabled={busy}
-                onChange={(e) =>
-                  void change(() =>
-                    unwrap(bridge.selectTopic(e.target.value, selected.id)),
-                  )
-                }
-              >
-                <option value="" disabled>
-                  选择话题
-                </option>
-                {topics.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                    {item.archivedAt ? " · 已归档" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {selected && (
-            <span className="sidebar-origin">
-              {selected.scope === "site"
-                ? "站点授权 · 全部话题"
-                : "旧版话题授权 · 仅当前话题"}
-            </span>
-          )}
-        </div>
         <div className="sidebar-bottom">
           <div className="capture-note">
             <Icon name="screen" />
@@ -481,44 +428,83 @@ function App() {
         </div>
       </aside>
       <main className="desktop-main">
-        {selected ? (
-          <label className="mobile-mailbox">
-            当前信箱
-            <select
-              aria-label="窄窗口切换信箱"
-              value={selectedId ?? ""}
-              disabled={busy}
-              onChange={(e) =>
-                void change(() => unwrap(bridge.selectSite(e.target.value)))
-              }
-            >
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.label}
+        {sites.length > 0 && (
+          <section
+            className="desktop-context glass-surface"
+            aria-label="网站与话题选择"
+          >
+            <label className="context-field" htmlFor="desktop-mailbox">
+              <span>当前网站</span>
+              <select
+                id="desktop-mailbox"
+                value={selectedId ?? ""}
+                disabled={busy}
+                onChange={(e) => {
+                  const nextSiteId = e.target.value;
+                  void change(() => unwrap(bridge.selectSite(nextSiteId)));
+                }}
+              >
+                <option value="" disabled>
+                  选择网站连接
                 </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        {selected && topics.length > 0 && (
-          <label className="mobile-mailbox">
-            当前话题
-            <select
-              aria-label="窄窗口切换话题"
-              value={topicId}
-              onChange={(e) =>
-                void change(() =>
-                  unwrap(bridge.selectTopic(e.target.value, selected.id)),
-                )
-              }
-            >
-              {topics.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.label}
+                  </option>
+                ))}
+              </select>
+              {selected && (
+                <small title={selected.origin}>
+                  {new URL(selected.origin).host}
+                </small>
+              )}
+            </label>
+            {selected && (
+              <label className="context-field" htmlFor="desktop-topic">
+                <span>当前话题</span>
+                <select
+                  id="desktop-topic"
+                  aria-label="当前话题"
+                  aria-describedby="desktop-topic-scope"
+                  value={topicId}
+                  disabled={busy || !topics.length}
+                  onChange={(e) => {
+                    const nextTopicId = e.target.value;
+                    void change(() =>
+                      unwrap(bridge.selectTopic(nextTopicId, selected.id)),
+                    );
+                  }}
+                >
+                  {!topics.length ? (
+                    <option value={topicId} disabled>
+                      {topicListStatus === "loading"
+                        ? "正在读取话题…"
+                        : topicListStatus === "error"
+                          ? "读取失败，请检查连接"
+                          : "暂无可选话题"}
+                    </option>
+                  ) : (
+                    <>
+                      <option value="" disabled>
+                        选择话题
+                      </option>
+                      {topics.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.title}
+                          {item.archivedAt ? " · 已归档" : ""}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <small id="desktop-topic-scope">
+                  {selected.scope === "site"
+                    ? "全部话题 · 新活动自动同步"
+                    : "仅授权话题 · 切换其他话题需在网页生成站点密钥"}
+                </small>
+              </label>
+            )}
+          </section>
         )}
         <header className="desktop-header">
           <div>
