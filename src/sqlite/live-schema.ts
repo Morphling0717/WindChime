@@ -2,6 +2,10 @@ import type { WindChimeSqlExecutor } from "./index.js";
 
 /** Called inside the existing schema transaction. No existing message becomes approved. */
 export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
+  const grantSchema = `CREATE TABLE mail_live_grants (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL CHECK(kind IN ('display','control')), scope TEXT NOT NULL DEFAULT 'topic' CHECK(scope IN ('topic','site')),
+    topic_id TEXT, label TEXT NOT NULL, expires_at INTEGER NOT NULL, revoked_at INTEGER, binding_id TEXT, platform_session TEXT, parent_grant_id TEXT,
+    CHECK ((scope='topic' AND topic_id IS NOT NULL) OR (scope='site' AND kind='control' AND topic_id IS NULL)))`;
   const statements = [
     `CREATE TABLE IF NOT EXISTS mail_live_identity (id INTEGER PRIMARY KEY CHECK(id=1), site_id TEXT NOT NULL)`,
     `INSERT OR IGNORE INTO mail_live_identity(id,site_id) VALUES(1,lower(hex(randomblob(24))))`,
@@ -13,7 +17,7 @@ export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
     `CREATE INDEX IF NOT EXISTS idx_live_queue_order ON mail_live_queue(topic_id,position)`,
     `CREATE TABLE IF NOT EXISTS mail_live_assets (id TEXT PRIMARY KEY, topic_id TEXT NOT NULL, message_id TEXT, purpose TEXT NOT NULL DEFAULT 'source', ordinal INTEGER NOT NULL DEFAULT 0, sha256 TEXT NOT NULL, mime_type TEXT NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL, size INTEGER NOT NULL, receipt_hash TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`,
     `CREATE INDEX IF NOT EXISTS idx_live_assets_message ON mail_live_assets(message_id,ordinal)`,
-    `CREATE TABLE IF NOT EXISTS mail_live_grants (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, topic_id TEXT NOT NULL, label TEXT NOT NULL, expires_at INTEGER NOT NULL, revoked_at INTEGER, binding_id TEXT, platform_session TEXT, parent_grant_id TEXT)`,
+    grantSchema.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS"),
     `CREATE TABLE IF NOT EXISTS mail_live_devices (device_hash TEXT PRIMARY KEY, user_code TEXT NOT NULL UNIQUE, device_name TEXT NOT NULL, challenge TEXT NOT NULL, expires_at INTEGER NOT NULL, topic_id TEXT, consumed_at INTEGER)`,
     `CREATE TABLE IF NOT EXISTS mail_live_operations (operation_id TEXT NOT NULL, topic_id TEXT NOT NULL, input_hash TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(operation_id,topic_id))`,
     `CREATE TABLE IF NOT EXISTS mail_live_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, topic_id TEXT NOT NULL, action TEXT NOT NULL, actor TEXT NOT NULL, message_id TEXT, created_at INTEGER NOT NULL)`,
@@ -27,6 +31,19 @@ export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
   // Permit a safe additive upgrade from an early 0.6 local development database.
   const grantColumns = new Set((await db.all<{name:string}>("PRAGMA table_info(mail_live_grants)")).map((r) => r.name));
   if (!grantColumns.has("parent_grant_id")) await db.run("ALTER TABLE mail_live_grants ADD COLUMN parent_grant_id TEXT");
+  const grantInfo = await db.all<{name:string;notnull:number}>("PRAGMA table_info(mail_live_grants)");
+  if (!grantColumns.has("scope") || grantInfo.some(column => column.name === "topic_id" && column.notnull)) {
+    // SQLite cannot remove NOT NULL in place. Preserve IDs, hashes, expiries and
+    // parent links inside the caller's schema transaction; old authority stays topic-only.
+    const triggers = await db.all<{name:string;sql:string}>("SELECT name,sql FROM sqlite_master WHERE type='trigger' AND sql LIKE '%mail_live_grants%'");
+    for (const trigger of triggers) await db.run(`DROP TRIGGER "${trigger.name.replace(/"/g,'""')}"`);
+    await db.run(grantSchema.replace("mail_live_grants", "mail_live_grants_scope_upgrade"));
+    await db.run(`INSERT INTO mail_live_grants_scope_upgrade(id,token_hash,kind,scope,topic_id,label,expires_at,revoked_at,binding_id,platform_session,parent_grant_id)
+      SELECT id,token_hash,kind,${grantColumns.has("scope") ? "scope" : "'topic'"},topic_id,label,expires_at,revoked_at,binding_id,platform_session,parent_grant_id FROM mail_live_grants`);
+    await db.run("DROP TABLE mail_live_grants");
+    await db.run("ALTER TABLE mail_live_grants_scope_upgrade RENAME TO mail_live_grants");
+    for (const trigger of triggers) await db.run(trigger.sql);
+  }
   const assetColumns = new Set((await db.all<{name:string}>("PRAGMA table_info(mail_live_assets)")).map((r) => r.name));
   if (!assetColumns.has("purpose")) await db.run("ALTER TABLE mail_live_assets ADD COLUMN purpose TEXT NOT NULL DEFAULT 'source'");
   await db.run(`CREATE TRIGGER IF NOT EXISTS live_asset_purpose_immutable BEFORE UPDATE OF purpose ON mail_live_assets BEGIN SELECT RAISE(ABORT,'Live asset purpose is immutable'); END`);
@@ -64,4 +81,5 @@ export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
     DELETE FROM mail_live_bindings WHERE topic_id=OLD.id;
     END`);
   await db.run("INSERT OR IGNORE INTO windchime_migrations(id,applied_at) VALUES('0.6.0-live',?)", [new Date().toISOString()]);
+  await db.run("INSERT OR IGNORE INTO windchime_migrations(id,applied_at) VALUES('0.7.0-site-control',?)", [new Date().toISOString()]);
 }

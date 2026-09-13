@@ -1,0 +1,11 @@
+{
+  "testedAt": "2026-09-13T05:54:28.009Z",
+  "receipt": {
+    "name": "Mia-B",
+    "revokedInWeb": true
+  },
+  "site": "http://127.0.0.1:3032",
+  "label": "密钥验收 44afa312 Mia-B",
+  "privateKeyVisible": 0,
+  "scope": "Synthetic local fixture, real /mail revoke UI."
+}

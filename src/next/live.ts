@@ -1,6 +1,7 @@
 import { createPublicKey, verify } from "node:crypto";
 import { WindChimeError } from "../core/errors.js";
-import type { WindChimeLiveAction } from "../core/live.js";
+import type { WindChimeLiveAction, WindChimeShareInfo } from "../core/live.js";
+import { isWindChimeInboxFilter } from "../core/index.js";
 import type { WindChimeService } from "../server/index.js";
 import type { LiveGrantRow, LiveProof } from "../server/live.js";
 import { readLiveAsset } from "../server/live-media.js";
@@ -12,6 +13,7 @@ export type WindChimeLiveRouteOptions = Pick<WindChimeRouteOptions, "service" | 
   gatewayPublicKeys?: Record<string, string>; gatewayIssuer?: string;
   /** Public origin behind a trusted proxy; never derived from caller-supplied forwarded headers. */
   publicOrigin?: string;
+  siteName?: string; posterDefaults?: WindChimeShareInfo["posterDefaults"];
   now?: () => number;
 };
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" } }); }
@@ -119,7 +121,7 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
       const path = url.pathname.slice(base.length).replace(/^\/+|\/+$/g, "");
       if (req.method === "OPTIONS") { checkOrigin(req); return new Response(null, { status: 204 }); }
       if (req.method !== "GET") checkOrigin(req);
-      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true, connectionKeys: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
+      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true, connectionKeys: true, siteControl: true, mailManagement: true, keywordFilterToggle: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
       if (path === "control/identity") {
         if (req.method !== "GET") return json({ code: "METHOD_NOT_ALLOWED", error: "此接口只支持 GET" }, 405);
         const token = /^Bearer (wc_ctl_[A-Za-z0-9_-]{43})$/.exec(req.headers.get("authorization") ?? "")?.[1];
@@ -155,10 +157,81 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
         // Authenticate cookies before reading the body (legacy callbacks use request.clone()).
         let initialAdmin: Response | null = null;
         if (!bearer(req)) { initialAdmin = await admin(req); if (initialAdmin) return initialAdmin; }
-        if (["POST","PUT","PATCH"].includes(req.method)) data = await body(req);
-        const scope = textInput(data.topicId ?? url.searchParams.get("topicId"),100,"信箱") ?? "default";
-        const authority = bearer(req) ? await control(req,scope) : null; if (authority instanceof Response) return authority;
+        if (["POST","PUT","PATCH"].includes(req.method) || (req.method === "DELETE" && req.body)) data = await body(req);
+        const token = bearer(req), authority = token ? await live.authenticate(token,"control") : null;
+        const requestedScope = textInput(data.topicId ?? url.searchParams.get("topicId"),100,"信箱");
+        if (url.searchParams.getAll("topicId").length > 1 || (data.topicId !== undefined && url.searchParams.has("topicId") && data.topicId !== url.searchParams.get("topicId"))) fail("INVALID_SCOPE","信箱范围不一致");
+        const scope = requestedScope ?? authority?.topic_id ?? "default";
+        async function scoped(id = scope) { if (token) await live.authenticate(token,"control",id); }
+        function siteOnly(bearerOnly = false) { if ((bearerOnly && !authority) || (authority && authority.scope !== "site")) fail("FORBIDDEN","需要站点管理授权",403); }
+        const { topicId: _topicId, ...payload } = data;
+        let segments: string[];
+        try { segments = path.slice("control/".length).split("/").map(decodeURIComponent); }
+        catch { return json({code:"INVALID_PATH",error:"路径编码无效"},400); }
+        if (segments.some(part => /[\\/\u0000-\u001f]/.test(part))) fail("INVALID_PATH","路径无效");
+        const [resource,id,operation] = segments;
+        if (resource === "topics") {
+          if (segments.length === 1 && req.method === "GET") {
+            const items = await service.listTopics({includeArchived:url.searchParams.get("include") === "archived",withCounts:true});
+            return json({items:authority?.scope === "topic" ? items.filter(item => item.id === authority.topic_id) : items});
+          }
+          if (segments.length === 1 && req.method === "POST") { siteOnly(); return json(await service.createTopic(payload as Parameters<typeof service.createTopic>[0]),201); }
+          if (id) {
+            await scoped(id);
+            if (segments.length === 2 && req.method === "GET") {
+              const item=(await service.getTopicById(id))??(await service.getTopicBySlug(id));
+              if(!item)fail("TOPIC_NOT_FOUND","主题不存在",404);return json(item);
+            }
+            siteOnly();
+            if (segments.length === 2 && req.method === "PATCH") return json(await service.updateTopic(id,payload));
+            if ((segments.length === 2 && req.method === "DELETE") || (segments.length === 3 && operation === "archive" && req.method === "POST")) {
+              onlyFields(payload,["markReadFirst"]);
+              const value = payload.markReadFirst ?? url.searchParams.get("markReadFirst") ?? false;
+              const flag = typeof value === "string" ? value === "true" ? true : value === "false" ? false : fail("INVALID_INPUT","markReadFirst 必须是布尔值") : boolInput(value,"markReadFirst");
+              return json(await service.archiveTopic(id,{markReadFirst:flag}));
+            }
+            if (segments.length === 3 && operation === "restore" && req.method === "POST") {onlyFields(payload,[]);return json(await service.restoreTopic(id));}
+            if (segments.length === 3 && operation === "purge" && req.method === "DELETE") return json({ok:true,topic:await service.deleteArchivedTopic(id)});
+          }
+        }
+        if (resource === "messages") {
+          if (scope === "all") siteOnly(); else await scoped();
+          if (segments.length === 1 && req.method === "GET") {
+            const filter = url.searchParams.get("filter")??"all";
+            if(!isWindChimeInboxFilter(filter))fail("INVALID_FILTER","未知信件筛选");
+            return json(await service.listMessages({topicId:scope,filter:filter as "all"|"unread"|"favorited"|"flagged"}));
+          }
+          if (scope === "all") fail("INVALID_SCOPE","修改信件需要明确话题");
+          if (segments.length === 2 && id === "batch" && req.method === "POST") return json(await service.batchMessages(payload as Parameters<typeof service.batchMessages>[0],scope));
+          if (segments.length === 3 && operation === "block" && req.method === "POST") {siteOnly();onlyFields(payload,[]);return json(await service.blockSender(id,scope));}
+          if (segments.length === 2 && req.method === "GET") return json(await service.getMessage(id,scope));
+          if (segments.length === 2 && req.method === "PATCH") return json(await service.updateMessage(id,payload,scope));
+          if (segments.length === 2 && req.method === "DELETE") return json(await service.deleteMessage(id,scope));
+        }
+        if (resource === "settings" && segments.length === 1) {
+          siteOnly();
+          if (req.method === "GET") return json(await service.getSettings());
+          if (req.method === "PATCH") {siteOnly(true);onlyFields(payload,["blockedTermsEnabled"]);await service.setBlockedTermsEnabled(boolInput(payload.blockedTermsEnabled,"blockedTermsEnabled"));return json(await service.getSettings());}
+          if (req.method === "PUT") {onlyFields(payload,["enabled"]);return json(await service.updateSettings({enabled:boolInput(payload.enabled,"enabled")}));}
+        }
+        if (resource === "blocked-terms" && segments.length === 1) {
+          siteOnly();
+          if(req.method === "GET")return json({terms:await service.getBlockedTerms()});
+          if(req.method === "PUT"){onlyFields(payload,["terms"]);return json({terms:await service.setBlockedTerms(payload.terms as string[])});}
+        }
+        if (resource === "blocklist") {
+          siteOnly();
+          if(segments.length === 1 && req.method === "GET")return json(await service.listBlockedSenders());
+          if(segments.length === 2 && req.method === "DELETE")return json(await service.unblockSender(id));
+        }
+        if (resource === "share" && segments.length === 1 && req.method === "GET") {
+          await scoped(); const item=(await service.getTopicById(scope))??(await service.getTopicBySlug(scope));
+          if(!item)fail("TOPIC_NOT_FOUND","主题不存在",404);
+          return json({siteName:options.siteName??new URL(origin(req)).hostname,origin:origin(req),topicId:item!.id,topicTitle:item!.title,
+            submissionUrl:new URL(item!.isDefault?"/":"/m/"+encodeURIComponent(item!.slug),origin(req)).href,posterDefaults:options.posterDefaults??{}} satisfies WindChimeShareInfo);
+        }
         const actor = authority ? "device:"+authority.id : "host-admin";
+        if (!path.startsWith("control/grants")) await scoped();
         if (path === "control/state" && req.method === "GET") return json(await live.state(scope));
         if (path === "control/action" && req.method === "POST") return json(await live.action(data as WindChimeLiveAction,actor));
         if (path === "control/message" && req.method === "POST") {
@@ -168,17 +241,23 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
           if (data.isFavorited !== undefined) patch.isFavorited=boolInput(data.isFavorited,"isFavorited");
           await service.updateMessage(textInput(data.messageId,100,"信件",true)!,patch,scope); return json(await live.state(scope));
         }
-        if (path === "control/grants" && req.method === "GET") return json({items:await live.listGrants(scope)});
+        const grantScope = requestedScope ?? (authority?.scope === "topic" ? authority.topic_id : null);
+        if (grantScope !== null) await scoped(grantScope);
+        if (path === "control/grants" && req.method === "GET") return json({items:await live.listGrants(grantScope)});
         if (path === "control/grants" && req.method === "POST") {
-          onlyFields(data,["topicId","kind","label"]);
+          onlyFields(data,["topicId","kind","label","scope"]);
           if (data.kind !== "display" && data.kind !== "control") fail("INVALID_KIND","授权类型无效");
           if (authority && data.kind !== "display") fail("FORBIDDEN","设备不能签发管理授权",403);
-          return json(await live.createGrant(scope,data.kind as "display"|"control",textInput(data.label,100,"名称")??"",undefined,null,null,authority?.id??null),201);
+          if(data.scope !== undefined && data.scope !== "site" && data.scope !== "topic")fail("INVALID_SCOPE","授权范围无效");
+          const grantKindScope = data.scope === "site" ? "site" : "topic";
+          if(grantKindScope === "site" && (data.kind !== "control" || requestedScope !== null))fail("INVALID_SCOPE","站点控制授权不能指定话题");
+          if(grantKindScope === "topic")await scoped(scope);
+          return json(await live.createGrant(grantKindScope === "site" ? null : scope,data.kind as "display"|"control",textInput(data.label,100,"名称")??"",undefined,null,null,authority?.id??null,grantKindScope),201);
         }
         if (path.startsWith("control/grants/") && req.method === "DELETE") {
           const id=path.slice("control/grants/".length);
-          if (authority) { const target=(await live.listGrants(scope)).find((g)=>g.id===id); if(target?.kind==="control") fail("FORBIDDEN","设备不能撤销其他管理授权",403); }
-          return json(await live.revokeGrant(id,scope));
+          if (authority?.scope === "topic") { const target=(await live.listGrants(grantScope)).find((g)=>g.id===id); if(target?.kind==="control") fail("FORBIDDEN","设备不能撤销其他管理授权",403); }
+          return json(await live.revokeGrant(id,grantScope));
         }
         if (path.startsWith("control/assets/") && req.method === "GET") {
           if (!options.mediaDirectory) fail("IMAGES_DISABLED","未配置图片存储",503);
@@ -233,7 +312,7 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
     if(requestOrigin && (requestOrigin===origin(req)||options.allowedOrigins?.includes(requestOrigin))) {
       response.headers.set("access-control-allow-origin",requestOrigin);response.headers.set("vary","Origin");
       if (requestOrigin===origin(req)) response.headers.set("access-control-allow-credentials","true");
-      response.headers.set("access-control-allow-methods","GET,POST,DELETE,OPTIONS");
+      response.headers.set("access-control-allow-methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
       response.headers.set("access-control-allow-headers","Authorization,Content-Type,X-WindChime-Platform-Lease");
     }
     return response;

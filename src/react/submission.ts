@@ -28,6 +28,8 @@ export type WindChimeSubmissionOptions = {
   nicknameMaxLength?: number;
   linkMaxLength?: number;
   blockedTerms?: string[];
+  /** Use the site's public settings value; opt-in matching is off by default. */
+  blockedTermsEnabled?: boolean;
 };
 function readStamps(key: string): number[] {
   try {
@@ -154,6 +156,7 @@ export function useWindChimeSubmission(options: WindChimeSubmissionOptions) {
       if (linkRaw.trim() && !linkUrl)
         throw new WindChimeClientError("INVALID_LINK");
       if (
+        options.blockedTermsEnabled === true &&
         matchWindChimeBlockedTerm(
           normalizeWindChimeTerms(options.blockedTerms ?? []),
           text,

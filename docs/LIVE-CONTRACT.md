@@ -2,14 +2,35 @@
 
 Mount `createWindChimeLiveRouteHandlers({service, authorizeAdmin, hasAdminAccess?, mediaDirectory?, allowedOrigins?, gatewayPublicKeys?, gatewayIssuer?})` at `/api/mail/live/[...path]` and `/api/mail/live`. Node runtime, one persistent server process, private persistent media directory. Every JSON response has `Cache-Control: no-store`. Errors use `{error,code}`. `service.broadcast` owns all rules. Ordinary consumers need no live configuration or sharp import.
 
-Control requests use the host's existing admin cookie OR `Authorization: Bearer wc_ctl_...`. Display requests ONLY accept `Bearer wc_disp_...` and never elevate from cookies. Grants bind exactly one topic; they cannot override their scope with another topicId. Host cookie writes require a matching Origin when Origin is present; explicit cross-site origins require allowlisting. Desktop main-process requests can omit Origin.
+Export **GET, POST, PUT, PATCH, DELETE, OPTIONS** from the Next.js route module. Omitting PUT/PATCH makes ordinary management and the keyword switch return framework-level 405 responses even when the shared handlers support them.
 
-Package 0.6.1 adds reusable connection-key encoding and a control-Bearer-only identity endpoint. It reuses the existing 30-day control grants and requires no new database schema. The host must deploy 0.6.1 before clients use the new capability; installing a newer desktop does not upgrade the host.
+Control requests use the host's existing admin cookie OR `Authorization: Bearer wc_ctl_...`. Display requests ONLY accept `Bearer wc_disp_...` and never elevate from cookies. In 0.7.0 control grants have explicit `scope:site|topic`; site control has `topicId:null`, while every display and legacy control grant binds one topic. Caller parameters cannot elevate scope. Host cookie writes require a matching Origin when Origin is present; explicit cross-site origins require allowlisting. Desktop main-process requests can omit Origin.
+
+Package 0.7.0 keeps `wc_conn_v1` encoding and the control-Bearer-only identity endpoint. Identity additionally returns `scope`; site identity has both `topicId` and `topicTitle` null. Capabilities adds `siteControl`, `mailManagement`, `keywordFilterToggle`. The 0.7.0 migration keeps old grants topic-scoped with original IDs, hashes, expiries and parent relationships. Both host and desktop must be upgraded to use site keys.
+
+## Full mailbox management (0.7.0)
+
+All routes below remain under `/control`, use the existing mailbox service, and return `no-store`. Site control can choose any topic in the same database; topic control only its own. Global settings, sender blocking, blocklist, word-list writes and topic lifecycle management require site control (or the original website administrator, except the keyword toggle).
+
+| Resource | Methods / behavior |
+| --- | --- |
+| `/topics`, `/topics/:id` | GET list/detail, POST create, PATCH update, DELETE archive with `{markReadFirst}`; `include=archived` includes archived items |
+| `/topics/:id/purge` | DELETE permanently removes one archived non-default topic; does not delete site grants |
+| `/messages?topicId=...&filter=...` | GET ordinary inbox or flagged filter; includes counts and `blockedTermsEnabled` |
+| `/messages/:id?topicId=...` | GET original, PATCH read/favorite/legacy flag, DELETE soft-delete |
+| `/messages/batch?topicId=...` | POST `{action:delete|markRead,ids}` in one service transaction |
+| `/messages/:id/block?topicId=...` | POST site-wide sender block, unavailable to topic keys |
+| `/settings` | GET site settings; PUT `{enabled}` controls the default mailbox; PATCH `{blockedTermsEnabled}` accepts only site Bearer, never website cookies |
+| `/blocked-terms`, `/blocklist` | GET/PUT word list, GET blocklist, DELETE `/blocklist/:hash` unblocks |
+| `/share?topicId=...` | GET `{siteName,origin,topicId,topicTitle,submissionUrl,posterDefaults}` from trusted host configuration |
+| `/grants` | Website admin POST `{kind:control,scope:site,label}` creates a 30-day site key. Desktop can list/revoke grants and issue topic-only display grants, but cannot create control keys or approve pairing |
+
+The keyword switch is absent/false by default even when a word list exists. Disabled list responses include historical flagged originals and normal unread/favorite counts; flags remain stored but flagged classification is hidden. Re-enabling affects only future submissions, with no rescan. The switch never changes broadcast approval. `useWindChimeSubmission` and the optional Sender accept `blockedTermsEnabled` to opt into client-side hints using the same public settings value.
 
 ## Endpoints
 
-- `GET /capabilities` → `{protocolVersion:1,siteId,basePath,features:{images:boolean,pairing:true,broadcast:true,connectionKeys:true},pollIntervalMs:1000,leaseMs:3000}`. siteId is a persistent random database identity. `connectionKeys` is absent on 0.6.0 hosts; clients must check it before importing a connection key.
-- `GET /control/identity` requires exactly `Authorization: Bearer wc_ctl_...`. It never accepts an admin cookie, a display token, a query parameter or a caller-selected topic. Returns `{siteId,topicId,topicTitle,label,expiresAt,grantId}` from the grant's actual scope, without a token or inbox content. `CONNECTION_KEY_INVALID`, `CONNECTION_KEY_EXPIRED` and `CONNECTION_KEY_REVOKED` are HTTP 401; any query returns `INVALID_QUERY` 400 after valid Bearer syntax, and non-GET requests return 405.
+- `GET /capabilities` → `{protocolVersion:1,siteId,basePath,features:{images:boolean,pairing:true,broadcast:true,connectionKeys:true,siteControl:true,mailManagement:true,keywordFilterToggle:true},pollIntervalMs:1000,leaseMs:3000}`. siteId is a persistent random database identity. `connectionKeys` is absent on 0.6.0 hosts; clients must check it before importing a connection key.
+- `GET /control/identity` requires exactly `Authorization: Bearer wc_ctl_...`. It never accepts an admin cookie, a display token, a query parameter or a caller-selected topic. Returns `{siteId,scope,topicId,topicTitle,label,expiresAt,grantId}` from the grant's actual scope, without a token or inbox content. `CONNECTION_KEY_INVALID`, `CONNECTION_KEY_EXPIRED` and `CONNECTION_KEY_REVOKED` are HTTP 401; any query returns `INVALID_QUERY` 400 after valid Bearer syntax, and non-GET requests return 405.
 - `GET /control/state?topicId=default` → `WindChimeLiveControlState` from `/core`: `{topicId,revision,epoch,messages,queue,current,appearance,receivers}`. messages contain private source + editable draft + review status. queue is ordered message IDs. current is null or `{messageId,snapshotId}`. receivers is the online count. No read/favorite/flagged value grants broadcast approval.
 - `POST /control/action` → updated control state. Body `{topicId,action,messageId?,expectedRevision,expectedDraftRevision?,operationId,draft?,order?,appearance?}`. Actions: `draft`, `approve`, `reject`, `revoke`, `show`, `next`, `hide`, `end`, `reorder`, `appearance`. operationId is an arbitrary unique 8–128 character command identifier. `hide`/`end`/`revoke`/`reject` supersede stale control revisions; other actions reject stale revisions with 409 `REVISION_CONFLICT`. Draft/approval also require `expectedDraftRevision`. Draft is `{text,nickname,linkUrl,assets:[{id,caption}]}`. Approval only queues. show requires an online receiver; no receiver → 409 `DISPLAY_NOT_READY`. Queue retains ALL approved messages in their full order after showing/closing. `next` advances after lastShown without looping; exhaustion blanks. Hide retains the private cursor; end/restart resets cursor but preserves approvals/order.
 - `POST /control/message` body `{topicId,messageId,isRead?,isFavorited?}` delegates existing scoped message mutations and returns updated control state. These flags do not affect approval.
@@ -28,13 +49,13 @@ Rendering must immediately blank on explicit errors and within 3 seconds of a lo
 
 Appearance is the `/core` `WindChimeLiveAppearance` type: safe font name, fontSize12–96, hex colors, transparent, layout card/letter/minimal, imageLayout row/column/grid (default column), animation none/fade/slide, padding/borderRadius0–100. No arbitrary CSS, HTML or remote URLs are accepted by configuration. Developers may provide their own renderer with only the filtered snapshot contract.
 
-## Reusable connection keys (0.6.1)
+## Reusable connection keys (0.6.1 encoding, 0.7.0 scope)
 
 `@windchime/embed/core` exports `encodeWindChimeConnectionKey({origin,siteId,token,v?:1})` and `parseWindChimeConnectionKey(unknown)`. The wire format is `wc_conn_v1.<base64url UTF-8 JSON>`, whose payload contains exactly `{v:1,origin,siteId,token}`. The complete input is limited to 4096 characters. Unknown fields, unsupported versions, invalid UTF-8/base64url, and non-control tokens are rejected with local `CONNECTION_KEY_INVALID` 400. Control tokens must match `wc_ctl_` followed by exactly 43 base64url characters.
 
 The codec normalizes an HTTPS origin, or HTTP on exact loopback hosts `localhost`, `127.0.0.1` and `[::1]`. It rejects credentials, non-root paths, query strings and fragments. The key is an encoding of a reusable control credential, not encrypted storage; never put it in a public URL, repository, log or capture surface.
 
-A website administrator creates the underlying grant with `POST /control/grants` and `{topicId,kind:"control",label}`. Encoding uses the current website origin and capability siteId. The raw grant is returned only when created; subsequent grant lists contain metadata. Its fixed 30-day expiry is not extended by importing or querying identity. Existing control Bearers cannot issue another control grant.
+A website administrator creates a site grant with `POST /control/grants` and `{scope:"site",kind:"control",label}`; `{topicId,kind:"control",label}` remains the legacy topic-scoped form. Encoding uses the current website origin and capability siteId. The raw grant is returned only when created; subsequent grant lists contain metadata. Its fixed 30-day expiry is not extended by importing or querying identity. Existing control Bearers cannot issue another control grant.
 
 On import, the desktop parses locally, checks `features.connectionKeys`, compares the capability siteId with the encoded siteId, then queries `/control/identity` using the encoded token. It saves only the verified scope and credentials using OS-backed encryption. The key cannot choose a different topic via payload or identity query. Clients must not persist an unverified credential or show an old connection's content while changing scope.
 

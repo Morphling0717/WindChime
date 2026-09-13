@@ -1,13 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createWindChimeLiveClient } from "../../../src/client/live";
+import { createWindChimeClient } from "../../../src/client";
+import type { WindChimeAdminTopic } from "../../../src/core";
 import { WindChimeLiveControlPanel } from "../../../src/broadcast/ControlPanel";
 import { windChimeControlCss } from "../../../src/broadcast/styles";
-import { assetTransport, transport, unwrap, type Site } from "./bridge";
+import {
+  assetTransport,
+  transport,
+  unwrap,
+  managementFetch,
+  type Site,
+} from "./bridge";
+import { Inbox, Topics, Share, GlobalSettings } from "./Management";
 import { parseWindChimeConnectionKey } from "../../../src/core/connection-key";
 import "./glass.css";
+import "./management.css";
 const bridge = window.windchimeDesktop;
-type View = "studio" | "connections" | "appearance";
+type View =
+  "inbox" | "studio" | "topics" | "share" | "settings" | "connections";
 function Icon({
   name,
   size = 20,
@@ -72,7 +83,13 @@ function Icon({
   );
 }
 function App() {
-  const [view, setView] = useState<View>("studio");
+  const [view, setView] = useState<View>("inbox");
+  const [topics, setTopics] = useState<WindChimeAdminTopic[]>([]);
+  const [keywordEnabled, setKeywordEnabled] = useState(false);
+  const [studioDirty, setStudioDirty] = useState(false),
+    [topicDirty, setTopicDirty] = useState(false),
+    [settingsDirty, setSettingsDirty] = useState(false);
+  const reportError = useCallback((message: string) => setError(message), []);
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
@@ -99,6 +116,23 @@ function App() {
     shortcut: "Ctrl+Shift+H",
   });
   const selected = sites.find((site) => site.id === selectedId);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const keywordRevision = useRef(0);
+  const updateKeyword = useCallback((enabled: boolean) => {
+    keywordRevision.current++;
+    setKeywordEnabled(enabled);
+  }, []);
+  const topicId = selected?.selectedTopicId ?? selected?.topicId ?? "";
+  const topic = topics.find((item) => item.id === topicId);
+  const mailClient = useMemo(
+    () =>
+      createWindChimeClient({
+        baseUrl: "/control",
+        fetch: managementFetch(selectedId ?? ""),
+      }),
+    [selectedId],
+  );
   const refresh = useCallback(async () => {
     const result = await unwrap(bridge.sites());
     setSites(result.items);
@@ -118,6 +152,109 @@ function App() {
       setBusy(false);
     }
   };
+  const confirmDiscard = useCallback(
+    () => unwrap(bridge.confirm("有尚未保存的修改，放弃修改并继续？")),
+    [],
+  );
+  const change = async (operation: () => Promise<unknown>) => {
+    if (
+      (studioDirty || topicDirty || settingsDirty) &&
+      !(await confirmDiscard())
+    )
+      return;
+    await act(operation);
+  };
+  const navigate = async (next: View) => {
+    if (view === next) return;
+    if (
+      (studioDirty || topicDirty || settingsDirty) &&
+      !(await confirmDiscard())
+    )
+      return;
+    setStudioDirty(false);
+    setTopicDirty(false);
+    setSettingsDirty(false);
+    setView(next);
+  };
+  const refreshTopics = useCallback(async () => {
+    if (!selectedId) return;
+    const result = await mailClient.topics.listAdmin({ includeArchived: true });
+    if (selectedRef.current === selectedId) setTopics(result.items);
+  }, [mailClient, selectedId]);
+  useEffect(() => {
+    setTopics([]);
+    setKeywordEnabled(false);
+    setStudioDirty(false);
+    setTopicDirty(false);
+    setSettingsDirty(false);
+    if (!selectedId) return;
+    let disposed = false;
+    let polling = false;
+    const abort = new AbortController();
+    const load = async () => {
+      if (polling || document.visibilityState === "hidden") return;
+      polling = true;
+      const keywordVersion = keywordRevision.current;
+      try {
+        const result = await mailClient.topics.listAdmin({
+          includeArchived: true,
+          signal: abort.signal,
+        });
+        if (disposed) return;
+        setTopics(result.items);
+        if (selected?.scope === "site" && !topicId && result.items.length) {
+          await unwrap(
+            bridge.selectTopic(
+              (result.items.find((item) => item.isDefault) ?? result.items[0])
+                .id,
+              selectedId,
+            ),
+          );
+          if (!disposed) await refresh();
+        }
+        if (selected?.scope === "site") {
+          const settings = await mailClient.request<{
+            blockedTermsEnabled?: boolean;
+          }>("/settings", "GET", undefined, { signal: abort.signal });
+          if (!disposed && keywordVersion === keywordRevision.current)
+            setKeywordEnabled(settings.blockedTermsEnabled === true);
+        } else if (topicId) {
+          const scoped = await mailClient.messages.list({
+            topicId,
+            signal: abort.signal,
+          });
+          if (!disposed)
+            setKeywordEnabled(
+              (scoped as { blockedTermsEnabled?: boolean })
+                .blockedTermsEnabled === true,
+            );
+        }
+      } catch (e) {
+        if (!disposed)
+          setError(
+            e instanceof Error
+              ? e.message
+              : "无法读取话题，请确认网站已升级风铃 0.7.0",
+          );
+      } finally {
+        polling = false;
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 3000);
+    const wake = () => void load();
+    window.addEventListener("focus", wake);
+    document.addEventListener("visibilitychange", wake);
+    const unsubscribe = mailClient.subscribe(wake);
+    return () => {
+      disposed = true;
+      abort.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", wake);
+      document.removeEventListener("visibilitychange", wake);
+      unsubscribe();
+    };
+  }, [selectedId, topicId, mailClient, refresh]);
   useEffect(() => {
     void refresh().catch((e) => setError(e.message));
     const interval = setInterval(() => {
@@ -162,8 +299,21 @@ function App() {
   const client = useMemo(
     () =>
       createWindChimeLiveClient({
-        transport: transport(bridge),
-        assetTransport: assetTransport(bridge),
+        transport: transport({
+          request: async (input) => {
+            const result = await bridge.request({
+              ...input,
+              connectionId: selectedId ?? undefined,
+            });
+            if (result.ok && input.method !== "GET")
+              mailClient.invalidate(["messages", "topics"]);
+            return result;
+          },
+        }),
+        assetTransport: assetTransport({
+          request: (input) =>
+            bridge.request({ ...input, connectionId: selectedId ?? undefined }),
+        }),
         uploadTransport: async (_topicId, messageId, file) =>
           unwrap(
             bridge.upload({
@@ -171,19 +321,26 @@ function App() {
               fileName: file.name,
               mimeType: file.type,
               bytes: new Uint8Array(await file.arrayBuffer()),
+              connectionId: selectedId ?? undefined,
             }),
           ),
       }),
-    [selectedId],
+    [selectedId, topicId, mailClient],
   );
   const pageTitle =
     view === "connections"
       ? "连接你的信箱"
-      : view === "appearance"
+      : view === "settings"
         ? "让来信，有你的风格"
-        : selected
-          ? "今天，也有值得倾听的声音"
-          : "让每一封来信，恰好被听见";
+        : view === "topics"
+          ? "每场活动，都有自己的话题"
+          : view === "share"
+            ? "把投稿入口，交给观众"
+            : view === "inbox" && selected
+              ? "所有来信，在这里慢慢读"
+              : selected
+                ? "今天，也有值得倾听的声音"
+                : "让每一封来信，恰好被听见";
   return (
     <div className="wc-desktop" data-view={view}>
       <style>{windChimeControlCss}</style>
@@ -193,6 +350,22 @@ function App() {
           <Icon name="shield" size={12} /> PRIVATE SPACE
         </span>
       </div>
+      <button
+        className="desktop-end"
+        disabled={!topicId}
+        onClick={() =>
+          void act(() =>
+            client.action({
+              topicId,
+              action: "end",
+              expectedRevision: 0,
+              operationId: crypto.randomUUID(),
+            }),
+          )
+        }
+      >
+        结束展示
+      </button>
       <aside className="desktop-sidebar glass-surface">
         <div className="desktop-brand">
           <picture className="brand-mark">
@@ -209,9 +382,12 @@ function App() {
         <nav aria-label="桌面导航">
           {(
             [
-              ["studio", "inbox", "来信工作台"],
-              ["connections", "link", "信箱连接"],
-              ["appearance", "palette", "展示外观"],
+              ["inbox", "inbox", "收件箱"],
+              ["studio", "screen", "直播工作台"],
+              ["topics", "inbox", "话题管理"],
+              ["share", "link", "投稿分享"],
+              ["settings", "palette", "设置与外观"],
+              ["connections", "link", "网站连接"],
             ] as const
           ).map(([id, icon, label]) => (
             <button
@@ -219,8 +395,8 @@ function App() {
               aria-label={label}
               title={label}
               aria-current={view === id ? "page" : undefined}
-              disabled={id === "appearance" && !selected}
-              onClick={() => setView(id)}
+              disabled={id !== "connections" && id !== "inbox" && !selected}
+              onClick={() => void navigate(id)}
             >
               <Icon name={icon} />
               <span>{label}</span>
@@ -229,7 +405,7 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-mailbox">
-          <div className="sidebar-label">当前信箱</div>
+          <div className="sidebar-label">当前网站连接</div>
           <label className="sr-only" htmlFor="desktop-mailbox">
             当前信箱
           </label>
@@ -238,7 +414,7 @@ function App() {
             value={selectedId ?? ""}
             disabled={busy || !sites.length}
             onChange={(e) =>
-              void act(() => unwrap(bridge.selectSite(e.target.value)))
+              void change(() => unwrap(bridge.selectSite(e.target.value)))
             }
           >
             <option value="" disabled>
@@ -256,6 +432,38 @@ function App() {
             </span>
           ) : (
             <span className="sidebar-origin">从网页复制密钥，即可连接</span>
+          )}
+          {selected && topics.length > 0 && (
+            <label className="sidebar-topic">
+              当前话题
+              <select
+                aria-label="当前话题"
+                value={topicId}
+                disabled={busy}
+                onChange={(e) =>
+                  void change(() =>
+                    unwrap(bridge.selectTopic(e.target.value, selected.id)),
+                  )
+                }
+              >
+                <option value="" disabled>
+                  选择话题
+                </option>
+                {topics.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                    {item.archivedAt ? " · 已归档" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {selected && (
+            <span className="sidebar-origin">
+              {selected.scope === "site"
+                ? "站点授权 · 全部话题"
+                : "旧版话题授权 · 仅当前话题"}
+            </span>
           )}
         </div>
         <div className="sidebar-bottom">
@@ -281,7 +489,7 @@ function App() {
               value={selectedId ?? ""}
               disabled={busy}
               onChange={(e) =>
-                void act(() => unwrap(bridge.selectSite(e.target.value)))
+                void change(() => unwrap(bridge.selectSite(e.target.value)))
               }
             >
               {sites.map((site) => (
@@ -292,22 +500,52 @@ function App() {
             </select>
           </label>
         ) : null}
+        {selected && topics.length > 0 && (
+          <label className="mobile-mailbox">
+            当前话题
+            <select
+              aria-label="窄窗口切换话题"
+              value={topicId}
+              onChange={(e) =>
+                void change(() =>
+                  unwrap(bridge.selectTopic(e.target.value, selected.id)),
+                )
+              }
+            >
+              {topics.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <header className="desktop-header">
           <div>
             <div className="desktop-eyebrow">
-              {view === "studio"
-                ? "YOUR PRIVATE STUDIO"
-                : view === "connections"
-                  ? "STAY CONNECTED"
-                  : "MAKE IT YOURS"}
+              {
+                {
+                  studio: "YOUR PRIVATE STUDIO",
+                  inbox: "LETTERS FOR YOU",
+                  topics: "EVERY OCCASION",
+                  share: "SHARE YOUR INBOX",
+                  connections: "STAY CONNECTED",
+                  settings: "MAKE IT YOURS",
+                }[view]
+              }
             </div>
             <h1>{pageTitle}</h1>
             <p>
-              {view === "studio"
-                ? "私下审阅，从容安排。准备好了，再交给观众。"
-                : view === "connections"
-                  ? "一个密钥，把网页里的来信带到桌面。"
-                  : "在私下预览中调整，选择适合这场直播的表达。"}
+              {
+                {
+                  studio: "私下审阅，从容安排。准备好了，再交给观众。",
+                  inbox: "阅读、收藏和整理来信，决定哪些值得带到直播间。",
+                  topics: "安排开放时间，管理当前活动与往期来信。",
+                  share: "专属二维码与海报，让观众轻松找到你的信箱。",
+                  connections: "一个密钥，把网页里的来信带到桌面。",
+                  settings: "管理网站权限与辅助审核，调整你喜欢的展示风格。",
+                }[view]
+              }
             </p>
           </div>
           <button
@@ -419,7 +657,7 @@ function App() {
                 />
               </label>
               <p className="wc-muted key-help">
-                在网站私人后台选择话题，生成并复制完整密钥。
+                在网站私人后台生成站点连接密钥，复制后即可管理全部话题。
               </p>
               {keyOrigin ? (
                 <p className="wc-muted">将连接到：{keyOrigin}</p>
@@ -433,12 +671,13 @@ function App() {
                 disabled={busy || !keyOrigin || !!pairing}
                 onClick={() => {
                   const submittedKey = connectionKey;
-                  void act(async () => {
+                  void change(async () => {
                     await unwrap(bridge.importKey(submittedKey));
                     setConnectionKey((current) =>
                       current === submittedKey ? "" : current,
                     );
-                  }, "信箱已连接。打开展示窗口后，仍需手动上屏。");
+                    setNotice("信箱已连接。打开展示窗口后，仍需手动上屏。");
+                  });
                 }}
               >
                 使用密钥连接
@@ -473,7 +712,7 @@ function App() {
                     className="wc-primary"
                     disabled={busy || !origin || !!pairing}
                     onClick={() =>
-                      void act(async () =>
+                      void change(async () =>
                         setPairing(
                           await unwrap(bridge.pair({ origin, label })),
                         ),
@@ -517,10 +756,7 @@ function App() {
               <button
                 disabled={busy}
                 onClick={() =>
-                  void act(
-                    () => unwrap(bridge.forgetSite(selected.id)),
-                    "已从此电脑移除连接；可在网站管理设备授权",
-                  )
+                  void change(() => unwrap(bridge.forgetSite(selected.id)))
                 }
               >
                 移除此连接
@@ -533,7 +769,7 @@ function App() {
             <div className="desktop-workspace-bar" hidden={view !== "studio"}>
               <span>
                 <Icon name="inbox" size={16} />
-                {selected.label}
+                {topic?.title ?? selected.label}
               </span>
               <button
                 disabled={busy}
@@ -544,16 +780,62 @@ function App() {
                 <Icon name="arrow" size={15} />
               </button>
             </div>
-            <div className="desktop-studio">
-              <WindChimeLiveControlPanel
-                key={selected.id}
-                client={client}
-                topicId={selected.topicId}
-                title={selected.label}
-                canApproveDevices={false}
-                onOpenDisplay={() => unwrap(bridge.openDisplay())}
+            {topicId && (view === "studio" || view === "settings") && (
+              <div className="desktop-studio">
+                <WindChimeLiveControlPanel
+                  key={`${selected.id}:${topicId}:${view}`}
+                  client={client}
+                  topicId={topicId}
+                  title={topic?.title ?? selected.label}
+                  canApproveDevices={false}
+                  blockedTermsEnabled={keywordEnabled}
+                  onDirtyChange={setStudioDirty}
+                  onConfirmDiscard={confirmDiscard}
+                  onOpenDisplay={() => unwrap(bridge.openDisplay())}
+                />
+              </div>
+            )}
+            {topicId && view === "inbox" && (
+              <Inbox
+                key={`${selected.id}:${topicId}`}
+                client={mailClient}
+                topicId={topicId}
+                siteScope={selected.scope === "site"}
+                keywordEnabled={keywordEnabled}
+                onError={reportError}
               />
-            </div>
+            )}
+            {view === "topics" && (
+              <Topics
+                key={`${selected.id}:${topicId}`}
+                client={mailClient}
+                siteScope={selected.scope === "site"}
+                topics={topics}
+                onRefresh={refreshTopics}
+                onError={reportError}
+                onDirtyChange={setTopicDirty}
+              />
+            )}
+            {topicId && view === "share" && (
+              <Share
+                key={`${selected.id}:${topicId}`}
+                client={mailClient}
+                topicId={topicId}
+                siteId={selected.siteId}
+                onError={reportError}
+              />
+            )}
+            {view === "settings" && (
+              <GlobalSettings
+                key={`${selected.id}:${topicId}`}
+                client={mailClient}
+                siteScope={selected.scope === "site"}
+                keywordEnabled={keywordEnabled}
+                onKeywordChange={updateKeyword}
+                onError={reportError}
+                onDirtyChange={setSettingsDirty}
+              />
+            )}
           </>
         ) : null}
         <footer className="desktop-footer">

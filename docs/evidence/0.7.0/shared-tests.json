@@ -1,0 +1,9 @@
+{
+  "command": "npm test",
+  "passed": true,
+  "tests": 136,
+  "failures": 0,
+  "completedAt": "2026-09-13T05:50:24.487Z",
+  "node": "v22.22.3",
+  "platform": "win32"
+}

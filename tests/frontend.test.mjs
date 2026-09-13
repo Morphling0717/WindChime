@@ -15,6 +15,26 @@ import {
 import { readWindChimePosterConfig } from "../dist/media/index.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+test('submission keyword hints require the explicit site switch and follow changes without remounting', async t => {
+  let form, tree; const sent = [];
+  function Harness({ enabled }) {
+    form = useWindChimeSubmission({ blockedTerms: ['secret'], blockedTermsEnabled: enabled, rateLimit: false, disableSenderFingerprint: true, onSubmit: async payload => { sent.push(payload); } });
+    return null;
+  }
+  await act(async () => { tree = create(React.createElement(Harness, {})); });
+  t.after(async () => { await act(async () => tree.unmount()); });
+  await act(async () => form.setText('secret while default off'));
+  await act(async () => { assert.equal(await form.submit(), true); });
+  assert.equal(sent.length, 1);
+  await act(async () => tree.update(React.createElement(Harness, { enabled: true })));
+  await act(async () => form.setText('secret while enabled'));
+  await act(async () => { assert.equal(await form.submit(), false); });
+  assert.equal(form.error.code, 'BLOCKED_TERM'); assert.equal(sent.length, 1);
+  await act(async () => tree.update(React.createElement(Harness, { enabled: false })));
+  await act(async () => { assert.equal(await form.submit(), true); });
+  assert.equal(sent.length, 2);
+});
 const counts = { all: 1, unread: 1, favorited: 0, flagged: 0 };
 const row = (id) => ({
   id,

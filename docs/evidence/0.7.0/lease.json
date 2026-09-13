@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "testedAt": "2026-09-13T05:59:38.946Z",
+  "electron": "44.3.0",
+  "node": "24.20.0",
+  "os": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64"
+  },
+  "directory": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-lease-smoke-NuO09I",
+  "observations": [
+    {
+      "site": "UliUli",
+      "topicId": "8c168bdb-bbf7-4209-9e04-e683a0b01e16",
+      "oldTopicScopePlaybackStableMs": 7164,
+      "topicRefreshes": 5,
+      "forbiddenSettingsRequests": 0,
+      "stalledDisplayRequests": 2,
+      "lastSuccessfulFrameRequestUnixMs": 1789279155033,
+      "lastSuccessfulFrameResponseUnixMs": 1789279155051,
+      "advertisedLeaseMs": 3000,
+      "responseToNativeHideMs": 2675,
+      "responseToConfirmedBlankMs": 2826,
+      "dispatchToConfirmedBlankMs": 2845,
+      "observationIntervalMs": 25,
+      "restoredWithoutReplayObservedMs": 1500,
+      "manualShowAfterRestore": true
+    },
+    {
+      "site": "Mia",
+      "topicId": "508c428d-11a4-4a56-a2ff-103ed66d327d",
+      "oldTopicScopePlaybackStableMs": 7169,
+      "topicRefreshes": 5,
+      "forbiddenSettingsRequests": 0,
+      "stalledDisplayRequests": 2,
+      "lastSuccessfulFrameRequestUnixMs": 1789279171388,
+      "lastSuccessfulFrameResponseUnixMs": 1789279171407,
+      "advertisedLeaseMs": 3000,
+      "responseToNativeHideMs": 2600,
+      "responseToConfirmedBlankMs": 2760,
+      "dispatchToConfirmedBlankMs": 2779,
+      "observationIntervalMs": 25,
+      "restoredWithoutReplayObservedMs": 1500,
+      "manualShowAfterRestore": true
+    }
+  ],
+  "method": "Real loopback Next.js adapters; independent actor suspends only display HTTP responses after a known successful reviewed frame; AbortSignal retained; native hide and confirmed blank DOM observed in separate display window",
+  "checks": [
+    "Fresh and approved output remains blank until manual show",
+    "Old topic credential output stays nonempty across multiple real three-second topic refreshes without forbidden settings request",
+    "Silent stalled transport clears within 3 seconds from both last response and its request dispatch",
+    "Restored connection is blank until a new manual show",
+    "Only temporary topic grants created by this test were revoked"
+  ],
+  "limitations": [
+    "Measures the Electron native hide event and confirmed new blank document, not actual OBS or LiveHime capture frames"
+  ],
+  "gracefulExit": true,
+  "unhandledRuntimeErrors": false
+}

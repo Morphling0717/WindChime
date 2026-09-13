@@ -88,7 +88,7 @@ test("control identity returns only server-derived grant metadata, including non
   const f = await fixture(t), topic = await f.service.createTopic({ slug: "private-event", title: "只属于此授权的信箱", note: "SECRET_INPUT_ADMIN_NOTE" });
   await f.service.submitMessage({ text: "SECRET_INPUT_UNREVIEWED_BODY", nickname: "SECRET_INPUT_NICK", topicSlug: topic.slug }, new Request("https://site.test/"));
   const grant = await f.service.broadcast.createGrant(topic.id, "control", "主播桌面");
-  const expected = { siteId: await f.service.broadcast.siteId(), topicId: topic.id, topicTitle: topic.title, label: "主播桌面", expiresAt: grant.expiresAt, grantId: grant.id };
+  const expected = { siteId: await f.service.broadcast.siteId(), scope: 'topic', topicId: topic.id, topicTitle: topic.title, label: "主播桌面", expiresAt: grant.expiresAt, grantId: grant.id };
   const response = await f.call("control/identity", grant.token), data = await response.json();
   assert.equal(response.status, 200); assert.deepEqual(data, expected);
   assert.deepEqual(await f.service.broadcast.controlIdentity(grant.token), expected);

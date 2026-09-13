@@ -53,7 +53,7 @@ test('configured ordinary display URL issues a scoped display link without enabl
   assert(fixture.button('复制展示链接'));assert.equal(fixture.button('连接 B 站会话'),undefined);
 });
 
-async function reviewFixture(t, actionHandler) {
+async function reviewFixture(t, actionHandler, props = {}) {
   const draft = { text: 'Saved original', nickname: 'Checked', linkUrl: null, assets: [] };
   let state = { topicId: 'topic', revision: 4, epoch: 'epoch', messages: [{ id: 'mail', createdAt: '2026-09-10T10:00:00Z', isRead: false, isFavorited: false, isFlagged: false, source: structuredClone(draft), draft: structuredClone(draft), draftRevision: 4, status: 'pending', snapshotId: null }], queue: [], current: null, appearance, receivers: 1 };
   const commands = [];
@@ -72,7 +72,7 @@ async function reviewFixture(t, actionHandler) {
   };
   let renderer;
   t.after(async () => { if (renderer) await act(async () => renderer.unmount()); });
-  await act(async () => { renderer = create(React.createElement(WindChimeLiveControlPanel, { client, topicId: 'topic' })); });
+  await act(async () => { renderer = create(React.createElement(WindChimeLiveControlPanel, { client, topicId: 'topic', ...props })); });
   fixture.renderer = renderer;
   fixture.button = label => renderer.root.findAllByType('button').find(node => node.children.join('') === label);
   fixture.field = label => renderer.root.findAllByType('label').find(node => node.children[0] === label).findByType(label === '展示正文' ? 'textarea' : 'input');
@@ -82,6 +82,38 @@ async function reviewFixture(t, actionHandler) {
   await act(async () => renderer.root.find(node => node.type === 'button' && node.props.className === 'wc-mail').props.onClick());
   return fixture;
 }
+
+test('dirty notification covers unsaved review and appearance without exposing disabled keyword markers', async t => {
+  const notifications = [];
+  const f = await reviewFixture(t, async (command, fixture) => {
+    fixture.state = fixture.saved(command);
+    if (command.action === 'appearance') fixture.state.appearance = command.appearance;
+    return structuredClone(fixture.state);
+  }, { onDirtyChange: dirty => notifications.push(dirty) });
+  assert.equal(notifications.at(-1), false);
+  await f.edit('展示正文', 'not saved'); assert.equal(notifications.at(-1), true);
+  await f.click('保存展示稿'); assert.equal(notifications.at(-1), false);
+  const font = f.renderer.root.findAllByType('label').find(node => node.children[0] === '字号').findByType('input');
+  await act(async () => font.props.onChange({ target: { value: '38' } }));
+  assert.equal(notifications.at(-1), true);
+  await f.click('应用外观'); assert.equal(notifications.at(-1), false);
+  f.state.messages[0].isFlagged = true;
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1100)); });
+  assert(!JSON.stringify(f.renderer.toJSON()).includes('敏感词标记'));
+});
+
+test('remote appearance updates cannot overwrite an unsaved local appearance', async t => {
+  const f = await reviewFixture(t, async (command, fixture) => structuredClone(fixture.state));
+  const font = () => f.renderer.root.findAllByType('label').find(node => node.children[0] === '字号').findByType('input');
+  await act(async () => font().props.onChange({ target: { value: '39' } }));
+  f.state = { ...f.state, revision: f.state.revision + 1, appearance: { ...f.state.appearance, fontSize: 50 } };
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1100)); });
+  assert.equal(font().props.value, 39);
+  assert(f.button('应用外观').props.disabled);
+  assert(JSON.stringify(f.renderer.toJSON()).includes('外观已在另一控制端更新'));
+  await f.click('确认新外观，保留我的编辑');
+  assert.equal(font().props.value, 39); assert.equal(f.button('应用外观').props.disabled, false);
+});
 
 test('own save adopts URL and whitespace normalization without a false remote conflict', async t => {
   const f = await reviewFixture(t, async (command, fixture) => { fixture.state = fixture.saved(command); return structuredClone(fixture.state); });

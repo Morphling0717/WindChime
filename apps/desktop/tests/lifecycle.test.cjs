@@ -11,12 +11,13 @@ async function harness(options={}) {
   const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault;
   const app=new EventEmitter();Object.assign(app,{requestSingleInstanceLock:()=>true,whenReady:async()=>{},getPath:()=>'/fixture',getName:()=> 'Fixture',quit:()=>{quitCount++;}});
   class Window extends EventEmitter {
-    constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isCrashed:()=>!!this.crashed,reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
+    constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isDestroyed:()=>!!this.contentsDestroyed,isCrashed:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');return !!this.crashed;},reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
     finishCrash(){this.crashed=true;this.webContents.emit('render-process-gone');}
     async loadFile(){this.loadCount++;this.crashed=false;if(this.options.title==='WindChime Display')await handlers.get('display:request')({sender:this.webContents,senderFrame:this.webContents.mainFrame},{path:'/display/open',method:'POST',body:{}});this.webContents.emit('did-finish-load');}
     async loadURL(url){this.blankUrl=url;this.crashed=false;this.blankLoadCount=(this.blankLoadCount??0)+1;await blankLoadGate?.(this);this.webContents.emit('did-finish-load');}
     show(){}showInactive(){this.showCount++;}focus(){}hide(){this.hideCount++;}isDestroyed(){return !!this.destroyed;}
-    close(){this.closeRequested=true;}finishClose(){this.destroyed=true;this.emit('closed');}
+    destroyContents(){this.contentsDestroyed=true;this.webContents.emit('destroyed');}
+    close(){this.closeRequested=true;}finishClose(){this.destroyContents();this.destroyed=true;this.emit('closed');}
   }
   const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutResult??true;},unregisterAll:()=>{}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
   const fetch=async(url,options)=>{
@@ -237,6 +238,47 @@ test('failed blank compositor creation closes the output instead of revealing a 
   assert.equal(output.showCount,1);assert.equal(h.requests.filter(r=>r.url.endsWith('/display/open')).length,1);
 });
 
+test('WebContents destruction before native window close withdraws output without touching the destroyed renderer',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  output.destroyContents();assert.equal(output.isDestroyed(),false,'Electron destroys contents before the window closed event');
+  const result=await h.invoke('control:hide');assert(result.ok,result.error);await flush();
+  assert(output.closeRequested);assert.equal(output.crashCount,0);assert.equal(output.blankLoadCount,undefined);
+  assert.equal((await h.invoke('app:status')).data.displayOpen,false);
+});
+
+test('destroying contents settles an in-flight termination; its late close cannot affect a replacement output',async()=>{
+  const h=await harness({deferredCrash:true});await h.pair(3011);await h.invoke('display:open');const old=h.output;
+  h.setRoute(r=>r.url.includes('/display/frame')?Promise.resolve(Response.json({error:'revoked'},{status:401})):null);
+  assert.equal((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],old)).ok,false);
+  assert.equal(old.crashCount,1);old.destroyContents();await flush();
+  assert(old.closeRequested);assert.equal(old.blankLoadCount,undefined);assert.equal(old.webContents.listenerCount('render-process-gone'),1,'only the application observer remains; termination listeners are removed');
+  h.setRoute(null);assert((await h.invoke('display:open')).ok);const replacement=h.output;
+  old.finishClose();await flush();assert.equal(replacement.hideCount,0);assert.equal(replacement.crashCount,0);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],replacement)).ok);
+});
+
+test('late blank failure from a destroyed old output cannot close or hide a new mailbox window',async()=>{
+  const h=await harness();const a=await h.pair(3011),b=await h.pair(3012);await h.invoke('sites:select',[a.id]);await h.invoke('display:open');const old=h.output;
+  let rejectPaint;h.setBlankLoadGate(window=>window===old?new Promise((_,reject)=>{rejectPaint=reject;}):null);
+  h.setRoute(r=>r.url.includes('/display/frame')?Promise.resolve(Response.json({error:'revoked'},{status:401})):null);
+  await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],old);await flush();
+  old.destroyContents();h.setRoute(null);await h.invoke('sites:select',[b.id]);await h.invoke('display:open');const current=h.output;
+  rejectPaint(new Error('old compositor destroyed'));await flush();
+  assert.equal(current.hideCount,0);assert.equal(current.crashCount,0);assert.equal(current.closeRequested,undefined);assert.equal(current.showCount,1);
+});
+
+test('quit during revoked-output painting closes the native output without starting a second paint or receiver',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  let rejectPaint;h.setBlankLoadGate(()=>new Promise((_,reject)=>{rejectPaint=reject;}));
+  h.setRoute(r=>r.url.includes('/display/frame')?Promise.resolve(Response.json({error:'revoked'},{status:401})):null);
+  await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output);await flush();
+  let prevented=0;h.app.emit('before-quit',{preventDefault(){prevented++;}});assert.equal(prevented,1);assert(output.closeRequested);
+  output.finishClose();rejectPaint(new Error('shutdown compositor destroyed'));await flush();await flush();
+  assert.equal(h.quitCount,1);assert.equal(output.blankLoadCount,1,'quit did not start another asynchronous blank paint');
+  assert.equal(output.loadCount,1,'quit did not reconnect a receiver');assert.equal((await h.invoke('app:status')).data.displayOpen,false);
+  assert.equal(h.requests.at(-1).body.action,'hide');
+});
+
 const { encodeWindChimeConnectionKey } = require('../build/connection-key.cjs');
 const keyFor = (port, seed = 5) => encodeWindChimeConnectionKey({ origin: `http://localhost:${port}`, siteId: String(port), token: 'wc_ctl_' + Buffer.alloc(32,seed).toString('base64url') });
 test('connection key validates identity before selection, saves v1 encrypted credentials and returns no token',async()=>{
@@ -353,4 +395,52 @@ test('untrusted remote error codes cannot echo a connection key or prototype pro
     h.setRoute(r=>r.url.endsWith('/control/identity')?Promise.resolve(Response.json({code,error:keyFor(3012)},{status:401})):null);
     const result=await h.invoke('sites:import-key',[keyFor(3012)]);assert.equal(result.ok,false);assert.equal(result.code,'CONNECTION_FAILED');assert(!/wc_ctl_|wc_conn_/.test(JSON.stringify(result)));
   }
+});
+
+test('site keys import without a topic and only a verified topic can open the independent display',async()=>{
+  const h=await harness();
+  h.setRoute(r=>r.url.endsWith('/capabilities')?Response.json({protocolVersion:1,siteId:'3011',features:{connectionKeys:true,siteControl:true,mailManagement:true}}):r.url.endsWith('/control/identity')?Response.json({scope:'site',siteId:'3011',topicId:null,topicTitle:null,label:'Full site',grantId:'site-key',expiresAt:'2099-01-01T00:00:00Z'}):r.url.endsWith('/control/topics/topic-A')?Response.json({id:'topic-A'}):r.url.endsWith('/control/topics/topic-B')?Response.json({id:'topic-B'}):null);
+  const imported=await h.invoke('sites:import-key',[keyFor(3011)]);assert(imported.ok,imported.error);assert.equal(imported.data.scope,'site');assert.equal(imported.data.topicId,null);assert.equal(imported.data.selectedTopicId,null);
+  assert.equal((await h.invoke('display:open')).ok,false);assert.equal(h.output,undefined);
+  const a=await h.invoke('sites:select-topic',['topic-A',imported.data.id]);assert(a.ok,a.error);assert.equal(a.data.selectedTopicId,'topic-A');assert((await h.invoke('display:open')).ok);const old=h.output;
+  const b=await h.invoke('sites:select-topic',['topic-B',imported.data.id]);assert(b.ok,b.error);assert(old.closeRequested);assert(old.hideCount>0);assert.equal(h.requests.at(-1).body.topicId,'topic-A');assert.equal(h.requests.at(-1).body.action,'hide');
+  assert((await h.invoke('display:open')).ok);const current=h.output;const before=h.requests.length;old.finishClose();await flush();assert.equal(h.requests.length,before);assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],current)).ok);
+  const saved=h.vaultCommits.at(-1).sites[0];assert.equal(saved.topicId,null);assert.equal(saved.selectedTopicId,'topic-B');
+});
+
+test('management commands from an old site and old topic cannot write after switching',async()=>{
+  const h=await harness();const a=await h.pair(3011),b=await h.pair(3012);const before=h.requests.length;
+  assert.equal((await h.invoke('control:request',[{connectionId:a.id,path:'/control/messages/m?topicId=3011',method:'DELETE'}])).ok,false);
+  assert.equal((await h.invoke('control:request',[{connectionId:b.id,path:'/control/messages/m?topicId=3011',method:'DELETE'}])).ok,false);
+  assert.equal(h.requests.length,before);assert.equal((await h.invoke('sites:select-topic',['other-topic',b.id])).ok,false);assert.equal(h.requests.length,before);
+  assert((await h.invoke('control:request',[{connectionId:b.id,path:'/control/messages/m?topicId=3012',method:'PATCH',body:{isRead:true}}])).ok);
+  assert.equal(h.requests.at(-1).body.isRead,true);assert.equal(h.requests.at(-1).headers.authorization,'Bearer wc_ctl_private');
+});
+
+test('display window cannot access any new management, save, confirmation or external-link IPC',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');
+  for(const [channel,args] of [['sites:select-topic',['3011']],['files:save',[{kind:'csv',name:'x',content:'x'}]],['app:confirm',[{message:'x'}]],['share:open',[]],['control:request',[{path:'/control/topics',method:'GET'}]]])assert.equal((await h.invoke(channel,args,h.output)).ok,false);
+});
+
+test('topic selection waits for an importing vault commit and rejects the old site callback',async()=>{
+  const h=await harness(),old=await h.pair(3011);const gate=deferred();let renaming=false;
+  h.setPersistence({rename:candidate=>{if(!renaming&&candidate.sites.some(site=>site.topicId==='3012')){renaming=true;return gate.promise;}}});
+  const importing=h.invoke('sites:import-key',[keyFor(3012)]);await flush();await flush();assert(renaming);
+  const changing=h.invoke('sites:select-topic',['3011',old.id]);await flush();assert.equal((await h.invoke('sites:list')).data.selectedId,old.id);
+  gate.resolve();const result=await importing;assert(result.ok,result.error);assert.equal((await changing).ok,false);
+  const final=(await h.invoke('sites:list')).data;assert.equal(final.selectedId,result.data.id);assert.equal(h.vaultCommits.at(-1).selected,result.data.id);
+  assert(!h.requests.some(request=>request.url.endsWith('/control/topics/3011')));
+});
+
+test('topic membership arriving inside a new import rename cannot publish or persist its old selection',async()=>{
+  const h=await harness();
+  h.setRoute(r=>r.url.endsWith('/capabilities')&&r.url.includes(':3011')?Response.json({protocolVersion:1,siteId:'3011',features:{connectionKeys:true,siteControl:true}}):r.url.endsWith('/control/identity')&&r.url.includes(':3011')?Response.json({scope:'site',siteId:'3011',topicId:null,topicTitle:null,label:'Site A',grantId:'site-key',expiresAt:'2099-01-01T00:00:00Z'}):null);
+  const old=await h.invoke('sites:import-key',[keyFor(3011)]);assert(old.ok,old.error);
+  const membership=deferred(),rename=deferred();let renaming=false;
+  h.setRoute(r=>r.url.endsWith('/control/topics/topic-A')?membership.promise:null);
+  const selecting=h.invoke('sites:select-topic',['topic-A',old.data.id]);await flush();
+  h.setPersistence({rename:candidate=>{if(!renaming&&candidate.sites.some(site=>site.topicId==='3012')){renaming=true;return rename.promise;}}});
+  const importing=h.invoke('sites:import-key',[keyFor(3012)]);await flush();await flush();assert(renaming);
+  const commits=h.vaultCommits.length;membership.resolve(Response.json({id:'topic-A'}));await flush();await flush();assert.equal(h.vaultCommits.length,commits);assert.equal((await h.invoke('sites:list')).data.items[0].selectedTopicId,null);
+  rename.resolve();const imported=await importing;assert(imported.ok,imported.error);assert.equal((await selecting).ok,false);assert.equal(h.vaultCommits.at(-1).selected,imported.data.id);assert.equal((await h.invoke('sites:list')).data.selectedId,imported.data.id);
 });

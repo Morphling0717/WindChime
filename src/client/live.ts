@@ -1,15 +1,17 @@
-import type { WindChimeLiveAction, WindChimeLiveControlState, WindChimeLiveFrame, WindChimeLiveGrant } from '../core/live.js';
+import type { WindChimeLiveAction, WindChimeLiveControlState, WindChimeLiveFrame, WindChimeLiveGrant, WindChimeShareInfo } from '../core/live.js';
 import type { WindChimeConnectionIdentity } from '../core/connection-key.js';
+import type { WindChimeAdminTopic, WindChimeMessageList, WindChimeMessageRecord, WindChimeBlockedSender, WindChimeInboxFilter } from '../core/index.js';
+import type { WindChimeTopicCreateInput, WindChimeTopicPatchInput } from '../types-topics.js';
 
 export type WindChimeLiveCapabilities = {
   protocolVersion: number; siteId: string; basePath: string;
-  features: { connectionKeys?: boolean; images?: boolean; pairing?: boolean; broadcast?: boolean };
+  features: { connectionKeys?: boolean; images?: boolean; pairing?: boolean; broadcast?: boolean; siteControl?: boolean; mailManagement?: boolean; keywordFilterToggle?: boolean };
   pollIntervalMs: number; leaseMs: number;
 };
 export type { WindChimeConnectionIdentity } from '../core/connection-key.js';
 
 /** A desktop may inject this restricted transport without exposing credentials. */
-export type WindChimeLiveRequest = { path: string; method: 'GET' | 'POST' | 'DELETE'; body?: unknown; signal?: AbortSignal };
+export type WindChimeLiveRequest = { path: string; method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal };
 export type WindChimeLiveTransport = <T>(request: WindChimeLiveRequest) => Promise<T>;
 export type WindChimeLiveOptions = {
   baseUrl?: string; getHeaders?: () => HeadersInit | Promise<HeadersInit>;
@@ -52,9 +54,41 @@ export function createWindChimeLiveClient(options: WindChimeLiveOptions = {}) {
     state: (topicId: string, signal?: AbortSignal) => request<WindChimeLiveControlState>({ path: `/control/state?${scope(topicId)}`, method: 'GET', signal }),
     action: (body: WindChimeLiveAction) => request<WindChimeLiveControlState>({ path: '/control/action', method: 'POST', body }),
     message: (topicId: string, messageId: string, patch: { isRead?: boolean; isFavorited?: boolean }) => request<WindChimeLiveControlState>({ path: '/control/message', method: 'POST', body: { topicId, messageId, ...patch } }),
-    grants: (topicId: string) => request<{ items: WindChimeLiveGrant[] }>({ path: `/control/grants?${scope(topicId)}`, method: 'GET' }),
+    grants: (topicId?: string) => request<{ items: WindChimeLiveGrant[] }>({ path: '/control/grants'+(topicId === undefined ? '' : `?${scope(topicId)}`), method: 'GET' }),
     createGrant: (topicId: string, kind: 'display' | 'control', label = '') => request<{ id: string; token: string; expiresAt: string; topicId: string; kind: string }>({ path: '/control/grants', method: 'POST', body: { topicId, kind, label } }),
-    revokeGrant: (topicId: string, id: string) => request<unknown>({ path: `/control/grants/${encodeURIComponent(id)}?${scope(topicId)}`, method: 'DELETE' }),
+    createSiteGrant: (label = '') => request<{ id: string; token: string; expiresAt: string; topicId: null; scope: 'site'; kind: 'control' }>({ path: '/control/grants', method: 'POST', body: { kind: 'control', scope: 'site', label } }),
+    revokeGrant: (topicId: string | undefined, id: string) => request<unknown>({ path: `/control/grants/${encodeURIComponent(id)}`+(topicId === undefined ? '' : `?${scope(topicId)}`), method: 'DELETE' }),
+    topics: {
+      list: (includeArchived = false, signal?: AbortSignal) => request<{items:WindChimeAdminTopic[]}>({path:'/control/topics'+(includeArchived?'?include=archived':''),method:'GET',signal}),
+      get: (id:string) => request<WindChimeAdminTopic>({path:`/control/topics/${encodeURIComponent(id)}`,method:'GET'}),
+      create: (input:WindChimeTopicCreateInput) => request<WindChimeAdminTopic>({path:'/control/topics',method:'POST',body:input}),
+      update: (id:string,input:WindChimeTopicPatchInput) => request<WindChimeAdminTopic>({path:`/control/topics/${encodeURIComponent(id)}`,method:'PATCH',body:input}),
+      archive: (id:string,markReadFirst=false) => request<{topic:WindChimeAdminTopic;unreadCount:number;flaggedCount:number}>({path:`/control/topics/${encodeURIComponent(id)}/archive`,method:'POST',body:{markReadFirst}}),
+      restore: (id:string) => request<WindChimeAdminTopic>({path:`/control/topics/${encodeURIComponent(id)}/restore`,method:'POST',body:{}}),
+      purge: (id:string) => request<{ok:true;topic:WindChimeAdminTopic}>({path:`/control/topics/${encodeURIComponent(id)}/purge`,method:'DELETE'}),
+    },
+    messages: {
+      list: (topicId:string,filter:WindChimeInboxFilter='all',signal?:AbortSignal) => request<WindChimeMessageList>({path:`/control/messages?${scope(topicId)}&filter=${filter}`,method:'GET',signal}),
+      get: (topicId:string,id:string) => request<WindChimeMessageRecord>({path:`/control/messages/${encodeURIComponent(id)}?${scope(topicId)}`,method:'GET'}),
+      update: (topicId:string,id:string,patch:{isRead?:boolean;isFavorited?:boolean;isFlagged?:boolean}) => request<{ok:true}>({path:`/control/messages/${encodeURIComponent(id)}?${scope(topicId)}`,method:'PATCH',body:patch}),
+      delete: (topicId:string,id:string) => request<{ok:true}>({path:`/control/messages/${encodeURIComponent(id)}?${scope(topicId)}`,method:'DELETE'}),
+      batch: (topicId:string,action:'delete'|'markRead',ids:string[]) => request<{ok:true}>({path:`/control/messages/batch?${scope(topicId)}`,method:'POST',body:{action,ids}}),
+      block: (topicId:string,id:string) => request<{ok:true}>({path:`/control/messages/${encodeURIComponent(id)}/block?${scope(topicId)}`,method:'POST',body:{}}),
+    },
+    settings: {
+      get: (signal?:AbortSignal) => request<{enabled:boolean;blockedTermsEnabled:boolean}>({path:'/control/settings',method:'GET',signal}),
+      setEnabled: (enabled:boolean) => request<{enabled:boolean}>({path:'/control/settings',method:'PUT',body:{enabled}}),
+      setBlockedTermsEnabled: (blockedTermsEnabled:boolean) => request<{enabled:boolean;blockedTermsEnabled:boolean}>({path:'/control/settings',method:'PATCH',body:{blockedTermsEnabled}}),
+    },
+    blockedTerms: {
+      get: () => request<{terms:string[]}>({path:'/control/blocked-terms',method:'GET'}),
+      set: (terms:string[]) => request<{terms:string[]}>({path:'/control/blocked-terms',method:'PUT',body:{terms}}),
+    },
+    blocklist: {
+      list: () => request<WindChimeBlockedSender[]>({path:'/control/blocklist',method:'GET'}),
+      remove: (hash:string) => request<{ok:true}>({path:`/control/blocklist/${encodeURIComponent(hash)}`,method:'DELETE'}),
+    },
+    share: (topicId:string) => request<WindChimeShareInfo>({path:`/control/share?${scope(topicId)}`,method:'GET'}),
     approveDevice: (userCode: string, topicId: string) => request<{ ok: true }>({ path: '/devices/approve', method: 'POST', body: { userCode, topicId } }),
     bindingChallenge: (topicId: string) => request<{ nonce: string; siteId: string; topicId: string; siteOrigin: string; expiresAt: string }>({ path: '/control/binding-challenge', method: 'POST', body: { topicId } }),
     bind: (topicId: string, proof: string) => request<{ ok: true; bindingId: string }>({ path: '/control/bind', method: 'POST', body: { topicId, proof } }),

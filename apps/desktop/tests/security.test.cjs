@@ -40,3 +40,20 @@ test('v1 device connections retain necessary credentials and ignore obsolete gat
   assert.throws(()=>restoreSite({...legacy,token:'wc_disp_readonly'}));
   assert.throws(()=>restoreSite({...legacy,topicId:null}));
 });
+
+test('site-scoped management keeps a separate selected topic and never permits credential creation', () => {
+  const value=restoreSite({id:'s',siteId:'instance',origin:'https://a.test',scope:'site',topicId:null,selectedTopicId:'topic-A',label:'Site',token:'wc_ctl_PRIVATE',expiresAt:'2099-01-01'});
+  assert.equal(value.topicId,null);assert.equal(publicSite(value).selectedTopicId,'topic-A');assert.equal(publicSite(value).scope,'site');
+  assert(!JSON.stringify(publicSite(value)).includes('PRIVATE'));
+  assert.equal(validateRequest({path:'/control/messages?filter=all',method:'GET'},'control','topic-A','site').path,'/control/messages?filter=all&topicId=topic-A');
+  for(const [path,method,body] of [['/control/topics','POST',{title:'New'}],['/control/settings','PATCH',{blockedTermsEnabled:false}],['/control/blocked-terms','PUT',{terms:['word']}],['/control/blocklist/hash','DELETE'],['/control/topics/topic-B','PATCH',{title:'Edit'}]])assert.doesNotThrow(()=>validateRequest({path,method,body},'control','topic-A','site'));
+  for(const path of ['/control/grants','/control/bind','/devices/request'])assert.throws(()=>validateRequest({path,method:'POST',body:{scope:'site'}},'control','topic-A','site'));
+  assert.throws(()=>validateRequest({path:'/control/messages?topicId=topic-B',method:'GET'},'control','topic-A','site'));
+  assert.throws(()=>validateRequest({path:'/control/messages',method:'GET'},'control',null,'site'));
+});
+
+test('old topic grants can manage their messages but cannot gain whole-site features', () => {
+  for(const [path,method,body] of [['/control/messages/m','PATCH',{isRead:true}],['/control/messages/batch','POST',{action:'delete',ids:['m']}],['/control/share','GET'],['/control/topics/topic-A','GET']])assert.doesNotThrow(()=>validateRequest({path,method,body},'control','topic-A','topic'));
+  for(const [path,method] of [['/control/topics','POST'],['/control/topics/topic-B','GET'],['/control/topics/topic-A','DELETE'],['/control/messages/m/block','POST'],['/control/blocklist','GET'],['/control/blocked-terms','GET'],['/control/settings','PATCH']])assert.throws(()=>validateRequest({path,method,body:{}},'control','topic-A','topic'));
+  assert.throws(()=>restoreSite({id:'a',siteId:'a',origin:'https://a.test',scope:'site',topicId:'topic-A',token:'wc_ctl_private',expiresAt:'2099-01-01'}));
+});

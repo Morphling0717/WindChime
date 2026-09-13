@@ -80,13 +80,22 @@ export function useWindChimeResource<T>(
     });
     const timer =
       enabled && options.pollIntervalMs
-        ? setInterval(() => void reload(), options.pollIntervalMs)
+        ? setInterval(() => {
+            if (typeof document === "undefined" || document.visibilityState !== "hidden") void reload();
+          }, options.pollIntervalMs)
         : undefined;
+    const resume = () => {
+      if (enabled && (typeof document === "undefined" || document.visibilityState !== "hidden")) void reload();
+    };
+    if (typeof window !== "undefined") window.addEventListener?.("focus", resume);
+    if (typeof document !== "undefined") document.addEventListener?.("visibilitychange", resume);
     return () => {
       ++serial.current;
       controller.current?.abort();
       unsubscribe();
       if (timer) clearInterval(timer);
+      if (typeof window !== "undefined") window.removeEventListener?.("focus", resume);
+      if (typeof document !== "undefined") document.removeEventListener?.("visibilitychange", resume);
     };
   }, [client, resource, reload, enabled, options.pollIntervalMs]);
   return {

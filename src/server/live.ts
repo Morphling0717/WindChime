@@ -16,7 +16,7 @@ const PROCESS_EPOCH = (runtime.__windchimeLiveEpoch ??= randomUUID());
 type Channel = { topic_id: string; revision: number; activation: number; current_snapshot: string | null; last_shown: string | null; runtime_epoch: string | null; appearance: string };
 type DraftRow = { message_id: string; topic_id: string; source_hash: string; draft_json: string; revision: number; status: "pending" | "approved" | "rejected"; snapshot_id: string | null };
 type SourceRow = { id: string; topic_id: string; created_at: string; text: string; nickname: string | null; link_url: string | null; is_read: number; is_favorited: number; is_flagged: number };
-export type LiveGrantRow = { id: string; token_hash: string; kind: "display" | "control"; topic_id: string; label: string; expires_at: number; revoked_at: number | null; binding_id: string | null; platform_session: string | null; parent_grant_id: string | null };
+export type LiveGrantRow = { id: string; token_hash: string; kind: "display" | "control"; scope: "site" | "topic"; topic_id: string | null; label: string; expires_at: number; revoked_at: number | null; binding_id: string | null; platform_session: string | null; parent_grant_id: string | null };
 type Receiver = { id: string; grantId: string; topicId: string; joinedActivation: number; lastSeen: number; epoch: string };
 export type LiveProof = { kind: "binding" | "display" | "lease"; iss: string; aud: string; siteId: string; topicId: string; bindingId: string; biliSubject: string; sessionId: string; jti: string; iat: number; exp: number; nonce?: string };
 export type WindChimeBroadcastOptions = { storage: WindChimeStorage; ready: () => Promise<void>; now: () => number; runtimeEpoch?: string };
@@ -159,14 +159,16 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
       return stateTx(db, t.id);
     });
   }
-  async function createGrant(topicId: string, kind: "display" | "control", label = "", durationMs = 30 * 86400000, bindingId: string | null = null, sessionId: string | null = null, parentGrantId: string | null = null) {
+  async function createGrant(topicId: string | null, kind: "display" | "control", label = "", durationMs = 30 * 86400000, bindingId: string | null = null, sessionId: string | null = null, parentGrantId: string | null = null, scope: "topic" | "site" = "topic") {
+    if (scope === "site" && (kind !== "control" || topicId !== null || parentGrantId || bindingId || sessionId)) fail("INVALID_SCOPE", "站点授权必须是独立控制授权");
+    if (scope !== "site" && (scope !== "topic" || !topicId)) fail("INVALID_SCOPE", "话题授权需要明确话题");
     await ready();
     const id = randomUUID(), token = (kind === "display" ? "wc_disp_" : "wc_ctl_") + liveSecret(), expires = now() + durationMs;
     return storage.transaction(async (db) => {
-      const t = await topic(db,topicId);
-      if (parentGrantId && (kind !== "display" || !(await db.get("SELECT id FROM mail_live_grants WHERE id=? AND kind='control' AND topic_id=? AND revoked_at IS NULL AND expires_at>?", [parentGrantId,t.id,now()])))) fail("UNAUTHORIZED", "签发设备授权已失效", 401);
-      await db.run("INSERT INTO mail_live_grants(id,token_hash,kind,topic_id,label,expires_at,binding_id,platform_session,parent_grant_id) VALUES(?,?,?,?,?,?,?,?,?)", [id, liveHash(token), kind, t.id, label.slice(0, 100), expires, bindingId, sessionId, parentGrantId]);
-      return { id, token, kind, topicId: t.id, expiresAt: new Date(expires).toISOString() };
+      const resolved = scope === "site" ? null : (await topic(db,topicId!)).id;
+      if (parentGrantId && (kind !== "display" || !(await db.get("SELECT id FROM mail_live_grants WHERE id=? AND kind='control' AND (scope='site' OR topic_id=?) AND revoked_at IS NULL AND expires_at>?", [parentGrantId,resolved,now()])))) fail("UNAUTHORIZED", "签发设备授权已失效", 401);
+      await db.run("INSERT INTO mail_live_grants(id,token_hash,kind,scope,topic_id,label,expires_at,binding_id,platform_session,parent_grant_id) VALUES(?,?,?,?,?,?,?,?,?,?)", [id, liveHash(token), kind, scope, resolved, label.slice(0, 100), expires, bindingId, sessionId, parentGrantId]);
+      return { id, token, kind, scope, topicId: resolved, expiresAt: new Date(expires).toISOString() };
     });
   }
   async function authenticate(token: string, kind: "display" | "control", scope?: string) {
@@ -174,46 +176,48 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
     const grant = await storage.get<LiveGrantRow>("SELECT * FROM mail_live_grants WHERE token_hash=? AND kind=? AND revoked_at IS NULL AND expires_at>?", [liveHash(token), kind, now()]);
     if (!grant) fail("UNAUTHORIZED", "授权失效", 401);
     if (grant!.parent_grant_id && !(await storage.get("SELECT id FROM mail_live_grants WHERE id=? AND revoked_at IS NULL AND expires_at>?", [grant!.parent_grant_id,now()]))) fail("UNAUTHORIZED", "签发设备授权已失效", 401);
-    if (scope !== undefined) { const t = await storage.transaction((db) => topic(db, scope)); if (t.id !== grant!.topic_id) fail("FORBIDDEN", "授权不属于当前信箱", 403); }
-    if (!(await storage.get("SELECT id FROM mail_topics WHERE id=?", [grant!.topic_id]))) fail("UNAUTHORIZED", "授权失效", 401);
+    if (grant!.scope === "site" && (kind !== "control" || grant!.topic_id !== null)) fail("UNAUTHORIZED", "授权失效", 401);
+    if (scope !== undefined) { const t = await storage.transaction((db) => topic(db, scope)); if (grant!.scope !== "site" && t.id !== grant!.topic_id) fail("FORBIDDEN", "授权不属于当前信箱", 403); }
+    if (grant!.scope !== "site" && !(await storage.get("SELECT id FROM mail_topics WHERE id=?", [grant!.topic_id]))) fail("UNAUTHORIZED", "授权失效", 401);
     return grant!;
   }
-  async function listGrants(topicId: string) {
-    await ready(); const t = await storage.transaction((db) => topic(db, topicId));
-    const rows = await storage.all<LiveGrantRow>("SELECT * FROM mail_live_grants WHERE topic_id=? ORDER BY expires_at DESC", [t.id]);
-    return rows.map((g) => ({ id: g.id, kind: g.kind, topicId: g.topic_id, label: g.label, expiresAt: new Date(g.expires_at).toISOString(), revokedAt: g.revoked_at ? new Date(g.revoked_at).toISOString() : null }));
+  async function listGrants(topicId: string | null) {
+    await ready(); const id = topicId === null ? null : (await storage.transaction((db) => topic(db, topicId))).id;
+    const rows = await storage.all<LiveGrantRow>("SELECT * FROM mail_live_grants"+(id === null ? "" : " WHERE topic_id=?")+" ORDER BY expires_at DESC", id === null ? [] : [id]);
+    return rows.map((g) => ({ id: g.id, kind: g.kind, scope: g.scope, topicId: g.topic_id, label: g.label, expiresAt: new Date(g.expires_at).toISOString(), revokedAt: g.revoked_at ? new Date(g.revoked_at).toISOString() : null }));
   }
   async function controlIdentity(token: string): Promise<WindChimeConnectionIdentity> {
     if (typeof token !== "string" || !/^wc_ctl_[A-Za-z0-9_-]{43}$/.test(token)) fail("CONNECTION_KEY_INVALID", "连接密钥无效", 401);
     await ready();
     // Read the identity and authorization together; never resolve a caller-provided topic.
     const row = await storage.get<{
-      id: string; topic_id: string; title: string; label: string; site_id: string;
+      id: string; scope: "site" | "topic"; topic_id: string | null; title: string | null; label: string; site_id: string;
       expires_at: number; revoked_at: number | null;
-    }>(`SELECT g.id,g.topic_id,t.title,g.label,i.site_id,g.expires_at,g.revoked_at
-      FROM mail_live_grants g JOIN mail_topics t ON t.id=g.topic_id
-      JOIN mail_live_identity i ON i.id=1 WHERE g.token_hash=? AND g.kind='control'`, [liveHash(token)]);
+    }>(`SELECT g.id,g.scope,g.topic_id,t.title,g.label,i.site_id,g.expires_at,g.revoked_at
+      FROM mail_live_grants g LEFT JOIN mail_topics t ON t.id=g.topic_id
+      JOIN mail_live_identity i ON i.id=1 WHERE g.token_hash=? AND g.kind='control' AND (g.scope='site' OR t.id IS NOT NULL)`, [liveHash(token)]);
     if (!row) fail("CONNECTION_KEY_INVALID", "连接密钥无效", 401);
     if (row!.revoked_at !== null) fail("CONNECTION_KEY_REVOKED", "连接密钥已撤销，请在网站后台重新生成", 401);
     if (row!.expires_at <= now()) fail("CONNECTION_KEY_EXPIRED", "连接密钥已过期，请在网站后台重新生成", 401);
-    return { siteId: row!.site_id, topicId: row!.topic_id, topicTitle: row!.title, label: row!.label,
+    return { scope: row!.scope, siteId: row!.site_id, topicId: row!.topic_id, topicTitle: row!.title, label: row!.label,
       expiresAt: new Date(row!.expires_at).toISOString(), grantId: row!.id };
   }
-  async function revokeGrant(id: string, topicId: string) {
-    await ready(); const t = await storage.transaction((db) => topic(db, topicId));
-    const result = await storage.run("UPDATE mail_live_grants SET revoked_at=? WHERE id=? AND topic_id=?", [now(), id, t.id]);
+  async function revokeGrant(id: string, topicId: string | null) {
+    await ready(); const resolved = topicId === null ? null : (await storage.transaction((db) => topic(db, topicId))).id;
+    const result = await storage.run("UPDATE mail_live_grants SET revoked_at=? WHERE id=?"+(resolved === null ? "" : " AND topic_id=?"), resolved === null ? [now(),id] : [now(), id, resolved]);
     if (!result.changes) fail("GRANT_NOT_FOUND", "授权不存在", 404);
     const affected = new Set([id,...(await storage.all<{id:string}>("SELECT id FROM mail_live_grants WHERE parent_grant_id=?",[id])).map((r)=>r.id)]);
     for (const [key, r] of receivers) if (affected.has(r.grantId)) receivers.delete(key);
     return { ok: true as const };
   }
   async function open(grant: LiveGrantRow) {
+    if (grant.kind !== "display" || grant.scope !== "topic" || !grant.topic_id) fail("UNAUTHORIZED", "需要话题展示授权", 401);
     await ready(); pruneReceivers();
-    const c = await storage.transaction((db) => channel(db, grant.topic_id));
+    const c = await storage.transaction((db) => channel(db, grant.topic_id!));
     const id = liveSecret();
     // Bound resource use; new readers cannot invalidate another healthy receiver.
     if (receivers.size >= 1000 || [...receivers.values()].filter((r) => r.grantId === grant.id).length >= 10) fail("RECEIVER_LIMIT", "展示连接过多", 429);
-    receivers.set(id, { id, grantId: grant.id, topicId: grant.topic_id, joinedActivation: c.activation, lastSeen: now(), epoch });
+    receivers.set(id, { id, grantId: grant.id, topicId: grant.topic_id!, joinedActivation: c.activation, lastSeen: now(), epoch });
     return { receiverId: id, epoch, leaseMs: LEASE_MS, pollIntervalMs: 1000 };
   }
   function requireReceiver(grant: LiveGrantRow, id: string) {
@@ -227,7 +231,7 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
       requireReceiver(grant, receiverId);
       if (!(await db.get(`SELECT g.id FROM mail_live_grants g WHERE g.id=? AND g.revoked_at IS NULL AND g.expires_at>?
         AND (g.parent_grant_id IS NULL OR EXISTS(SELECT 1 FROM mail_live_grants p WHERE p.id=g.parent_grant_id AND p.revoked_at IS NULL AND p.expires_at>?))`, [grant.id, now(), now()]))) fail("UNAUTHORIZED", "展示授权已失效", 401);
-      const t = await topic(db, grant.topic_id), c = await channel(db, t.id);
+      const t = await topic(db, grant.topic_id!), c = await channel(db, t.id);
       let snapshot: WindChimeLiveSnapshot | null = null;
       if (!t.archivedAt && c.runtime_epoch === epoch && c.activation > r.joinedActivation && c.current_snapshot) {
         const row = await db.get<{ payload_json: string; message_id: string; source_hash: string }>(`SELECT s.* FROM mail_live_snapshots s JOIN mail_live_drafts d ON d.snapshot_id=s.id

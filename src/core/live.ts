@@ -40,6 +40,10 @@ export type WindChimeLiveAction = {
   appearance?: Partial<WindChimeLiveAppearance>;
 };
 export type WindChimeLiveGrant = {
-  id: string; kind: "display" | "control"; topicId: string; label: string;
+  id: string; kind: "display" | "control"; scope: "site" | "topic"; topicId: string | null; label: string;
   expiresAt: string; revokedAt: string | null;
+};
+export type WindChimeShareInfo = {
+  siteName: string; origin: string; topicId: string; topicTitle: string; submissionUrl: string;
+  posterDefaults: { title?: string; subtitle?: string; signature?: string; avatarUrl?: string };
 };

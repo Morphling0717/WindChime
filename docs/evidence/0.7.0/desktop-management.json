@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "version": "0.7.0",
+  "electron": "44.3.0",
+  "checks": [
+    "site key imports through real form; default topic selected; historical flagged mail visible with keyword filter disabled",
+    "inbox original/read/favorite and CSV saved through restricted main-process dialog",
+    "original remains readable after opening the last unread message removes its unread-list row",
+    "new website activity appears within polling; topic switch isolates messages",
+    "topic creation uses shared management route",
+    "shared QR/poster renderer, local normalized avatar and actual PNG saves; safe server-provided submission link",
+    "poster title/signature/avatar preferences survive share view remount without persisting credentials or mail",
+    "site-wide keyword toggle and terms editor use main-process authenticated routes",
+    "external settings/blocklist/grants synchronize while visible; hidden pauses reads; focus refreshes immediately; dirty terms preserved",
+    "canceling native unsaved-draft confirmation preserves studio and draft",
+    "emergency hide remains available; management navigation never opens output or approves mail"
+  ],
+  "screenshots": [
+    "inbox-wide",
+    "inbox-narrow",
+    "topics-wide",
+    "share-wide",
+    "settings-wide"
+  ],
+  "savedFiles": [
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-5NksbI\\风铃来信.csv",
+      "bytes": 301
+    },
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-5NksbI\\风铃投稿二维码.png",
+      "bytes": 5269
+    },
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-5NksbI\\风铃投稿海报.png",
+      "bytes": 410244
+    }
+  ],
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-5NksbI",
+  "requests": 92,
+  "consoleErrors": [],
+  "at": "2026-09-13T05:34:49.567Z"
+}

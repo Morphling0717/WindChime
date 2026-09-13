@@ -1,4 +1,6 @@
 'use client';
+export { WindChimeConnectionKeys } from './ConnectionKeys.js';
+export type { WindChimeConnectionKeysProps } from './ConnectionKeys.js';
 export { WindChimeLiveControlPanel } from './ControlPanel.js';
 export type { WindChimeLiveControlPanelProps } from './ControlPanel.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';

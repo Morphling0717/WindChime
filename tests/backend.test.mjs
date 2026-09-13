@@ -98,7 +98,7 @@ test("new database initializes default and independent migration record; service
   assert.equal((await f.service.getSettings()).enabled, true);
   assert.equal(
     (await f.storage.all("SELECT * FROM windchime_migrations")).length,
-    2,
+    3,
   );
   assert.ok(hostReadyCalls >= 3);
   assert.equal(
@@ -121,7 +121,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   assert.equal(old.is_favorited, 1);
   assert.equal(old.created_at, "2024-01-02T03:04:05Z");
   assert.equal(old.text, "keep text");
-  assert.deepEqual(await f.service.getSettings(), { enabled: false });
+  assert.deepEqual(await f.service.getSettings(), { enabled: false, blockedTermsEnabled: false });
   assert.deepEqual(await f.service.getBlockedTerms(), ["secret"]);
   assert.deepEqual(await f.storage.get("SELECT * FROM host_users"), {
     id: "admin",
@@ -145,7 +145,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   await second.ready;
   assert.equal(
     (await second.all("SELECT * FROM windchime_migrations")).length,
-    2,
+    3,
   );
   assert.equal(
     (await second.all("SELECT * FROM mail_rate_limit_hits")).length,
@@ -345,6 +345,7 @@ test("message lifecycle, review redaction, consistent counts, topic isolation, a
   const f = await fixture(t);
   const topic = await f.service.createTopic({ slug: "event", title: "Event" });
   await f.service.setBlockedTerms([" Secret ", "secret"]);
+  await f.service.setBlockedTermsEnabled(true);
   for (const payload of [
     { text: "normal" },
     {
@@ -452,6 +453,7 @@ test("archive markReadFirst addresses the requested topic atomically and leaves 
   const a = await f.service.createTopic({ slug: "a", title: "A" }),
     b = await f.service.createTopic({ slug: "b", title: "B" });
   await f.service.setBlockedTerms(["review"]);
+  await f.service.setBlockedTermsEnabled(true);
   for (const [index, payload] of [
     { text: "normal A", topicSlug: "a" },
     { text: "review A", topicSlug: "a" },
@@ -788,7 +790,7 @@ test("eight independent connections can initialize the same brand new schema con
   );
   assert.equal(
     (await connections[7].all("SELECT id FROM windchime_migrations")).length,
-    2,
+    3,
   );
 });
 
@@ -975,6 +977,7 @@ test("explicitly empty legacy salt preserves stored sender identity while missin
 test("blocklist preserves normal previews but never reveals new, legacy or untraceable flagged originals", async (t) => {
   const f = await fixture(t);
   await f.service.setBlockedTerms(["secret"]);
+  await f.service.setBlockedTermsEnabled(true);
   await f.service.submitMessage(
     { text: "secret original", senderFingerprint: "flagged" },
     f.request("/messages", "POST", undefined, false),

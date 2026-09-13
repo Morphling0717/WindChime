@@ -123,6 +123,7 @@ export function WindChimeSender({
   linkMaxLength = 500,
   turnstileSiteKey,
   blockedTerms,
+  blockedTermsEnabled = false,
   blockedTermsMessage = "内容包含不允许的词，请修改后再试。",
   disableSenderFingerprint = false,
   senderFingerprintKey = "windchime:fp",
@@ -147,6 +148,7 @@ export function WindChimeSender({
     nicknameMaxLength,
     linkMaxLength,
     blockedTerms,
+    blockedTermsEnabled,
     disableSenderFingerprint,
     senderFingerprintKey,
   });

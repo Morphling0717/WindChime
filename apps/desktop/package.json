@@ -1,7 +1,7 @@
 {
   "name": "windchime-desktop",
   "productName": "WindChime",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "风铃直播信箱 · 私人审核与播出控制台",
   "author": "WindChime contributors",
   "license": "MIT",
@@ -17,7 +17,8 @@
     "test:smoke": "npm run build && electron scripts/smoke.cjs",
     "test:sites": "npm run build && node scripts/run-site-smoke.cjs",
     "test:keys": "npm run build && node scripts/run-key-smoke.cjs",
-    "test:visual": "npm run build && electron scripts/glass-preview.cjs"
+    "test:visual": "npm run test:management",
+    "test:management": "npm run build && node scripts/run-management-smoke.cjs"
   },
   "config": {
     "forge": "./forge.config.cjs"

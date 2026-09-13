@@ -47,7 +47,10 @@ export type WindChimeMessageRecord = {
 export type WindChimeMessageList = {
   items: WindChimeMessageRecord[];
   counts: WindChimeCounts;
+  /** Absent on pre-0.7 servers, which always applied keyword filtering. */
+  blockedTermsEnabled?: boolean;
 };
+export type WindChimeSettings = { enabled: boolean; blockedTermsEnabled?: boolean };
 export type WindChimeBlockedSender = {
   hash: string;
   label?: string | null;
@@ -120,11 +123,12 @@ export function isWindChimeInboxFilter(
 export function filterWindChimeMessages(
   items: readonly WindChimeMessageRecord[],
   filter: WindChimeInboxFilter,
+  blockedTermsEnabled = true,
 ): WindChimeMessageRecord[] {
   return items.filter((item) =>
     filter === "flagged"
-      ? item.isFlagged
-      : !item.isFlagged &&
+      ? blockedTermsEnabled && item.isFlagged
+      : (!blockedTermsEnabled || !item.isFlagged) &&
         (filter === "all" ||
           (filter === "unread" && !item.isRead) ||
           (filter === "favorited" && item.isFavorited)),
@@ -132,11 +136,12 @@ export function filterWindChimeMessages(
 }
 export function countWindChimeMessages(
   items: readonly WindChimeMessageRecord[],
+  blockedTermsEnabled = true,
 ): WindChimeCounts {
   return {
-    all: filterWindChimeMessages(items, "all").length,
-    unread: filterWindChimeMessages(items, "unread").length,
-    favorited: filterWindChimeMessages(items, "favorited").length,
-    flagged: filterWindChimeMessages(items, "flagged").length,
+    all: filterWindChimeMessages(items, "all", blockedTermsEnabled).length,
+    unread: filterWindChimeMessages(items, "unread", blockedTermsEnabled).length,
+    favorited: filterWindChimeMessages(items, "favorited", blockedTermsEnabled).length,
+    flagged: filterWindChimeMessages(items, "flagged", blockedTermsEnabled).length,
   };
 }

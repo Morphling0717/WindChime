@@ -9,6 +9,7 @@ import type {
 } from "../sqlite/index.js";
 import { createTopicOperations } from "./topics.js";
 import { createMessageOperations } from "./messages.js";
+import { readBlockedTermsEnabled } from "./keyword-settings.js";
 import { getWindChimeClientIp } from "./identity.js";
 import { boolInput, fail } from "./validation.js";
 import { createWindChimeBroadcast } from "./live.js";
@@ -70,6 +71,19 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
   async function getBlockedTerms() {
     await ready();
     return readTerms(storage);
+  }
+  async function getBlockedTermsEnabled() {
+    await ready();
+    return readBlockedTermsEnabled(storage);
+  }
+  async function setBlockedTermsEnabled(value: boolean) {
+    boolInput(value, "blockedTermsEnabled");
+    await ready();
+    await storage.run(
+      "INSERT INTO mail_settings(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+      ["mail.blocked_terms_enabled", JSON.stringify(value), new Date(now()).toISOString()],
+    );
+    return getSettings();
   }
   async function setBlockedTerms(terms: string[]): Promise<string[]> {
     if (!Array.isArray(terms) || terms.some((term) => typeof term !== "string"))
@@ -159,14 +173,14 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
   async function getSettings() {
     const topic = await topics.getDefaultTopic();
     if (!topic) fail("NOT_INITIALIZED", "默认主题未初始化", 503);
-    return { enabled: topic.isEnabled };
+    return { enabled: topic.isEnabled, blockedTermsEnabled: await getBlockedTermsEnabled() };
   }
   async function updateSettings(input: { enabled: boolean }) {
     boolInput(input.enabled, "enabled");
     const topic = await topics.updateTopic("default", {
       isEnabled: input.enabled,
     });
-    return { enabled: topic.isEnabled };
+    return { enabled: topic.isEnabled, blockedTermsEnabled: await getBlockedTermsEnabled() };
   }
   // Legacy blocklist previews have no source message ID. Only expose a preview
   // when its sender and text prefix still match an unflagged original, and no
@@ -211,6 +225,8 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
     ...messages,
     getBlockedTerms,
     setBlockedTerms,
+    getBlockedTermsEnabled,
+    setBlockedTermsEnabled,
     getSettings,
     updateSettings,
     listBlockedSenders,

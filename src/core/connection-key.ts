@@ -4,7 +4,7 @@ export type WindChimeConnectionKey = {
   v: 1; origin: string; siteId: string; token: string;
 };
 export type WindChimeConnectionIdentity = {
-  siteId: string; topicId: string; topicTitle: string;
+  scope: "site" | "topic"; siteId: string; topicId: string | null; topicTitle: string | null;
   label: string; expiresAt: string; grantId: string;
 };
 

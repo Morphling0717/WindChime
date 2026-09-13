@@ -9,6 +9,18 @@ const copyOptions = {
   verbatimSymlinks: true,
 };
 
+async function rename(source, destination) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fs.rename(source, destination); }
+    catch (error) {
+      // Windows scanners briefly hold a newly closed compiler output directory.
+      // Retry the same atomic operation; never copy over a live destination.
+      if (process.platform !== "win32" || !["EPERM", "EBUSY"].includes(error.code) || attempt === 4) throw error;
+      await new Promise(resolve => setTimeout(resolve, 75 * 2 ** attempt));
+    }
+  }
+}
+
 /** Publish a fully built directory without copying over the live output. */
 export async function promoteBuild(stage, destination) {
   if (!(await fs.stat(stage)).isDirectory())
@@ -21,7 +33,7 @@ export async function promoteBuild(stage, destination) {
     preserveRecovery = false;
   try {
     try {
-      await fs.rename(destination, previous);
+      await rename(destination, previous);
       hadPrevious = true;
     } catch (error) {
       if (error.code === "EXDEV") {
@@ -34,7 +46,7 @@ export async function promoteBuild(stage, destination) {
         throw error;
       }
     }
-    await fs.rename(stage, destination);
+    await rename(stage, destination);
   } catch (error) {
     if (!hadPrevious) throw error;
     preserveRecovery = true;
@@ -45,7 +57,7 @@ export async function promoteBuild(stage, destination) {
       const restore = path.join(recovery, "restore");
       await fs.cp(previous, restore, copyOptions);
       try {
-        await fs.rename(restore, destination);
+        await rename(restore, destination);
       } catch (restoreError) {
         if (restoreError.code !== "EXDEV") throw restoreError;
         await fs.cp(restore, destination, copyOptions);
