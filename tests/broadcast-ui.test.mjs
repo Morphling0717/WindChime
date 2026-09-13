@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { create, act } from 'react-test-renderer';
 import { WindChimeLiveControlPanel } from '../dist/broadcast/ControlPanel.js';
-import { WindChimeLiveDisplay } from '../dist/broadcast/Display.js';
+import { WindChimeLiveCard, WindChimeLiveDisplay } from '../dist/broadcast/Display.js';
+import { AppearanceEditor } from '../dist/broadcast/AppearanceEditor.js';
 import { DEFAULT_WINDCHIME_LIVE_APPEARANCE as appearance } from '../dist/core/live.js';
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -234,4 +235,118 @@ test('display forwards the polling interval and removes the previous timer when 
     await advance(250);assert.equal(frames,3,'the old 500ms interval must not remain subscribed');
     await act(async()=>renderer.unmount());renderer=null;await advance(1000);assert.equal(frames,3);
   } finally { if(renderer)await act(async()=>renderer.unmount());globalThis.window=oldWindow;globalThis.document=oldDocument; }
+});
+
+test('older sites allow private theme previews but never receive new appearance fields', async t => {
+  const legacyAppearance = { ...appearance, layout: 'card' };
+  for (const key of ['theme', 'accentColor', 'borderWidth', 'lineHeight', 'letterSpacing', 'maxWidth']) delete legacyAppearance[key];
+  const calls = [], notifications = [];
+  const state = { appearance: structuredClone(legacyAppearance) };
+  const studio = { state, connected: true, pending: false, actWithResult: async command => { calls.push(command); return state; } };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange: dirty => notifications.push(dirty) })); });
+  t.after(async () => { await act(async () => renderer.unmount()); });
+  const save = () => renderer.root.findAllByType('button').find(node => node.children.join('') === '应用外观');
+  const choose = async className => act(async () => renderer.root.findByProps({ className }).parent.props.onClick());
+  assert.equal(save().props.disabled, true);
+  assert(JSON.stringify(renderer.toJSON()).includes('此网站需要升级到风铃 0.8.0 才能保存新版外观。现在可以先预览。'));
+  await choose('wc-appearance-layout-sample wc-appearance-layout-split');
+  await choose('wc-appearance-theme-sample wc-appearance-theme-mia');
+  const preview = renderer.root.findByType(WindChimeLiveCard).props;
+  assert.equal(preview.appearance.theme, 'mia');
+  assert.equal(preview.appearance.layout, 'split');
+  assert.equal(notifications.at(-1), true);
+  assert.equal(save().props.disabled, true, 'a local theme selection cannot claim that the server supports it');
+  await act(async () => save().props.onClick());
+  await act(async () => renderer.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  assert.deepEqual(calls, [], 'both click and form submission are blocked for an older server');
+  assert.deepEqual(state.appearance, legacyAppearance, 'local previews never mutate the server response');
+});
+
+test('appearance presets keep the selected layout and text metrics private until explicitly applied', async t => {
+  const initial = { ...appearance, layout: 'split', imageLayout: 'grid', fontSize: 38, padding: 21, lineHeight: 1.8, letterSpacing: 0.3, maxWidth: 900, animation: 'none' };
+  const calls = [], notifications = [];
+  const studio = { state: { appearance: structuredClone(initial) }, connected: true, pending: false, actWithResult: async command => {
+    calls.push(structuredClone(command)); studio.state = { appearance: structuredClone(command.appearance) }; return studio.state;
+  } };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange: dirty => notifications.push(dirty) })); });
+  t.after(async () => { await act(async () => renderer.unmount()); });
+  await act(async () => renderer.root.findByProps({ className: 'wc-appearance-theme-sample wc-appearance-theme-uliuli' }).parent.props.onClick());
+  let preview = renderer.root.findByType(WindChimeLiveCard).props;
+  assert.equal(preview.appearance.theme, 'uliuli');
+  for (const key of ['layout', 'imageLayout', 'fontSize', 'padding', 'lineHeight', 'letterSpacing', 'maxWidth', 'animation']) assert.equal(preview.appearance[key], initial[key], key);
+  assert.equal(calls.length, 0);
+  assert.deepEqual(studio.state.appearance, initial);
+  const font = renderer.root.findAllByType('label').find(node => node.children[0] === '字号').findByType('input');
+  await act(async () => font.props.onChange({ target: { value: '42' } }));
+  preview = renderer.root.findByType(WindChimeLiveCard).props;
+  assert.equal(preview.appearance.fontSize, 42);
+  const button = renderer.root.findAllByType('button').find(node => node.children.join('') === '应用外观');
+  await act(async () => button.props.onClick());
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].appearance.fontSize, 42);
+  assert.equal(calls[0].appearance.layout, 'split');
+  assert.equal(notifications.at(-1), false);
+});
+
+test('appearance preview falls back to window resize when ResizeObserver is unavailable', async () => {
+  const oldWindow = globalThis.window, oldObserver = globalThis.ResizeObserver;
+  globalThis.window = new EventTarget();
+  globalThis.ResizeObserver = undefined;
+  let renderer, width = 640;
+  try {
+    const studio = { state: { appearance }, connected: true, pending: false, actWithResult: async () => null };
+    await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} }), {
+      createNodeMock: element => element.props.className === 'wc-appearance-viewport' ? { getBoundingClientRect: () => ({ width }) } : null,
+    }); });
+    const canvas = () => renderer.root.findByProps({ className: 'wc-appearance-canvas' });
+    assert.equal(canvas().props.style.transform, 'scale(0.5)');
+    width = 320;
+    await act(async () => globalThis.window.dispatchEvent(new Event('resize')));
+    assert.equal(canvas().props.style.transform, 'scale(0.25)');
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.window = oldWindow;
+    globalThis.ResizeObserver = oldObserver;
+  }
+});
+
+test('appearance preview scales its widest card and reserves scroll space for tall content', async () => {
+  const oldObserver = globalThis.ResizeObserver;
+  const observers = [];
+  globalThis.ResizeObserver = class {
+    constructor(callback) { this.callback = callback; this.nodes = []; this.disconnected = false; observers.push(this); }
+    observe(node) { this.nodes.push(node); }
+    disconnect() { this.disconnected = true; }
+  };
+  let renderer;
+  const viewportNode = { clientWidth: 800, getBoundingClientRect: () => ({ width: 800 }) };
+  const contentNode = { scrollHeight: 480 };
+  try {
+    const studio = { state: { appearance: { ...appearance, maxWidth: 1920 } }, connected: true, pending: false, actWithResult: async () => null };
+    await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} }), {
+      createNodeMock: element => element.props.className === 'wc-appearance-viewport' ? viewportNode : element.props.className === 'wc-appearance-preview-content' ? contentNode : null,
+    }); });
+    const canvas = () => renderer.root.findByProps({ className: 'wc-appearance-canvas' });
+    assert.equal(canvas().props.style.width, 2000, '1920px card receives its full width plus two 40px margins');
+    assert.equal(canvas().props.style.transform, 'scale(0.4)');
+    assert.equal(canvas().props.style.height, 1125, 'the initial canvas is at least 16:9');
+    assert.equal(observers.at(-1).nodes.length, 2, 'viewport and intrinsic content are observed');
+    const input = label => renderer.root.findAllByType('label').find(node => node.children[0] === label).findByType('input');
+    await act(async () => { input('字号').props.onChange({ target: { value: '96' } }); input('最大宽度').props.onChange({ target: { value: '280' } }); });
+    assert.equal(canvas().props.style.width, 1280, 'narrow cards retain the original canvas size');
+    contentNode.scrollHeight = 4200;
+    await act(async () => observers.at(-1).callback());
+    assert.equal(canvas().props.style.height, 4280, 'the full card height and both margins are reserved');
+    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-scroll-space' }).props.style.height, 2675);
+    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-viewport' }).props.tabIndex, 0, 'overflow can be reached with keyboard scrolling');
+    assert(JSON.stringify(renderer.toJSON()).includes('等比例预览 · 可上下滚动'));
+    assert(observers.slice(0, -1).every(observer => observer.disconnected), 'replaced observers are disconnected');
+    await act(async () => renderer.unmount()); renderer = null;
+    assert(observers.every(observer => observer.disconnected), 'unmount releases the final observer');
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.ResizeObserver = oldObserver;
+  }
 });

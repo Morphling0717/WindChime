@@ -1,0 +1,17 @@
+import { createRequire } from 'node:module';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('../', import.meta.url));
+const require = createRequire(new URL('../apps/desktop/package.json', import.meta.url));
+const { build } = require('esbuild');
+const output = path.join(root, '.work/display-designs');
+await mkdir(output, { recursive: true });
+const result = await build({ absWorkingDir: root, entryPoints: ['examples/display-designs/gallery.tsx'], outdir: output, write: false, bundle: true, minify: true, platform: 'browser', target: 'chrome120', jsx: 'automatic', alias: { react: path.join(root,'node_modules/react'), 'react-dom': path.join(root,'node_modules/react-dom') }, define: { 'process.env.NODE_ENV': '"production"' } });
+const script = result.outputFiles.find(file => file.path.endsWith('.js')).text.replaceAll('</script', '<\\/script');
+const css = result.outputFiles.find(file => file.path.endsWith('.css')).text;
+const hash = createHash('sha256').update(script).digest('base64');
+const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'"><title>风铃 · 展示设计样板</title><style>${css}</style></head><body><div id="root"></div><script>${script}</script></body></html>`;
+await writeFile(path.join(output, 'WindChime-Display-Designs.html'), html);
+console.log(path.join(output, 'WindChime-Display-Designs.html'));

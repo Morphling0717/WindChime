@@ -5,7 +5,7 @@ import type { WindChimeTopicCreateInput, WindChimeTopicPatchInput } from '../typ
 
 export type WindChimeLiveCapabilities = {
   protocolVersion: number; siteId: string; basePath: string;
-  features: { connectionKeys?: boolean; images?: boolean; pairing?: boolean; broadcast?: boolean; siteControl?: boolean; mailManagement?: boolean; keywordFilterToggle?: boolean };
+  features: { connectionKeys?: boolean; images?: boolean; pairing?: boolean; broadcast?: boolean; siteControl?: boolean; mailManagement?: boolean; keywordFilterToggle?: boolean; displayThemes?: boolean };
   pollIntervalMs: number; leaseMs: number;
 };
 export type { WindChimeConnectionIdentity } from '../core/connection-key.js';

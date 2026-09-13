@@ -86,6 +86,8 @@ const requests = [],
   opened = [],
   savedFiles = [],
   topicPickerLayouts = [],
+  appearanceLayouts = [],
+  appearanceStressCases = [],
   approved = new Set();
 const appearance = {
   fontFamily: "system-ui",
@@ -93,7 +95,13 @@ const appearance = {
   textColor: "#ffffff",
   backgroundColor: "#18202eee",
   transparent: true,
-  layout: "card",
+  layout: "stack",
+  theme: "pure",
+  accentColor: "#2de2e6",
+  borderWidth: 0,
+  lineHeight: 1.65,
+  letterSpacing: 0,
+  maxWidth: 1200,
   imageLayout: "column",
   animation: "fade",
   borderRadius: 24,
@@ -137,7 +145,7 @@ const server = createServer(async (req, res) => {
       chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks)) : {};
-    requests.push({ method: req.method, route });
+    requests.push({ method: req.method, route, ...(route === "/control/action" ? { action: body.action } : {}) });
     const json = (value, status = 200) => {
       res.writeHead(status, {
         "content-type": "application/json",
@@ -154,6 +162,7 @@ const server = createServer(async (req, res) => {
           siteControl: true,
           mailManagement: true,
           keywordFilterToggle: true,
+          displayThemes: true,
         },
       });
     if (req.headers.authorization !== `Bearer ${token}`)
@@ -250,6 +259,7 @@ const server = createServer(async (req, res) => {
     if (route === "/control/state") return json(live(topicId));
     if (route === "/control/action") {
       if (body.action === "approve") approved.add(body.messageId);
+      if (body.action === "appearance") Object.assign(appearance, body.appearance);
       revision++;
       return json(live(topicId));
     }
@@ -420,6 +430,109 @@ async function capture(name, width = 1440, height = 1000) {
     (await control.webContents.capturePage()).toPNG(),
   );
   screenshots.push(name);
+}
+async function chooseAppearance(name) {
+  await evaluate(`(()=>{const button=Array.from(document.querySelectorAll('.wc-appearance-choice')).find(node=>node.querySelector('.wc-appearance-choice-name')?.firstChild?.textContent.trim()===${JSON.stringify(name)});if(!button)throw new Error('Missing appearance choice');button.click();})()`);
+  await pause(100);
+}
+async function assertAppearancePreview(theme, layout) {
+  await until(
+    () => evaluate(`(()=>{const card=document.querySelector('.wc-appearance-preview .wc-display');return card?.dataset.theme===${JSON.stringify(theme)}&&card?.dataset.layout===${JSON.stringify(layout)};})()`),
+    `private preview shows ${theme} with ${layout}`,
+  );
+}
+async function captureAppearance(name, width, height) {
+  control.setSize(width, height);
+  await pause(300);
+  await evaluate("document.querySelector('.wc-appearance-editor').scrollIntoView({block:'start'});window.scrollBy(0,-64)");
+  await pause(300);
+  const geometry = await evaluate(`(()=>{const geometry=selector=>{const node=document.querySelector(selector),rect=node.getBoundingClientRect();return {x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height}};return {preview:geometry('.wc-appearance-viewport'),themes:geometry('.wc-appearance-choices'),viewport:{width:innerWidth,height:innerHeight},imageCount:Array.from(document.querySelectorAll('.wc-appearance-preview img')).filter(node=>node.complete&&node.naturalWidth>0).length,theme:document.querySelector('.wc-appearance-preview .wc-display').dataset.theme,layout:document.querySelector('.wc-appearance-preview .wc-display').dataset.layout}})()`);
+  for (const [section, rect] of Object.entries({ preview: geometry.preview, themes: geometry.themes })) {
+    assert(rect.width > 200 && rect.height > 50, `${name} ${section} has useful visible dimensions`);
+    assert(rect.x >= 0 && rect.y >= 48 && rect.right <= geometry.viewport.width && rect.bottom <= geometry.viewport.height, `${name} ${section} fits the visible viewport: ${JSON.stringify(geometry)}`);
+  }
+  assert.equal(geometry.imageCount, 2, `${name} loads both local sample images`);
+  appearanceLayouts.push({ name, requestedSize: [width, height], ...geometry });
+  await capture(name, width, height);
+}
+async function verifyAppearanceDimensions() {
+  await evaluate("document.querySelector('.wc-appearance-advanced').open=true");
+  await input('input[aria-label="最大宽度"]', "1920");
+  await until(() => evaluate("document.querySelector('.wc-appearance-preview .wc-display')?.offsetWidth===1920&&parseFloat(document.querySelector('.wc-appearance-canvas').style.width)===2000"), "full 1920px card fits an expanded preview canvas");
+  const wide = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),card=canvas.querySelector('.wc-display'),bounds=viewport.getBoundingClientRect(),rect=card.getBoundingClientRect();return {cardWidth:card.offsetWidth,canvasWidth:canvas.offsetWidth,scaledWidth:rect.width,scale:new DOMMatrixReadOnly(getComputedStyle(canvas).transform).a,contentWidth:viewport.clientWidth,withinPreview:rect.left>=bounds.left&&rect.right<=bounds.left+viewport.clientWidth+1,horizontalOverflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
+  assert.equal(wide.cardWidth, 1920);
+  assert.equal(wide.canvasWidth, 2000);
+  assert(Math.abs(wide.scaledWidth - 1920 * wide.scale) < 1, "1920px card scales without being clamped to the old 1200px content area");
+  assert.equal(wide.withinPreview, true);
+  assert.equal(wide.horizontalOverflow, false);
+  appearanceStressCases.push({ name: "maxWidth1920", ...wide });
+  await captureAppearance("appearance-maxwidth-1920", 1440, 1200);
+
+  await input('input[aria-label="最大宽度"]', "280");
+  await input('input[aria-label="字号"]', "96");
+  await until(() => evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),content=document.querySelector('.wc-appearance-preview-content'),card=canvas.querySelector('.wc-display');return card.offsetWidth===280&&getComputedStyle(card).fontSize==='96px'&&canvas.offsetHeight>=content.scrollHeight+79&&viewport.scrollHeight>viewport.clientHeight+100})()`), "96px type in a 280px card reserves scrollable space for the entire content");
+  const tall = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),content=document.querySelector('.wc-appearance-preview-content'),card=canvas.querySelector('.wc-display');return {cardWidth:card.offsetWidth,cardHeight:card.offsetHeight,contentHeight:content.scrollHeight,canvasHeight:canvas.offsetHeight,scrollHeight:viewport.scrollHeight,visibleHeight:viewport.clientHeight,keyboardScrollable:viewport.tabIndex===0,overflowY:getComputedStyle(viewport).overflowY,previewHorizontalOverflow:viewport.scrollWidth>viewport.clientWidth+1,horizontalOverflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
+  assert.equal(tall.cardWidth, 280);
+  assert(tall.cardHeight > 720, "stress sample exceeds the old fixed canvas height");
+  assert(tall.canvasHeight >= tall.contentHeight + 79);
+  assert.equal(tall.keyboardScrollable, true);
+  assert.equal(tall.overflowY, "auto");
+  assert.equal(tall.previewHorizontalOverflow, false);
+  assert.equal(tall.horizontalOverflow, false);
+  await captureAppearance("appearance-tall-content-top", 760, 1050);
+  const textEndVisible = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),text=viewport.querySelector('.wc-display-text'),range=document.createRange();range.selectNodeContents(text);range.setStart(text.firstChild,text.firstChild.textContent.length-1);const before=range.getBoundingClientRect(),bounds=viewport.getBoundingClientRect();viewport.scrollTop+=before.bottom-bounds.bottom+20;const after=range.getBoundingClientRect();return after.top>=bounds.top&&after.bottom<=bounds.bottom;})()`);
+  assert.equal(textEndVisible, true, "the final text character can be scrolled fully into view");
+  const tail = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport');viewport.scrollTop=viewport.scrollHeight;const bounds=viewport.getBoundingClientRect(),figure=viewport.querySelector('.wc-display-media figure:last-child'),image=figure.querySelector('img'),caption=figure.querySelector('figcaption'),visible=node=>{const rect=node.getBoundingClientRect();return rect.top>=bounds.top&&rect.bottom<=bounds.bottom};return {lastCaption:caption.textContent,lastImageVisible:visible(image),lastCaptionVisible:visible(caption),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
+  assert.equal(tail.lastCaption, "月下微风");
+  assert.equal(tail.lastImageVisible, true, "the complete final image is reachable");
+  assert.equal(tail.lastCaptionVisible, true, "the complete final caption is reachable");
+  assert(Math.abs(tail.scrollTop - tail.maxScroll) < 1, "preview reaches the actual end without a clipped tail");
+  appearanceStressCases.push({ name: "fontSize96-maxWidth280", ...tall, ...tail });
+  await captureAppearance("appearance-tall-content-bottom", 760, 1050);
+  checks.push("1920px maximum width expands the real preview canvas; 96px type in a 280px card preserves all text and both images in a keyboard-scrollable preview, including the final caption, without horizontal overflow");
+}
+async function verifyAppearanceEditor() {
+  await until(() => evaluate("!!document.querySelector('.wc-appearance-editor')&&!document.querySelector('.wc-appearance-apply').disabled"), "new appearance controls loaded");
+  const appearanceWrites = () => requests.filter(request => request.action === "appearance").length;
+  const before = appearanceWrites();
+  await chooseAppearance("图文双栏");
+  await chooseAppearance("Mia · 星祷");
+  await assertAppearancePreview("mia", "split");
+  assert.equal(appearanceWrites(), before, "theme and layout changes stay private before applying");
+  assert.equal(appearance.theme, "pure");
+  assert.equal(appearance.layout, "stack");
+  await captureAppearance("appearance-mia-wide", 1440, 1200);
+  await captureAppearance("appearance-mia-narrow", 760, 1050);
+  await click("应用外观");
+  await until(() => appearance.theme === "mia" && appearance.layout === "split", "appearance action persists both independent choices");
+  assert.equal(appearanceWrites(), before + 1, "one explicit apply issues one appearance action");
+  await until(() => evaluate("document.querySelector('.wc-appearance-save-state')?.textContent==='外观已同步'"), "appearance apply clears dirty state");
+  await nav("topics", "话题管理");
+  await nav("settings", "设置与外观");
+  await assertAppearancePreview("mia", "split");
+  assert.equal(appearanceWrites(), before + 1, "remount restores the saved server appearance without sending an action");
+  await chooseAppearance("UliUli · 夜航");
+  await assertAppearancePreview("uliuli", "split");
+  assert.equal(appearanceWrites(), before + 1, "switching the theme preserves split layout and stays private");
+  assert.equal(appearance.theme, "mia");
+  confirmResponse = 0;
+  await evaluate("window.scrollTo(0,0)");
+  const canceled = confirmCalls;
+  await selectTopic("general", "dirty appearance topic change");
+  await until(() => confirmCalls > canceled, "topic change asks about unsaved appearance");
+  assert.equal(await evaluate("document.querySelector('#desktop-topic').value"), "event-a");
+  await assertAppearancePreview("uliuli", "split");
+  assert.equal(appearanceWrites(), before + 1, "canceling topic change cannot save local appearance");
+  await captureAppearance("appearance-uliuli-wide", 1440, 1200);
+  await captureAppearance("appearance-uliuli-narrow", 760, 1050);
+  await verifyAppearanceDimensions();
+  assert.equal(appearanceWrites(), before + 1, "extreme preview dimensions never update the saved appearance");
+  confirmResponse = 1;
+  await nav("topics", "话题管理");
+  await nav("settings", "设置与外观");
+  await assertAppearancePreview("mia", "split");
+  await evaluate("window.scrollTo(0,0)");
+  checks.push("real appearance editor previews Mia and split privately, saves once through the appearance action, restores persisted choices after remount, preserves split while selecting UliUli, and canceling a topic change retains unsaved local appearance; both themes and their shared renderer preview are visible at wide and narrow sizes");
 }
 async function run() {
   userData = await fs.mkdtemp(path.join(os.tmpdir(), "windchime-management-"));
@@ -664,6 +777,7 @@ async function run() {
     () => evaluate('!!document.querySelector(".setting-toggle input")'),
     "settings loaded",
   );
+  await verifyAppearanceEditor();
   await evaluate(
     'document.querySelectorAll(".setting-toggle input")[1].click()',
   );
@@ -790,7 +904,7 @@ async function run() {
   );
   await evaluate('document.querySelector(".desktop-hide").click()');
   await until(
-    () => requests.some((r) => r.route === "/control/action"),
+    () => requests.some((r) => r.route === "/control/action" && r.action === "hide"),
     "emergency hide",
   );
   assert.equal(BrowserWindow.getAllWindows().length, 1);
@@ -805,6 +919,8 @@ async function run() {
     checks,
     screenshots,
     topicPickerLayouts,
+    appearanceLayouts,
+    appearanceStressCases,
     savedFiles: await Promise.all(
       savedFiles.map(async (file) => ({
         path: file,
@@ -845,6 +961,8 @@ run().catch(async (error) => {
       error: error.message,
       checks,
       topicPickerLayouts,
+      appearanceLayouts,
+      appearanceStressCases,
       rendererState,
       requests,
       consoleErrors: errors,

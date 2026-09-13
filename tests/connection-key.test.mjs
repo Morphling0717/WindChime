@@ -81,6 +81,7 @@ async function fixture(t) {
 test("capabilities advertise reusable connection keys without changing protocol version", async t => {
   const f = await fixture(t), response = await f.call("capabilities"), data = await response.json();
   assert.equal(response.status, 200); assert.equal(data.protocolVersion, 1); assert.equal(data.features.connectionKeys, true);
+  assert.equal(data.features.displayThemes, true);
   assert.equal(data.features.pairing, true); assert.equal(data.siteId, await f.service.broadcast.siteId());
 });
 

@@ -11,6 +11,7 @@ import sharp from "sharp";
 import { createWindChimeSqlite } from "../dist/sqlite/index.js";
 import { createWindChimeService } from "../dist/server/index.js";
 import { createWindChimeLiveRouteHandlers, createWindChimeRouteHandlers } from "../dist/next/index.js";
+import { DEFAULT_WINDCHIME_LIVE_APPEARANCE } from "../dist/core/live.js";
 
 async function fixture(t, options={}) {
   const directory=await mkdtemp(join(tmpdir(),"windchime-live-")),storage=createWindChimeSqlite({filename:join(directory,"mail.db")});
@@ -37,6 +38,116 @@ async function fixture(t, options={}) {
   async function display(topic="default") {const issued=await service.broadcast.createGrant(topic,"display"),grant=await service.broadcast.authenticate(issued.token,"display"),opened=await service.broadcast.open(grant);return {...issued,grant,...opened};}
   return {directory,storage,service,handler,legacy,request,call,submit,act,display,config,now:()=>stamp,advance:(ms)=>stamp+=ms};
 }
+
+test("appearance theme and layout patches are independent, persist across restart, and reach display frames",async(t)=>{
+  const f=await fixture(t),d=await f.display();
+  const styled=await f.act("appearance",undefined,{appearance:{
+    layout:"split",theme:"uliuli",fontFamily:"Georgia",fontSize:44,textColor:"#f0f0f0",backgroundColor:"#18202e88",
+    transparent:false,imageLayout:"grid",animation:"slide",borderRadius:19,padding:38,
+    accentColor:"#ab12ef80",borderWidth:3.5,lineHeight:1.8,letterSpacing:1.2,maxWidth:1080,
+  }});
+  let expected=styled.appearance;
+  for(const theme of ["mia","pure","uliuli"]) {
+    expected={...expected,theme};
+    const changed=await f.act("appearance",undefined,{appearance:{theme}});
+    assert.deepEqual(changed.appearance,expected,"theme patch must preserve layout and every custom style");
+  }
+  for(const layout of ["stack","banner","split"]) {
+    expected={...expected,layout};
+    assert.deepEqual((await f.act("appearance",undefined,{appearance:{layout}})).appearance,expected);
+  }
+  for(const edge of [
+    {borderWidth:0,lineHeight:1.1,letterSpacing:-1,maxWidth:280},
+    {borderWidth:8,lineHeight:2.4,letterSpacing:6,maxWidth:1920},
+  ]) {
+    expected={...expected,...edge};
+    assert.deepEqual((await f.act("appearance",undefined,{appearance:edge})).appearance,expected);
+  }
+  const stored=await f.storage.get("SELECT appearance FROM mail_live_channels WHERE topic_id='default'");
+  assert.deepEqual(JSON.parse(stored.appearance),expected);
+  const response=await f.call("display/frame?receiverId="+d.receiverId,"GET",undefined,d.token);
+  assert.equal(response.status,200);
+  const frame=await response.json();assert.deepEqual(frame.appearance,expected);assert.equal(frame.snapshot,null);
+  assert.deepEqual(Object.keys(frame).sort(),["receiverId","epoch","revision","activation","leaseMs","appearance","snapshot"].sort());
+  assert.deepEqual(Object.keys(frame.appearance).sort(),Object.keys(DEFAULT_WINDCHIME_LIVE_APPEARANCE).sort());
+  const copied=createWindChimeSqlite({filename:join(f.directory,"mail.db")});
+  try {
+    const restarted=createWindChimeService({...f.config,storage:copied,runtimeEpoch:"process-b"});await restarted.ready();
+    assert.deepEqual((await restarted.broadcast.state("default")).appearance,expected);
+    const grant=await restarted.broadcast.authenticate(d.token,"display"),receiver=await restarted.broadcast.open(grant);
+    assert.deepEqual((await restarted.broadcast.frame(grant,receiver.receiverId)).appearance,expected);
+  } finally { await copied.close(); }
+});
+
+test("appearance rejects CSS injection, unknown fields, invalid enums, nonfinite values and out-of-range numbers atomically",async(t)=>{
+  const f=await fixture(t);await f.act("appearance",undefined,{appearance:{theme:"mia",layout:"banner",accentColor:"#123456"}});
+  const before=await f.service.broadcast.state("default");
+  const invalid=[
+    {theme:"card"},{theme:"Mia"},{theme:["pure"]},{theme:null},{layout:"mia"},{layout:"split;display:none"},
+    {accentColor:"red"},{accentColor:"#12345"},{accentColor:"#fff;background:url(https://evil.test)"},
+    {textColor:"var(--secret)"},{backgroundColor:"url(javascript:alert(1))"},{fontFamily:"system-ui;display:none"},
+  ];
+  for(const [key,min,max] of [["borderWidth",0,8],["lineHeight",1.1,2.4],["letterSpacing",-1,6],["maxWidth",280,1920]]) {
+    for(const value of [min-0.01,max+0.01,NaN,Infinity,-Infinity,"1",null]) invalid.push({[key]:value});
+  }
+  for(const patch of invalid) await assert.rejects(f.act("appearance",undefined,{appearance:patch}),e=>e.code==="INVALID_APPEARANCE");
+  for(const patch of [{css:"body{display:none}"},{status:"approved"},{current:{messageId:"forged"}},{theme:"pure",senderHash:"private"}]) {
+    await assert.rejects(f.act("appearance",undefined,{appearance:patch}),e=>e.code==="INVALID_FIELD");
+  }
+  const response=await f.call("control/action","POST",{topicId:"default",action:"appearance",expectedRevision:before.revision,operationId:randomUUID(),appearance:{accentColor:"#ffffff;opacity:0"}});
+  assert.equal(response.status,400);
+  assert.deepEqual(await f.service.broadcast.state("default"),before,"rejected styles must preserve the entire control state and revision");
+  assert.equal((await f.storage.get("SELECT COUNT(*) AS total FROM mail_live_operations")).total,1);
+});
+
+test("historical empty and legacy appearances gain defaults on read without rewriting saved appearance or mail",async(t)=>{
+  const f=await fixture(t),id=await f.submit("legacy-mail"),d=await f.display();
+  await f.service.updateMessage(id,{isRead:true,isFavorited:true,isFlagged:true});
+  await f.act("approve",id);await f.act("show",id);
+  const legacyMessages=await f.storage.all("SELECT * FROM mail_messages ORDER BY id");
+  const legacyDrafts=await f.storage.all("SELECT * FROM mail_live_drafts ORDER BY message_id");
+  const legacySnapshots=await f.storage.all("SELECT * FROM mail_live_snapshots ORDER BY id");
+  const legacyQueue=await f.storage.all("SELECT * FROM mail_live_queue ORDER BY message_id");
+  for(const saved of [{},...["card","letter","minimal"].map(layout=>({layout,fontSize:27,padding:13,transparent:false}))]) {
+    const json=JSON.stringify(saved);await f.storage.run("UPDATE mail_live_channels SET appearance=? WHERE topic_id='default'",[json]);
+    const before=await f.storage.get("SELECT * FROM mail_live_channels WHERE topic_id='default'");
+    const state=await f.service.broadcast.state("default"),frame=await f.service.broadcast.frame(d.grant,d.receiverId);
+    const expected={...DEFAULT_WINDCHIME_LIVE_APPEARANCE,...saved};
+    assert.deepEqual(state.appearance,expected);assert.deepEqual(frame.appearance,expected);
+    assert.equal(state.appearance.theme,"pure");assert.equal(state.appearance.accentColor,"#2de2e6");
+    assert.equal(state.appearance.borderWidth,0);assert.equal(state.appearance.lineHeight,1.65);
+    assert.equal(state.appearance.letterSpacing,0);assert.equal(state.appearance.maxWidth,1200);
+    assert.equal(frame.snapshot.messageId,id);
+    assert.deepEqual(await f.storage.get("SELECT * FROM mail_live_channels WHERE topic_id='default'"),before);
+  }
+  assert.deepEqual(await f.storage.all("SELECT * FROM mail_messages ORDER BY id"),legacyMessages);
+  assert.deepEqual(await f.storage.all("SELECT * FROM mail_live_drafts ORDER BY message_id"),legacyDrafts);
+  assert.deepEqual(await f.storage.all("SELECT * FROM mail_live_snapshots ORDER BY id"),legacySnapshots);
+  assert.deepEqual(await f.storage.all("SELECT * FROM mail_live_queue ORDER BY message_id"),legacyQueue);
+});
+
+test("style edits cannot approve, start playing, revoke or withdraw messages",async(t)=>{
+  const f=await fixture(t),pending=await f.submit("pending"),approved=await f.submit("approved"),rejected=await f.submit("rejected"),d=await f.display();
+  const initial=await f.service.broadcast.state("default");
+  const themed=await f.act("appearance",undefined,{appearance:{theme:"uliuli",layout:"stack"}});
+  assert.deepEqual(themed.messages,initial.messages);assert.deepEqual(themed.queue,[]);assert.equal(themed.current,null);
+  assert.equal((await f.service.broadcast.frame(d.grant,d.receiverId)).snapshot,null);
+  await f.act("approve",approved);await f.act("reject",rejected);
+  const queued=await f.service.broadcast.state("default");
+  const queueStyled=await f.act("appearance",undefined,{appearance:{theme:"mia",lineHeight:1.9}});
+  assert.deepEqual(queueStyled.messages,queued.messages);assert.deepEqual(queueStyled.queue,[approved]);assert.equal(queueStyled.current,null);
+  assert.equal((await f.service.broadcast.frame(d.grant,d.receiverId)).snapshot,null);
+  await f.act("show",approved);
+  const playing=await f.service.broadcast.state("default"),frame=await f.service.broadcast.frame(d.grant,d.receiverId);
+  const liveStyled=await f.act("appearance",undefined,{appearance:{theme:"pure",layout:"banner",borderWidth:2,letterSpacing:-0.5,maxWidth:840}});
+  const after=await f.service.broadcast.frame(d.grant,d.receiverId);
+  assert.deepEqual(liveStyled.messages,playing.messages);assert.deepEqual(liveStyled.queue,playing.queue);assert.deepEqual(liveStyled.current,playing.current);
+  assert.deepEqual(after.snapshot,frame.snapshot);assert.equal(after.activation,frame.activation);
+  assert.equal(liveStyled.messages.find(m=>m.id===pending).status,"pending");
+  assert.equal(liveStyled.messages.find(m=>m.id===rejected).status,"rejected");
+  assert.equal(liveStyled.messages.find(m=>m.id===approved).status,"approved");
+  assert.equal(after.appearance.theme,"pure");assert.equal(after.appearance.layout,"banner");
+});
 
 test("new/unflagged/read/favorited mail never broadcasts; approval queues without playing; display DTO has no private fields",async(t)=>{
   const f=await fixture(t),id=await f.submit(),d=await f.display();

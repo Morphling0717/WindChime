@@ -7,13 +7,16 @@ export type WindChimeLiveDraft = {
 };
 export type WindChimeLiveAppearance = {
   fontFamily: string; fontSize: number; textColor: string; backgroundColor: string;
-  transparent: boolean; layout: "card" | "letter" | "minimal";
+  transparent: boolean; layout: "card" | "letter" | "minimal" | "stack" | "split" | "banner";
   imageLayout: "row" | "column" | "grid";
   animation: "none" | "fade" | "slide"; borderRadius: number; padding: number;
+  theme?: "pure" | "uliuli" | "mia"; accentColor?: string; borderWidth?: number;
+  lineHeight?: number; letterSpacing?: number; maxWidth?: number;
 };
 export const DEFAULT_WINDCHIME_LIVE_APPEARANCE: WindChimeLiveAppearance = {
   fontFamily: "system-ui", fontSize: 32, textColor: "#ffffff", backgroundColor: "#18202eee",
   transparent: true, layout: "card", imageLayout: "column", animation: "fade", borderRadius: 24, padding: 32,
+  theme: "pure", accentColor: "#2de2e6", borderWidth: 0, lineHeight: 1.65, letterSpacing: 0, maxWidth: 1200,
 };
 export type WindChimeLiveSnapshot = WindChimeLiveDraft & {
   id: string; messageId: string; assets: WindChimeLiveAsset[];

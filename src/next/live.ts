@@ -121,7 +121,7 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
       const path = url.pathname.slice(base.length).replace(/^\/+|\/+$/g, "");
       if (req.method === "OPTIONS") { checkOrigin(req); return new Response(null, { status: 204 }); }
       if (req.method !== "GET") checkOrigin(req);
-      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true, connectionKeys: true, siteControl: true, mailManagement: true, keywordFilterToggle: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
+      if (path === "capabilities" && req.method === "GET") return json({ protocolVersion: 1, siteId: await live.siteId(), basePath: base, features: { images: !!options.mediaDirectory, pairing: true, broadcast: true, connectionKeys: true, siteControl: true, mailManagement: true, keywordFilterToggle: true, displayThemes: true }, pollIntervalMs: 1000, leaseMs: live.leaseMs });
       if (path === "control/identity") {
         if (req.method !== "GET") return json({ code: "METHOD_NOT_ALLOWED", error: "此接口只支持 GET" }, 405);
         const token = /^Bearer (wc_ctl_[A-Za-z0-9_-]{43})$/.exec(req.headers.get("authorization") ?? "")?.[1];

@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WindChimeLiveClient } from '../client/live.js';
 import { encodeWindChimeConnectionKey } from '../core/connection-key.js';
-import type { WindChimeLiveAppearance, WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
+import type { WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
 import { useWindChimeLiveControl } from '../react/live.js';
 import { WindChimeLiveCard } from './Display.js';
 import { windChimeControlCss } from './styles.js';
+import { AppearanceEditor } from './AppearanceEditor.js';
 
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
@@ -88,32 +89,6 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
     <div className="wc-actions"><button className="wc-primary" disabled={dirty || conflict || uploading || studio.pending || !studio.connected || message.status === 'approved' || draft.assets.some(a => !urls[a.id])} onClick={() => void act('approve')}>批准进入待播</button><button disabled={studio.pending || message.status === 'rejected'} onClick={() => void act('reject')}>拒绝</button>{message.status === 'approved' ? <button className="wc-danger" onClick={() => void act('revoke')}>撤销批准并撤下</button> : null}</div>
     <p className="wc-muted">批准后仍需在待播列表点击「上屏」。已读、收藏{blockedTermsEnabled ? '和敏感词标记' : ''}与播出批准相互独立。</p>
   </div>;
-}
-function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; onDirtyChange: (dirty: boolean) => void }) {
-  const [appearance, setAppearance] = useState(studio.state!.appearance);
-  const [basis, setBasis] = useState(studio.state!.appearance);
-  const dirty = JSON.stringify(appearance) !== JSON.stringify(basis);
-  const conflict = JSON.stringify(studio.state!.appearance) !== JSON.stringify(basis);
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
-  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
-  useEffect(() => { if (!dirty && conflict) { setAppearance(studio.state!.appearance); setBasis(studio.state!.appearance); } }, [dirty, conflict, studio.state!.appearance]);
-  const save = async () => {
-    const submitted = structuredClone(appearance);
-    const result = await studio.actWithResult({ action: 'appearance', appearance: submitted });
-    if (result) { setBasis(result.appearance); setAppearance(before => JSON.stringify(before) === JSON.stringify(submitted) ? result.appearance : before); }
-  };
-  const change = <K extends keyof WindChimeLiveAppearance>(key: K, value: WindChimeLiveAppearance[K]) => setAppearance({ ...appearance, [key]: value });
-  return <div className="wc-stack"><div className="wc-grid2">
-    <label>字体<select value={appearance.fontFamily} onChange={e => change('fontFamily', e.target.value)}>{['system-ui', 'sans-serif', 'serif', 'monospace', 'Microsoft YaHei', 'SimSun'].map(f => <option key={f}>{f}</option>)}</select></label>
-    <label>字号<input type="number" min={12} max={96} value={appearance.fontSize} onChange={e => change('fontSize', Number(e.target.value))} /></label>
-    <label>文字颜色<input type="color" value={appearance.textColor.slice(0, 7)} onChange={e => change('textColor', e.target.value)} /></label>
-    <label>背景颜色<input type="color" value={appearance.backgroundColor.slice(0, 7)} onChange={e => change('backgroundColor', e.target.value)} /></label>
-    <label>布局<select value={appearance.layout} onChange={e => change('layout', e.target.value as WindChimeLiveAppearance['layout'])}><option value="card">卡片</option><option value="letter">信笺</option><option value="minimal">简洁</option></select></label>
-    <label>入场动画<select value={appearance.animation} onChange={e => change('animation', e.target.value as WindChimeLiveAppearance['animation'])}><option value="none">无</option><option value="fade">淡入</option><option value="slide">上移</option></select></label>
-    <label>图片排列<select value={appearance.imageLayout ?? 'column'} onChange={e => change('imageLayout', e.target.value as WindChimeLiveAppearance['imageLayout'])}><option value="row">横向排列</option><option value="column">纵向排列</option><option value="grid">网格排列</option></select></label>
-    <label>圆角<input type="number" min={0} max={80} value={appearance.borderRadius} onChange={e => change('borderRadius', Number(e.target.value))} /></label>
-    <label>内边距<input type="number" min={0} max={100} value={appearance.padding} onChange={e => change('padding', Number(e.target.value))} /></label>
-  </div><label className="wc-checkbox"><input type="checkbox" checked={appearance.transparent} onChange={e => change('transparent', e.target.checked)} />透明背景</label>{dirty && conflict ? <div className="wc-error" role="alert">外观已在另一控制端更新，你的改动仍保留。<button onClick={() => { setAppearance(studio.state!.appearance); setBasis(studio.state!.appearance); }}>载入最新外观，放弃本地改动</button><button onClick={() => setBasis(studio.state!.appearance)}>确认新外观，保留我的编辑</button></div> : null}<button disabled={studio.pending || !studio.connected || conflict} onClick={() => void save()}>应用外观</button></div>;
 }
 type ConnectionsProps = Pick<WindChimeLiveControlPanelProps, 'client' | 'topicId' | 'displayUrl' | 'onOpenDisplay' | 'onCopyDisplayLink' | 'onBindGateway' | 'deviceCode' | 'canApproveDevices' | 'enablePlatformIntegration'>;
 function Connections(props: ConnectionsProps) {
