@@ -30,6 +30,7 @@ function appearance(value: unknown): WindChimeLiveAppearance {
   for (const [key, min, max] of [
     ["fontSize", 12, 96], ["padding", 0, 100], ["borderRadius", 0, 100],
     ["borderWidth", 0, 8], ["lineHeight", 1.1, 2.4], ["letterSpacing", -1, 6], ["maxWidth", 280, 1920],
+    ["viewportHeight", 180, 1080], ["scrollSpeed", 5, 120], ["scrollStartPauseMs", 0, 15000], ["scrollEndPauseMs", 0, 15000],
   ] as const) if (raw[key] !== undefined) {
     const n = raw[key]; if (typeof n !== "number" || !Number.isFinite(n) || n < min || n > max) fail("INVALID_APPEARANCE", "外观数值超出范围"); result[key] = n;
   }
@@ -37,6 +38,7 @@ function appearance(value: unknown): WindChimeLiveAppearance {
     if (typeof raw[key] !== "string" || !/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(raw[key] as string)) fail("INVALID_APPEARANCE", "颜色必须是十六进制颜色"); result[key] = raw[key] as string;
   }
   if (raw.transparent !== undefined) { if (typeof raw.transparent !== "boolean") fail("INVALID_APPEARANCE", "透明值无效"); result.transparent = raw.transparent; }
+  if (raw.autoScroll !== undefined) { if (typeof raw.autoScroll !== "boolean") fail("INVALID_APPEARANCE", "自动滚动值无效"); result.autoScroll = raw.autoScroll; }
   if (raw.layout !== undefined) { if (!["card", "letter", "minimal", "stack", "split", "banner"].includes(raw.layout as string)) fail("INVALID_APPEARANCE", "布局无效"); result.layout = raw.layout as WindChimeLiveAppearance["layout"]; }
   if (raw.theme !== undefined) { if (!["pure", "uliuli", "mia"].includes(raw.theme as string)) fail("INVALID_APPEARANCE", "主题无效"); result.theme = raw.theme as WindChimeLiveAppearance["theme"]; }
   if (raw.imageLayout !== undefined) { if (!["row", "column", "grid"].includes(raw.imageLayout as string)) fail("INVALID_APPEARANCE", "图片布局无效"); result.imageLayout = raw.imageLayout as WindChimeLiveAppearance["imageLayout"]; }

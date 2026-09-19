@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "at": "2026-09-13T09:34:14.191Z",
+  "electron": "44.3.0",
+  "checks": [
+    "A hidden/background native window keeps its confirmed current letter scrolling and polling with background throttling disabled",
+    "Configured 900px output clamps to the native 420px capture window; approved portrait scrolls to its fully visible final caption",
+    "Shrinking to 300px resets the loop and still reveals the final caption at the actual end",
+    "Output blank destroys the animation, reopens a blank receiver and never restores the previous letter"
+  ],
+  "bounds": {
+    "height": 422,
+    "windowHeight": 422,
+    "width": 640,
+    "windowWidth": 640,
+    "overflow": false
+  },
+  "frames": 30,
+  "opens": 2,
+  "consoleErrors": [],
+  "limitations": [
+    "Synthetic read-only IPC frames; no production inbox, OBS or live-software capture"
+  ]
+}

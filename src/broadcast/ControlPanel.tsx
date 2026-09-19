@@ -172,18 +172,36 @@ function ConnectionControls({ client, topicId, displayUrl, onOpenDisplay, onCopy
     {error ? <p className="wc-error" role="alert">{error}</p> : null}{notice ? <p className="wc-notice" role="status">{notice}</p> : null}
   </div>;
 }
+export const WINDCHIME_LIVE_MODULES = [
+  { id: 'inbox', title: '来信列表' },
+  { id: 'review', title: '审阅与预览' },
+  { id: 'queue', title: '待播顺序' },
+  { id: 'transport', title: '快捷播控' },
+  { id: 'appearance', title: '展示外观' },
+] as const;
+export type WindChimeLiveModule = typeof WINDCHIME_LIVE_MODULES[number]['id'];
 export type WindChimeLiveControlPanelProps = {
   client: WindChimeLiveClient; topicId: string; title?: string; displayUrl?: string; deviceCode?: string; canApproveDevices?: boolean; enablePlatformIntegration?: boolean;
   onOpenDisplay?: () => Promise<void>; onCopyDisplayLink?: () => Promise<void>; onBindGateway?: () => Promise<void>;
+  /** Desktop hosts can clear the native output even before the first state read completes. */
+  onHideDisplay?: () => Promise<void>;
   blockedTermsEnabled?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
   onConfirmDiscard?: () => Promise<boolean>;
+  /** Render one private module without mounting the other editors or authorization UI. */
+  module?: WindChimeLiveModule;
+  onOpenTile?: (module: WindChimeLiveModule) => Promise<void>;
+  /** Hosts can synchronize review selection across private windows. The host must confirm dirty editors. */
+  selectedMessageId?: string | null;
+  onSelectMessage?: (id: string) => Promise<void>;
 };
 /** Private control surface. Hosts can reuse the hook/client for wholly custom UIs. */
 export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps) {
   const { client, topicId, title = '风铃直播信箱' } = props;
   const studio = useWindChimeLiveControl(client, topicId);
-  const [selection, setSelection] = useState(''); const [filter, setFilter] = useState('all'); const [dragging, setDragging] = useState('');
+  const [localSelection, setSelection] = useState(''); const [filter, setFilter] = useState('all'); const [dragging, setDragging] = useState('');
+  const selection = props.selectedMessageId === undefined ? localSelection : props.selectedMessageId ?? '';
+  const includes = (module: WindChimeLiveModule) => props.module === undefined || props.module === module;
   const [auxiliaryError, setAuxiliaryError] = useState('');
   const [reviewDirty, setReviewDirty] = useState(false);
   const [appearanceDirty, setAppearanceDirty] = useState(false);
@@ -191,6 +209,11 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
   useEffect(() => () => props.onDirtyChange?.(false), [props.onDirtyChange]);
   const select = async (id: string) => {
     if (selection === id) return;
+    if (props.onSelectMessage) {
+      setAuxiliaryError('');
+      try { await props.onSelectMessage(id); } catch (error) { setAuxiliaryError(error instanceof Error ? error.message : '无法切换来信'); }
+      return;
+    }
     if (reviewDirty && !(await (props.onConfirmDiscard?.() ?? Promise.resolve(typeof window !== 'undefined' && window.confirm('展示稿尚未保存。放弃改动并切换信件？'))))) return;
     setSelection(id);
   };
@@ -199,13 +222,34 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
   const visible = state?.messages.filter(m => filter === 'all' || m.status === filter) ?? [];
   const queue = state?.queue.map(id => state.messages.find(m => m.id === id)).filter((m): m is WindChimeLiveMessage => !!m) ?? [];
   const shift = (from: number, to: number) => { if (!state || to < 0 || to >= state.queue.length || from === to) return; const order = [...state.queue]; order.splice(to, 0, order.splice(from, 1)[0]!); void studio.act({ action: 'reorder', order }); };
-  return <section className="wc-live" aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
-    <header className="wc-top"><div><div className="wc-eyebrow">WINDCHIME / PRIVATE STUDIO</div><h2>{title}</h2><p className="wc-muted">先审阅，再安排，每一封由你决定。</p></div><div className="wc-actions"><button onClick={() => void studio.act({ action: 'end' })}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={() => void studio.act({ action: 'hide' })}>■ 一键隐藏</button></div></header>
+  const openTile = (module: WindChimeLiveModule) => {
+    setAuxiliaryError('');
+    void props.onOpenTile?.(module).catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开磁贴'));
+  };
+  const hideDisplay = () => {
+    setAuxiliaryError('');
+    if (props.onHideDisplay) void props.onHideDisplay().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '隐藏失败'));
+    else void studio.act({ action: 'hide' });
+  };
+  return <section className="wc-live" data-module={props.module} aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
+    {props.module ? null : <header className="wc-top"><div><div className="wc-eyebrow">WINDCHIME / PRIVATE STUDIO</div><h2>{title}</h2><p className="wc-muted">先审阅，再安排，每一封由你决定。</p></div><div className="wc-actions"><button onClick={() => void studio.act({ action: 'end' })}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={hideDisplay}>■ 一键隐藏</button></div></header>}
     <div className="wc-status" role="status"><span><i className={`wc-led${studio.connected ? ' on' : ''}`} />{studio.connected ? '控制已连接' : '连接状态未确认'}</span><span>{state?.receivers ?? 0} 个展示端就绪</span><strong style={{ marginLeft: 'auto', fontSize: 12 }}>{state?.current ? '正在展示已批准信件' : '观众画面为空白'}</strong></div>
     {studio.error || auxiliaryError ? <div className="wc-error" role="alert">{studio.error || auxiliaryError}</div> : null}
-    <div className="wc-columns"><section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封</span></div><div className="wc-tabs" aria-label="审核状态">{[['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']].map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? '此分类暂无来信' : '正在连接信箱…'}</p> : null}</div></section>
-    <section className="wc-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} /> : <p className="wc-empty">选择左侧一封来信，审阅最终展示内容。</p>}</section>
-    <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>{props.onOpenDisplay ? <button onClick={() => { setAuxiliaryError(''); void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口')); }}>打开独立展示窗口</button> : null}</div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">批准后的信件会出现在这里，等待你点击上屏。</p> : null}</aside></div>
-    <div className="wc-grid2 wc-settings"><section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} /> : null}</div></section><section className="wc-panel"><div className="wc-panel-head"><h3>展示授权与设备连接</h3></div><div className="wc-pad"><Connections key={topicId} {...props} /></div></section></div>
+    {props.onOpenTile && !props.module ? <nav className="wc-tile-launcher" aria-label="悬浮磁贴"><strong>悬浮磁贴</strong><span className="wc-muted">将常用模块固定在手边</span><div className="wc-actions">{WINDCHIME_LIVE_MODULES.map(item => <button key={item.id} aria-label={`打开${item.title}磁贴`} onClick={() => openTile(item.id)}>{item.title} ↗</button>)}</div></nav> : null}
+    {props.module === 'transport' ? <section className="wc-panel wc-transport-panel"><div className="wc-pad wc-transport-actions">
+      <button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>
+      <button className="wc-danger" onClick={hideDisplay}>■ 一键隐藏</button><button onClick={() => void studio.act({ action: 'end' })}>结束展示</button>
+      {props.onOpenDisplay ? <button onClick={() => { setAuxiliaryError(''); void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口')); }}>打开独立展示窗口</button> : null}
+      <p className="wc-muted">{queue.length} 封已批准 · 列表末尾自动清空</p>
+    </div></section> : null}
+    {includes('inbox') || includes('review') || includes('queue') ? <div className="wc-columns">
+      {includes('inbox') ? <section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封</span></div><div className="wc-tabs" aria-label="审核状态">{[['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']].map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? '此分类暂无来信' : '正在连接信箱…'}</p> : null}</div></section> : null}
+      {includes('review') ? <section className="wc-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} /> : <p className="wc-empty">{props.module ? '在来信磁贴或主工作台选择一封来信。' : '选择左侧一封来信，审阅最终展示内容。'}</p>}</section> : null}
+      {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>{props.onOpenDisplay ? <button onClick={() => { setAuxiliaryError(''); void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口')); }}>打开独立展示窗口</button> : null}</div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">批准后的信件会出现在这里，等待你点击上屏。</p> : null}</aside> : null}
+    </div> : null}
+    {!props.module || includes('appearance') ? <div className="wc-grid2 wc-settings">
+      {includes('appearance') ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} /> : null}</div></section> : null}
+      {!props.module ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示授权与设备连接</h3></div><div className="wc-pad"><Connections key={topicId} {...props} /></div></section> : null}
+    </div> : null}
   </section>;
 }

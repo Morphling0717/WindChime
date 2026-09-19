@@ -1,8 +1,8 @@
 'use client';
 export { WindChimeConnectionKeys } from './ConnectionKeys.js';
 export type { WindChimeConnectionKeysProps } from './ConnectionKeys.js';
-export { WindChimeLiveControlPanel } from './ControlPanel.js';
-export type { WindChimeLiveControlPanelProps } from './ControlPanel.js';
+export { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from './ControlPanel.js';
+export type { WindChimeLiveControlPanelProps, WindChimeLiveModule } from './ControlPanel.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';
 export type { WindChimeLiveRenderProps } from './Display.js';
 export { LIVE_LAYOUTS, LIVE_THEMES, LIVE_THEME_FONTS, resolveLiveLayout, applyLiveTheme } from './appearance.js';

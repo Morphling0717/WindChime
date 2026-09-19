@@ -12,12 +12,13 @@ const sample: WindChimeLiveSnapshot = {
 };
 const photo = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="260" viewBox="0 0 600 260"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#7894ac"/><stop offset="1" stop-color="#d9c6b1"/></linearGradient></defs><rect width="600" height="260" fill="url(#sky)"/><circle cx="454" cy="76" r="34" fill="#f6e5bd"/><path d="M0 210 108 139 251 230 384 154 600 211V260H0" fill="#607e82"/><path d="M0 250 191 202 311 237 470 190 600 225V260H0" fill="#365b69"/></svg>');
 const media = { id: 'example-photo', caption: '把此刻的风景，寄给你。', mimeType: 'image/svg+xml', width: 600, height: 260, sha256: '' };
+const portraitPhoto = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900"><rect width="600" height="900" fill="#7894ac"/><circle cx="420" cy="175" r="78" fill="#f6e5bd"/><path d="M0 800 210 300 420 720 540 450 600 700V900H0" fill="#365b69"/><text x="300" y="865" text-anchor="middle" fill="#f6e5bd" font-size="28">风景的最下方</text></svg>');
 
-function Preview({ theme, layout, images, long, width, compact = false }: { theme: WindChimeLiveTheme; layout: WindChimeLiveLayout; images: boolean; long: boolean; width: number; compact?: boolean }) {
+function Preview({ theme, layout, images, long, width, height, speed, portrait, reset, compact = false }: { theme: WindChimeLiveTheme; layout: WindChimeLiveLayout; images: boolean; long: boolean; width: number; height: number; speed: number; portrait: boolean; reset: number; compact?: boolean }) {
   const container = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ scale: .5, height: 300 });
-  const appearance = { ...applyLiveTheme(DEFAULT_WINDCHIME_LIVE_APPEARANCE, theme), layout, maxWidth: width, fontSize: 30, animation: 'none' as const, imageLayout: 'row' as const };
-  const snapshot = { ...sample, text: long ? (sample.text + '\n\n').repeat(12) : sample.text, assets: images ? [media] : [] };
+  const appearance = { ...applyLiveTheme(DEFAULT_WINDCHIME_LIVE_APPEARANCE, theme), layout, maxWidth: width, viewportHeight: height, scrollSpeed: speed, fontSize: 30, animation: 'none' as const, imageLayout: 'row' as const };
+  const snapshot = { ...sample, id: `design-sample-${reset}`, text: long ? (sample.text + '\n\n').repeat(12) : sample.text, assets: images ? [{ ...media, height: portrait ? 900 : media.height }] : [] };
   useEffect(() => {
     const update = () => {
       if (!container.current || !content.current) return;
@@ -32,7 +33,7 @@ function Preview({ theme, layout, images, long, width, compact = false }: { them
   }, [width]);
   return <div ref={container} className={`design-stage${compact ? ' compact' : ''}`} data-stage-theme={theme} data-stage-layout={layout} style={{ height: size.height }}>
     <div ref={content} className="design-content" style={{ width, transform: `scale(${size.scale})` }}>
-      <WindChimeLiveCard snapshot={snapshot} appearance={appearance} assetUrls={{ 'example-photo': photo }} />
+      <WindChimeLiveCard snapshot={snapshot} appearance={appearance} assetUrls={{ 'example-photo': portrait ? portraitPhoto : photo }} />
     </div>
   </div>;
 }
@@ -41,6 +42,7 @@ function App() {
   const [layout, setLayout] = useState<WindChimeLiveLayout>('stack');
   const [images, setImages] = useState(false), [long, setLong] = useState(false);
   const [width, setWidth] = useState(960), [mode, setMode] = useState<'single' | 'matrix'>('single');
+  const [height, setHeight] = useState(640), [speed, setSpeed] = useState(24), [portrait, setPortrait] = useState(false), [reset, setReset] = useState(0);
   const [blank, setBlank] = useState(false);
   return <main className="design-page" data-mode={mode}>
     <header className="design-header"><div><span className="design-eyebrow">WINDCHIME · DISPLAY STUDIES</span><h1>同一封来信，不同的模样。</h1><p>排版安排内容，主题赋予颜色与质感。它们可以自由搭配。</p></div><button onClick={() => setMode(mode === 'single' ? 'matrix' : 'single')}>{mode === 'single' ? '查看九种组合' : '返回自由搭配'}</button></header>
@@ -48,12 +50,16 @@ function App() {
       <label>视觉主题<select aria-label="视觉主题" value={theme} onChange={e => setTheme(e.target.value as WindChimeLiveTheme)}>{LIVE_THEMES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>内容排版<select aria-label="内容排版" value={layout} onChange={e => setLayout(e.target.value as WindChimeLiveLayout)}>{LIVE_LAYOUTS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>展示宽度<select aria-label="展示宽度" value={width} onChange={e => setWidth(Number(e.target.value))}><option value={960}>宽 · 960 px</option><option value={640}>中 · 640 px</option><option value={360}>窄 · 360 px</option></select></label>
+      <label>展示高度<select aria-label="展示高度" value={height} onChange={e => setHeight(Number(e.target.value))}><option value={640}>640 px</option><option value={420}>420 px</option><option value={900}>900 px</option></select></label>
+      <label>滚动速度<select aria-label="滚动速度" value={speed} onChange={e => setSpeed(Number(e.target.value))}><option value={24}>舒缓 · 24 px/秒</option><option value={60}>中速 · 60 px/秒</option><option value={120}>快速 · 120 px/秒</option></select></label>
       <label className="design-check"><input type="checkbox" aria-label="包含图片" checked={images} onChange={e => setImages(e.target.checked)} />包含图片</label>
       <label className="design-check"><input type="checkbox" aria-label="长信示例" checked={long} onChange={e => setLong(e.target.checked)} />长信示例</label>
+      <label className="design-check"><input type="checkbox" aria-label="竖图示例" checked={portrait} onChange={e => setPortrait(e.target.checked)} />竖图示例</label>
+      <button onClick={() => setReset(value => value + 1)}>从头预览</button>
       <button className="design-hide" onClick={() => setBlank(!blank)}>{blank ? '恢复示例' : '隐藏示例'}</button>
     </section>
-    <p className="design-note">{blank ? '画面已清空。' : '示例预览 · 不连接信箱，也不会播出。棋盘格表示透明区域。'}<span>主题变化不会改变当前排版。</span></p>
-    {blank ? <div className="design-blank" data-blank="true" /> : mode === 'single' ? <section className="design-single"><div className="design-caption"><div><strong>{LIVE_THEMES.find(item => item.id === theme)?.name}</strong><p>{LIVE_THEMES.find(item => item.id === theme)?.description}</p></div><span>{LIVE_LAYOUTS.find(item => item.id === layout)?.name}</span></div><Preview theme={theme} layout={layout} images={images} long={long} width={width} /></section> : <section className="design-matrix" aria-label="主题与排版组合">{LIVE_THEMES.flatMap(skin => LIVE_LAYOUTS.map(composition => <div className="design-tile" key={`${skin.id}-${composition.id}`}><div className="design-tile-title"><strong>{skin.name}</strong><span>{composition.name}</span></div><Preview theme={skin.id} layout={composition.id} images={images} long={long} width={960} compact /></div>))}</section>}
+    <p className="design-note">{blank ? '画面已清空。' : '仅当前来信在固定视窗内循环：顶部停留 2 秒，滚动到底停留 2.5 秒，然后回顶。'}<span>图片等比例放大 · 短信不滚动 · 主题与排版独立</span></p>
+    {blank ? <div className="design-blank" data-blank="true" /> : mode === 'single' ? <section className="design-single"><div className="design-caption"><div><strong>{LIVE_THEMES.find(item => item.id === theme)?.name}</strong><p>{LIVE_THEMES.find(item => item.id === theme)?.description}</p></div><span>{LIVE_LAYOUTS.find(item => item.id === layout)?.name}</span></div><Preview theme={theme} layout={layout} images={images} long={long} width={width} height={height} speed={speed} portrait={portrait} reset={reset} /></section> : <section className="design-matrix" aria-label="主题与排版组合">{LIVE_THEMES.flatMap(skin => LIVE_LAYOUTS.map(composition => <div className="design-tile" key={`${skin.id}-${composition.id}`}><div className="design-tile-title"><strong>{skin.name}</strong><span>{composition.name}</span></div><Preview theme={skin.id} layout={composition.id} images={images} long={long} width={960} height={height} speed={speed} portrait={portrait} reset={reset} compact /></div>))}</section>}
     <footer>纯净 / UliUli 夜航 / Mia 星祷 <span>纵向信笺 · 图文双栏 · 横向条幅</span></footer>
   </main>;
 }

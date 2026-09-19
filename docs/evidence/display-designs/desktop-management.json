@@ -11,7 +11,7 @@
     "topic creation uses shared management route",
     "shared QR/poster renderer, local normalized avatar and actual PNG saves; safe server-provided submission link",
     "poster title/signature/avatar preferences survive share view remount without persisting credentials or mail",
-    "1920px maximum width expands the real preview canvas; 96px type in a 280px card preserves all text and both images in a keyboard-scrollable preview, including the final caption, without horizontal overflow",
+    "1920px maximum width expands the real preview canvas; 96px type in a 280px card stays inside a fixed 640px output and automatically scrolls through the final text, image and caption, without a second outer scroll area or horizontal overflow",
     "real appearance editor previews Mia and split privately, saves once through the appearance action, restores persisted choices after remount, preserves split while selecting UliUli, and canceling a topic change retains unsaved local appearance; both themes and their shared renderer preview are visible at wide and narrow sizes",
     "site-wide keyword toggle and terms editor use main-process authenticated routes",
     "external settings/blocklist/grants synchronize while visible; hidden pauses reads; focus refreshes immediately; dirty terms preserved",
@@ -625,47 +625,48 @@
       "name": "maxWidth1920",
       "cardWidth": 1920,
       "canvasWidth": 2000,
-      "scaledWidth": 552,
-      "scale": 0.2875,
-      "contentWidth": 575,
+      "scaledWidth": 566.4000244140625,
+      "scale": 0.295,
+      "contentWidth": 590,
       "withinPreview": true,
       "horizontalOverflow": false
     },
     {
       "name": "fontSize96-maxWidth280",
       "cardWidth": 280,
-      "cardHeight": 3889,
-      "contentHeight": 3889,
-      "canvasHeight": 3969,
-      "scrollHeight": 3377,
-      "visibleHeight": 621,
-      "keyboardScrollable": true,
-      "overflowY": "auto",
+      "cardHeight": 640,
+      "contentHeight": 640,
+      "canvasHeight": 720,
+      "scrollHeight": 3785,
+      "visibleHeight": 575,
+      "outerScrollHeight": 621,
+      "outerHeight": 621,
+      "overflowY": "hidden",
       "previewHorizontalOverflow": false,
       "horizontalOverflow": false,
       "lastCaption": "月下微风",
       "lastImageVisible": true,
       "lastCaptionVisible": true,
-      "scrollTop": 1450.6666259765625,
-      "maxScroll": 1451
+      "scrollTop": 3210,
+      "maxScroll": 3210
     }
   ],
   "savedFiles": [
     {
-      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-Jo6qYV\\风铃来信.csv",
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-pBu9I3\\风铃来信.csv",
       "bytes": 301
     },
     {
-      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-Jo6qYV\\风铃投稿二维码.png",
-      "bytes": 5316
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-pBu9I3\\风铃投稿二维码.png",
+      "bytes": 5333
     },
     {
-      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-Jo6qYV\\风铃投稿海报.png",
-      "bytes": 410881
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-pBu9I3\\风铃投稿海报.png",
+      "bytes": 411118
     }
   ],
-  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-Jo6qYV",
-  "requests": 249,
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-pBu9I3",
+  "requests": 320,
   "consoleErrors": [],
-  "at": "2026-09-13T08:28:56.832Z"
+  "at": "2026-09-13T09:26:32.504Z"
 }

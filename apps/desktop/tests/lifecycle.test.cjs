@@ -8,18 +8,19 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 async function harness(options={}) {
   const deferredCrash=options.deferredCrash;
-  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault;
+  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[],workspaceWrites=[],unregistered=[],confirmations=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault,confirmation=options.confirmation??0;
   const app=new EventEmitter();Object.assign(app,{requestSingleInstanceLock:()=>true,whenReady:async()=>{},getPath:()=>'/fixture',getName:()=> 'Fixture',quit:()=>{quitCount++;}});
   class Window extends EventEmitter {
     constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isDestroyed:()=>!!this.contentsDestroyed,isCrashed:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');return !!this.crashed;},reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
     finishCrash(){this.crashed=true;this.webContents.emit('render-process-gone');}
-    async loadFile(){this.loadCount++;this.crashed=false;if(this.options.title==='WindChime Display')await handlers.get('display:request')({sender:this.webContents,senderFrame:this.webContents.mainFrame},{path:'/display/open',method:'POST',body:{}});this.webContents.emit('did-finish-load');}
+    async loadFile(file,loadOptions){this.loadedFile=file;this.loadOptions=loadOptions;this.loadCount++;this.crashed=false;if(this.options.title==='WindChime Display')await handlers.get('display:request')({sender:this.webContents,senderFrame:this.webContents.mainFrame},{path:'/display/open',method:'POST',body:{}});this.webContents.emit('did-finish-load');}
     async loadURL(url){this.blankUrl=url;this.crashed=false;this.blankLoadCount=(this.blankLoadCount??0)+1;await blankLoadGate?.(this);this.webContents.emit('did-finish-load');}
     show(){}showInactive(){this.showCount++;}focus(){}hide(){this.hideCount++;}isDestroyed(){return !!this.destroyed;}
     destroyContents(){this.contentsDestroyed=true;this.webContents.emit('destroyed');}
     close(){this.closeRequested=true;}finishClose(){this.destroyContents();this.destroyed=true;this.emit('closed');}
+    getBounds(){return {x:50,y:60,width:this.options.width,height:this.options.height};}setAlwaysOnTop(pinned){this.pinned=pinned;}
   }
-  const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutResult??true;},unregisterAll:()=>{}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
+  const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutPolicy?options.shortcutPolicy(key):options.shortcutResult??true;},unregister:key=>unregistered.push(key),unregisterAll:()=>{}},dialog:{showMessageBox:async(_window,input)=>{confirmations.push(input);return {response:typeof confirmation==='function'?await confirmation():confirmation};}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
   const fetch=async(url,options)=>{
     const request={url,body:options.body?JSON.parse(options.body):null,method:options.method,headers:options.headers};requests.push(request);
     const intercepted=route?.(request);if(intercepted)return intercepted;
@@ -33,15 +34,114 @@ async function harness(options={}) {
     if(url.endsWith('/display/open'))value={receiverId:'r',epoch:'epoch',leaseMs:3000};
     return Response.json(value);
   };
-  const fileSystem={readFile:async()=>{if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(_path,bytes)=>{const candidate=JSON.parse(bytes.toString());await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async()=>{await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
+  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('workspace.v1.json.tmp'))return;await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
   wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
   async function pair(port){const pending=await invoke('sites:pair',[{origin:`http://localhost:${port}`,label:`Site ${port}`}]);assert(pending.ok);const result=await invoke('sites:pair-status',[pending.data.id]);assert(result.ok,result.error);return result.data.site;}
-  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
+  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,workspaceWrites,unregistered,confirmations,setConfirmation:value=>{confirmation=value;},powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
 }
+test('private tiles have distinct isolated windows, selected-only sites and no credential or display authority',async()=>{
+  const h=await harness();await h.pair(3012);await h.pair(3011);
+  assert((await h.invoke('tiles:open',['review'])).ok);const tile=h.windows.at(-1);
+  assert.equal(tile.options.title,'WindChime Private · 信件审阅');assert.equal(tile.options.alwaysOnTop,true);
+  assert.equal(tile.options.webPreferences.sandbox,true);assert.equal(tile.options.webPreferences.contextIsolation,true);assert.equal(tile.options.webPreferences.nodeIntegration,false);assert.match(tile.options.webPreferences.partition,/^windchime-private-tile-/);
+  assert.equal(tile.loadOptions.query.tile,'review');const count=h.windows.length;
+  let titlePrevented=false;tile.emit('page-title-updated',{preventDefault:()=>{titlePrevented=true;}},'风铃 · 私人控制台');assert(titlePrevented,'HTML cannot overwrite the private module capture title');assert.equal(tile.options.frame,false);assert.equal(tile.options.resizable,true);
+  assert((await h.invoke('tiles:open',['review'])).ok);assert.equal(h.windows.length,count);
+  const sites=(await h.invoke('sites:list',[],tile)).data;assert.equal(sites.items.length,1);assert(!JSON.stringify(sites).includes('wc_ctl'));
+  assert((await h.invoke('control:request',[{path:'/control/state',method:'GET'}],tile)).ok);
+  for(const [channel,args] of [['sites:select',[null]],['sites:import-key',['secret']],['app:next-shortcut',['Ctrl+Alt+N']],['files:save',[{}]],['share:open',[]],['display:request',[{path:'/display/open',method:'POST',body:{}}]]])assert.equal((await h.invoke(channel,args,tile)).ok,false,channel);
+  assert((await h.invoke('tiles:pin',['review',false],tile)).ok);assert.equal(tile.pinned,false);
+  const status=(await h.invoke('app:status',[],tile)).data;assert.equal(status.tile.module,'review');assert.equal(status.tile.pinned,false);assert(!JSON.stringify(status).includes('wc_ctl'));
+  await flush();assert(!JSON.stringify(h.workspaceWrites).includes('wc_ctl'));assert(!JSON.stringify(h.workspaceWrites).includes('信件原文'));
+});
+
+test('dirty tile close and mailbox switches cancel without hiding output or replacing credentials',async()=>{
+  const h=await harness();const first=await h.pair(3011),second=await h.pair(3012);await h.invoke('sites:select',[first.id]);await h.invoke('display:open');const output=h.output;
+  await h.invoke('tiles:open',['review']);const tile=h.windows.at(-1);await h.invoke('tiles:dirty',[true],tile);
+  assert.equal((await h.invoke('tiles:close',['review'],tile)).code,'OPERATION_CANCELLED');assert.equal(tile.closeRequested,undefined);
+  const before=h.requests.length,version=(await h.invoke('app:status')).data.contextVersion;
+  assert.equal((await h.invoke('sites:select',[second.id])).code,'OPERATION_CANCELLED');assert.equal((await h.invoke('sites:list')).data.selectedId,first.id);assert.equal(h.requests.length,before);assert.equal(output.hideCount,0);
+  h.setConfirmation(1);assert((await h.invoke('sites:select',[second.id])).ok);assert(tile.closeRequested);assert(output.hideCount>0);
+  assert.equal((await h.invoke('control:request',[{path:'/control/state',method:'GET'}],tile)).ok,false);
+  await h.invoke('tiles:open',['review']);const newer=h.windows.at(-1);tile.finishClose();assert.equal((await h.invoke('app:status',[],newer)).data.tile.module,'review');assert((await h.invoke('app:status')).data.contextVersion>version);
+});
+
+test('selected review identity synchronizes across private windows and protects main and tile drafts',async()=>{
+  const h=await harness();const site=await h.pair(3011);await h.invoke('tiles:open',['inbox']);const inbox=h.windows.at(-1);await h.invoke('tiles:open',['review']);const review=h.windows.at(-1);
+  const version=(await h.invoke('app:status')).data.contextVersion;
+  assert((await h.invoke('control:select-message',['first',site.id,version],inbox)).ok);
+  assert.equal((await h.invoke('app:status',[],review)).data.selectedMessageId,'first');
+  await h.invoke('tiles:dirty',[true]);assert.equal((await h.invoke('control:select-message',['second',site.id,version],inbox)).code,'OPERATION_CANCELLED');
+  assert.equal((await h.invoke('app:status')).data.selectedMessageId,'first');await h.invoke('tiles:dirty',[false]);await h.invoke('tiles:dirty',[true],review);
+  assert.equal((await h.invoke('control:select-message',['second',site.id,version],inbox)).code,'OPERATION_CANCELLED');
+  h.setConfirmation(1);assert((await h.invoke('control:select-message',['second',site.id,version],inbox)).ok);assert.equal((await h.invoke('app:status',[],review)).data.selectedMessageId,'second');
+  assert.equal((await h.invoke('control:select-message',['third',site.id,version-1],inbox)).code,'CONNECTION_CHANGED');
+});
+
+test('closing a tile rejects its delayed reads and cancels queued writes without disturbing another tile',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('tiles:open',['review']);const tile=h.windows.at(-1);
+  const pending=deferred();h.setRoute(r=>r.url.includes('/control/state')?pending.promise:null);
+  const read=h.invoke('control:request',[{path:'/control/state',method:'GET'}],tile);await flush();await h.invoke('tiles:close',['review'],tile);pending.resolve(Response.json({messages:[{text:'old'}]}));assert.equal((await read).ok,false);
+  await h.invoke('tiles:open',['review']);const replacement=h.windows.at(-1);assert((await h.invoke('app:status',[],replacement)).ok);
+  const gate=deferred();h.setRoute(r=>r.body?.action==='show'?gate.promise:null);
+  const first=h.invoke('control:request',[{path:'/control/action',method:'POST',body:{topicId:'3011',action:'show'}}]);await flush();
+  const queued=h.invoke('control:request',[{path:'/control/action',method:'POST',body:{topicId:'3011',action:'next'}}],replacement);await flush();
+  await h.invoke('tiles:close',['review'],replacement);gate.resolve(Response.json({}));await first;assert.equal((await queued).ok,false);assert(!h.requests.some(r=>r.body?.action==='next'));
+});
+
+test('closing a tile during message membership or display grant reads cancels side effects',async()=>{
+  const h=await harness();const site=await h.pair(3011);await h.invoke('control:select-message',['first',site.id]);await h.invoke('tiles:open',['inbox']);const inbox=h.windows.at(-1);
+  const member=deferred();h.setRoute(r=>r.url.includes('/control/messages/second')?member.promise:null);
+  const selection=h.invoke('control:select-message',['second',site.id],inbox);await flush();await h.invoke('tiles:close',['inbox'],inbox);member.resolve(Response.json({id:'second'}));assert.equal((await selection).code,'CONNECTION_CHANGED');assert.equal((await h.invoke('app:status')).data.selectedMessageId,'first');
+  h.setRoute(null);await h.invoke('tiles:open',['transport']);const transport=h.windows.at(-1),grant=deferred();h.setRoute(r=>r.url.endsWith('/control/grants')?grant.promise:null);
+  const open=h.invoke('display:open',[],transport);await flush();await h.invoke('tiles:close',['transport'],transport);grant.resolve(Response.json({id:'late',token:'wc_disp_late'}));assert.equal((await open).code,'CONNECTION_CHANGED');assert.equal(h.output,undefined);
+  h.setRoute(null);await h.invoke('display:open');const existing=h.output;await h.invoke('tiles:open',['transport']);const newer=h.windows.at(-1);assert((await h.invoke('display:open',[],newer)).ok);await h.invoke('tiles:close',['transport'],newer);assert.equal(h.output,existing);assert.equal(existing.closeRequested,undefined,'closing controls does not close an already established display');
+});
+
+test('edits created while a selected-message read is pending still require discard confirmation',async()=>{
+  const h=await harness();const site=await h.pair(3011);await h.invoke('control:select-message',['first',site.id]);await h.invoke('tiles:open',['inbox']);const inbox=h.windows.at(-1);
+  const response=deferred();h.setRoute(r=>r.url.includes('/control/messages/second')?response.promise:null);
+  const next=h.invoke('control:select-message',['second',site.id],inbox);await flush();assert.equal(h.confirmations.length,0);await h.invoke('tiles:dirty',[true]);response.resolve(Response.json({id:'second'}));assert.equal((await next).code,'OPERATION_CANCELLED');assert.equal(h.confirmations.length,1);assert.equal((await h.invoke('app:status')).data.selectedMessageId,'first');
+});
+
+test('dirty tile native close and key import ask before closing or committing new credentials',async()=>{
+  const h=await harness();const site=await h.pair(3011);await h.invoke('display:open');const output=h.output;await h.invoke('tiles:open',['appearance']);const tile=h.windows.at(-1);await h.invoke('tiles:dirty',[true],tile);
+  let prevented=false;tile.emit('close',{preventDefault:()=>{prevented=true;}});await flush();assert(prevented);assert.equal(tile.closeRequested,undefined);
+  const writes=h.vaultWrites.length;assert.equal((await h.invoke('sites:import-key',[keyFor(3012)])).code,'OPERATION_CANCELLED');assert.equal(h.vaultWrites.length,writes);assert.equal((await h.invoke('sites:list')).data.selectedId,site.id);assert.equal(output.hideCount,0);
+  h.setConfirmation(1);assert((await h.invoke('sites:import-key',[keyFor(3012)])).ok);assert(tile.closeRequested);assert(output.hideCount>0);
+});
+
+test('hotkey recording temporarily releases only next, suppresses pending callbacks and restores on blur',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');await h.invoke('app:next-shortcut',['Ctrl+Alt+N']);const shortcut=h.shortcuts.at(-1),before=h.requests.length;
+  assert((await h.invoke('app:shortcut-recording',[true])).ok);assert.equal((await h.invoke('app:status')).data.shortcutRecording,true);assert.deepEqual(h.unregistered,['CommandOrControl+Alt+N']);
+  shortcut.callback();await flush();assert.equal(h.requests.length,before);assert.equal((await h.invoke('app:next-shortcut',['Ctrl+Alt+M'])).ok,false);
+  await h.invoke('tiles:open',['transport']);const tile=h.windows.at(-1);assert.equal((await h.invoke('app:shortcut-recording',[false],tile)).ok,false);
+  h.windows[0].emit('blur');assert.equal((await h.invoke('app:status')).data.shortcutRecording,false);assert.equal(h.shortcuts.at(-1).key,'CommandOrControl+Alt+N');
+  assert((await h.invoke('app:shortcut-recording',[true])).ok);h.shortcuts[0].callback();await flush();assert(h.requests.some(r=>r.body?.action==='hide'),'emergency hide remains registered during recording');await h.invoke('app:shortcut-recording',[false]);
+});
+
+test('next shortcut registration is opt-in, conflict-safe and persists independently of the encrypted vault',async()=>{
+  const h=await harness({shortcutPolicy:key=>!key.endsWith('+X')});assert.equal((await h.invoke('app:status')).data.nextShortcut,'');assert.equal(h.shortcuts.length,1);
+  assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+N'])).ok);assert.equal(h.workspaceWrites.at(-1).nextShortcut,'CommandOrControl+Alt+N');assert.equal(h.vaultWrites.length,0);
+  assert.equal((await h.invoke('app:next-shortcut',['Ctrl+Alt+X'])).ok,false);assert.equal((await h.invoke('app:status')).data.nextShortcut,'CommandOrControl+Alt+N');assert.match((await h.invoke('app:status')).data.shortcutError,/占用/);assert.equal(h.unregistered.length,0);
+  assert.equal((await h.invoke('app:next-shortcut',['Ctrl+Shift+H'])).ok,false);
+  assert((await h.invoke('app:next-shortcut',[''])).ok);assert.deepEqual(h.unregistered,['CommandOrControl+Alt+N']);
+  const restored=await harness({workspace:{version:1,nextShortcut:'Ctrl+Alt+N',tiles:{review:{pinned:true,bounds:{x:0,y:0,width:500,height:500}}}}});assert.equal(restored.windows.length,1);assert.equal(restored.requests.length,0);assert.equal((await restored.invoke('app:status')).data.nextShortcut,'CommandOrControl+Alt+N');
+});
+
+test('next hotkey reads fresh revision, debounces and does not replay after hide or reconnect',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('app:next-shortcut',['Ctrl+Alt+N']);const shortcut=h.shortcuts.at(-1);
+  shortcut.callback();await flush();assert.match((await h.invoke('app:status')).data.nextActionError,/展示窗口/);assert(!h.requests.some(r=>r.body?.action==='next'));
+  await h.invoke('display:open');h.advance(700);h.setRoute(r=>r.url.includes('/control/state')?Response.json({topicId:'3011',revision:37,receivers:1}):null);
+  shortcut.callback();shortcut.callback();await flush();await flush();const next=h.requests.filter(r=>r.body?.action==='next');assert.equal(next.length,1);assert.equal(next[0].body.expectedRevision,37);assert.equal(typeof next[0].body.operationId,'string');
+  h.advance(700);const pending=deferred();h.setRoute(r=>r.url.includes('/control/state')?pending.promise:null);shortcut.callback();await flush();const hide=h.invoke('control:hide');pending.resolve(Response.json({topicId:'3011',revision:38,receivers:1}));await hide;await flush();assert.equal(h.requests.filter(r=>r.body?.action==='next').length,1);
+  h.advance(700);await h.invoke('display:open');await flush();assert.equal(h.requests.filter(r=>r.body?.action==='next').length,1,'reconnecting never replays the cancelled keystroke');
+});
+
 test('completing a new pairing clears the old output; its delayed close cannot hide the new mailbox',async()=>{
   const h=await harness();await h.pair(3011);assert((await h.invoke('display:open')).ok);const old=h.output;
   await h.pair(3012);assert(old.hideCount>0);assert(old.closeRequested);
@@ -98,7 +198,7 @@ test('status reports both unreadable credentials and failed shortcut registratio
   for(const shortcutResult of [false,new Error('occupied')]){
     const h=await harness({readError:new Error('corrupt ciphertext'),shortcutResult});
     const status=(await h.invoke('app:status')).data;
-    assert.deepEqual(Object.keys(status).sort(),['connectionError','displayOpen','shortcut']);
+    assert.deepEqual(Object.keys(status).sort(),['connectionError','contextVersion','displayOpen','nextActionError','nextPending','nextShortcut','selectedMessageId','shortcut','shortcutError','shortcutRecording','tile','tiles']);
     assert.match(status.connectionError,/加密凭据无法读取/);assert.match(status.connectionError,/快捷键注册失败/);
     assert.equal(status.shortcut,'Ctrl+Shift+H');assert.equal(status.displayOpen,false);assert.equal(h.requests.length,0);
   }

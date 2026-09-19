@@ -1,10 +1,14 @@
 {
   "passed": true,
-  "at": "2026-09-13T08:17:33.150Z",
+  "at": "2026-09-13T09:21:42.979Z",
   "electron": "44.3.0",
   "checks": [
     "3 themes × 3 layouts × 3 widths × text-only/image letters: 54 combinations render full sample text without horizontal overflow or extra links",
-    "Long letters preserve all text and expand naturally in all layouts; no line-clamp or fixed-height clipping",
+    "Long letters retain all text inside a fixed 640px output; content overflows only the inner scrolling viewport, while ornaments and borders stay fixed",
+    "Real animation reaches bottom, holds the last line, returns to top and loops the same snapshot; frame decoration does not move",
+    "Appearance and snapshot replacement reset immediately at the top and cancel the detached old animation",
+    "A short letter remains stationary after the initial pause",
+    "Landscape and portrait images fill their columns without cropping or distortion in every layout; tall images scroll fully through their final caption",
     "Hiding removes all cards, background panels, borders and ornaments instead of hiding just the text"
   ],
   "cases": [
@@ -164,7 +168,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -180,7 +184,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -196,7 +200,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -212,7 +216,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -228,7 +232,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -244,7 +248,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -260,7 +264,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -276,7 +280,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -292,7 +296,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -308,7 +312,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -324,7 +328,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -340,7 +344,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -356,7 +360,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -372,7 +376,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -388,7 +392,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -404,7 +408,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -420,7 +424,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -436,7 +440,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -496,7 +500,7 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "469.083px 390.917px",
+      "bodyGrid": "344px 516px",
       "imagesLoaded": true,
       "background": "rgba(0, 0, 0, 0)",
       "border": "0px",
@@ -512,7 +516,7 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "294.542px 245.458px",
+      "bodyGrid": "216px 324px",
       "imagesLoaded": true,
       "background": "rgba(0, 0, 0, 0)",
       "border": "0px",
@@ -596,7 +600,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -612,7 +616,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -628,7 +632,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -640,11 +644,11 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "468.354px 390.312px",
+      "bodyGrid": "343.458px 515.208px",
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -656,11 +660,11 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "293.812px 244.844px",
+      "bodyGrid": "215.458px 323.208px",
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -676,7 +680,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -692,7 +696,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -708,7 +712,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -724,7 +728,7 @@
       "imagesLoaded": true,
       "background": "rgba(5, 5, 8, 0.933)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -740,7 +744,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -756,7 +760,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -772,7 +776,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -784,11 +788,11 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "468.354px 390.312px",
+      "bodyGrid": "343.458px 515.208px",
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -800,11 +804,11 @@
       "overflow": false,
       "text": "今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。",
       "columns": "auto",
-      "bodyGrid": "293.812px 244.844px",
+      "bodyGrid": "215.458px 323.208px",
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -820,7 +824,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -836,7 +840,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -852,7 +856,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     },
@@ -868,7 +872,7 @@
       "imagesLoaded": true,
       "background": "rgb(251, 246, 236)",
       "border": "0.666667px",
-      "brand": true,
+      "brand": false,
       "ornaments": 3,
       "links": 0
     }

@@ -19,7 +19,7 @@ const snapshot = Object.freeze({
 });
 const assetUrls = Object.freeze(Object.fromEntries(snapshot.assets.map(asset => [asset.id, `blob:https://display.test/${asset.id}`])));
 const layouts = ['stack', 'split', 'banner'];
-const unchangedKeys = ['layout', 'imageLayout', 'fontSize', 'padding', 'lineHeight', 'letterSpacing', 'maxWidth', 'animation'];
+const unchangedKeys = ['layout', 'imageLayout', 'fontSize', 'padding', 'lineHeight', 'letterSpacing', 'maxWidth', 'animation', 'viewportHeight', 'autoScroll', 'scrollSpeed', 'scrollStartPauseMs', 'scrollEndPauseMs'];
 const escapeHtml = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[char]);
 const renderCard = appearance => renderToStaticMarkup(React.createElement(WindChimeLiveCard, { snapshot, appearance, assetUrls }));
 function assertInertMarkup(markup) {
@@ -83,7 +83,10 @@ for (const { id: theme } of LIVE_THEMES) for (const layout of layouts) {
     }
     const hasBrandOrOrnament = /class="[^"]*\bwc-display-(?:brand|ornament)\b/.test(markup);
     assert.equal(hasBrandOrOrnament, theme !== 'pure', 'pure theme omits decoration elements from the DOM');
-    if (theme === 'pure') assert.doesNotMatch(markup, /<svg\b|ULIULI|MIA ·/);
+    assert.doesNotMatch(markup, /wc-display-brand|>ULIULI<|>MIA ·|星夜来信|来信频道/, 'private theme names are never stamped on the audience output');
+    if (theme === 'pure') assert.doesNotMatch(markup, /<svg\b/);
+    assert.match(markup, /height:640px/);
+    assert.match(markup, /class="wc-display-viewport"/);
     assert.deepEqual(snapshot, before, 'rendering a theme must not alter approved snapshot data');
   });
 }

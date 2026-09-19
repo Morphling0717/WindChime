@@ -1,15 +1,21 @@
-const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, Menu, session, powerMonitor, dialog, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, Menu, session, powerMonitor, dialog, nativeImage, screen } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { performance } = require('node:perf_hooks');
 const { normalizeOrigin, validateRequest, restoreSite, verifier, challenge, publicSite } = require('./security.cjs');
 const { parseWindChimeConnectionKey } = require('./build/connection-key.cjs');
+const { TILE_MODULES, HIDE_SHORTCUT, normalizeNextShortcut, restoreWorkspace, fitTileBounds } = require('./workspace.cjs');
 const state = { sites: [], selected: null, pairings: new Map(), output: null, connectionError: '' };
 let controlWindow, displayWindow, tray, quitting = false, vaultPath;
 let selectionVersion = 0, outputVersion = 0, switching = false;
 let importVersion = 0;
 let connectionCommit = null;
+const tiles = new Map();
+let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
+let selectedMessageId = null, mainDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
+let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
+let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
 const pendingRequests = new Set();
 let writeTail = Promise.resolve(), vaultTail = Promise.resolve();
 let outputDeadline = 0, outputHeld = false, pendingOutputClears = 0;
@@ -42,6 +48,124 @@ function selected() { return state.sites.find(site => site.id === state.selected
 function activeTopic(site) { return site?.scope === 'site' ? site.selectedTopicId : site?.topicId; }
 function abortRequests() { for (const request of pendingRequests) request.abort(); pendingRequests.clear(); }
 function connectionError(message) { state.connectionError = [state.connectionError, message].filter(Boolean).join('\n'); }
+async function readWorkspace() {
+  try { workspace = restoreWorkspace(JSON.parse(await fs.readFile(workspacePath, 'utf8'))); }
+  catch (error) { if (error.code !== 'ENOENT') connectionError('悬浮磁贴和快捷键设置无法读取，已使用默认设置'); }
+}
+function saveWorkspace() {
+  const contents = JSON.stringify(workspace);
+  const save = workspaceTail.then(async () => { const temporary = `${workspacePath}.tmp`; await fs.writeFile(temporary, contents); await fs.rename(temporary, workspacePath); });
+  workspaceTail = save.catch(() => {}); return save;
+}
+function tileFor(window) { return [...tiles.values()].find(tile => tile.window === window); }
+function tileMetadata(tile) { return { module: tile.module, pinned: tile.pinned, dirty: tile.dirty, connectionId: tile.scope.site.id, topicId: tile.topicId, contextVersion: tile.scope.version }; }
+function assertTile(tile) { if (tiles.get(tile.module) !== tile || !isCurrent(tile.scope) || tile.topicId !== activeTopic(selected())) throw Object.assign(new Error('磁贴所属信箱已切换，请重新打开磁贴'), { code: 'CONNECTION_CHANGED' }); }
+function cancelled() { return Object.assign(new Error('已取消操作，未保存内容仍然保留'), { code: 'OPERATION_CANCELLED' }); }
+async function confirmDirty(tileList, message, includeMain = false, parent = controlWindow) {
+  if (!tileList.some(tile => tile.dirty) && !(includeMain && mainDirty)) return;
+  const response = await dialog.showMessageBox(parent, { type: 'warning', title: '保留未保存内容', message, buttons: ['取消，继续编辑', '放弃并继续'], defaultId: 0, cancelId: 0, noLink: true });
+  if (response.response !== 1) throw cancelled();
+}
+function dirtyTiles() { return [...tiles.values()].filter(tile => tile.dirty); }
+function rememberTile(tile) {
+  const bounds = !tile.window.isDestroyed() ? tile.window.getBounds?.() : workspace.tiles[tile.module]?.bounds;
+  workspace.tiles[tile.module] = { pinned: tile.pinned, ...(bounds ? { bounds } : {}) };
+  void saveWorkspace().catch(() => { connectionError('磁贴位置未能保存'); });
+}
+function disposeTiles() {
+  selectedMessageId = null; mainDirty = false;
+  for (const tile of tiles.values()) { rememberTile(tile); tile.allowClose = true; tile.window.close(); }
+  tiles.clear();
+}
+async function openTile(module) {
+  if (!Object.prototype.hasOwnProperty.call(TILE_MODULES, module)) throw new Error('未知磁贴模块');
+  const scope = context(); if (!activeTopic(scope.site)) throw new Error('请先选择话题');
+  const existing = tiles.get(module); if (existing) { assertTile(existing); existing.window.show(); existing.window.focus(); return tileMetadata(existing); }
+  const preferences = workspace.tiles[module] || {}, partition = `windchime-private-tile-${crypto.randomUUID()}`;
+  const stableTitle = `WindChime Private · ${TILE_MODULES[module]}`;
+  const window = new BrowserWindow({ width: module === 'review' || module === 'appearance' ? 760 : 480, height: module === 'transport' ? 360 : 720, minWidth: 340, minHeight: 260, ...fitTileBounds(preferences.bounds, screen?.getAllDisplays().map(display => display.workArea)), title: stableTitle, frame: false, resizable: true, alwaysOnTop: preferences.pinned !== false, icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: '#e9f1f5', autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
+  const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false }; tiles.set(module, tile); secureWindow(window, partition);
+  // The shared private HTML title must never replace the module-specific
+  // native capture title or make a private tile look like the public output.
+  window.on('page-title-updated', event => event.preventDefault());
+  for (const event of ['moved', 'resized']) window.on(event, () => { if (tiles.get(module) === tile) rememberTile(tile); });
+  window.on('close', event => {
+    if (tile.allowClose || quitting || !tile.dirty) return;
+    event.preventDefault(); if (tile.closing) return; tile.closing = true;
+    void confirmDirty([tile], '此磁贴有未保存的修改。关闭磁贴会放弃这些修改。', false, window).then(() => { if (tiles.get(module) !== tile) return; tile.allowClose = true; rememberTile(tile); window.close(); }).catch(() => {}).finally(() => { tile.closing = false; });
+  });
+  window.on('closed', () => { if (tiles.get(module) !== tile) return; rememberTile(tile); tiles.delete(module); });
+  try { await window.loadFile(path.join(__dirname, 'build/control.html'), { query: { tile: module } }); assertTile(tile); window.setTitle?.(stableTitle); window.show(); return tileMetadata(tile); }
+  catch (error) { if (tiles.get(module) === tile) { tiles.delete(module); tile.allowClose = true; window.close(); } throw error; }
+}
+async function closeTile(module) {
+  const tile = tiles.get(module); if (!tile) return; assertTile(tile);
+  await confirmDirty([tile], '此磁贴有未保存的修改。关闭磁贴会放弃这些修改。', false, tile.window); assertTile(tile);
+  rememberTile(tile); tile.allowClose = true; tiles.delete(module); tile.window.close();
+}
+async function chooseMessage(messageId, connectionId, contextVersion, parent = controlWindow) {
+  const scope = context(), initiatingTile = tileFor(parent);
+  const assertSelection = () => { assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); };
+  if (connectionId !== scope.site.id || (contextVersion !== undefined && contextVersion !== scope.version)) throw Object.assign(new Error('信箱已切换，旧选信操作已取消'), { code: 'CONNECTION_CHANGED' });
+  if (messageId !== null && (typeof messageId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(messageId))) throw new Error('无效信件');
+  if (messageId === selectedMessageId) return selectedMessageId;
+  const old = selectedMessageId;
+  // Validate membership before inspecting dirty editors. A slow website must
+  // not bypass edits made in another private window while this read is pending.
+  if (messageId !== null) { await siteRequest(scope.site, { path: `/control/messages/${encodeURIComponent(messageId)}?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' }); assertSelection(); }
+  if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
+  const review = tiles.get('review');
+  await confirmDirty(review ? [review] : [], '当前审阅中有未保存的修改。选择另一封信会放弃当前信件的修改。', true, parent); assertSelection();
+  if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
+  selectedMessageId = messageId; if (review) review.dirty = false; return selectedMessageId;
+}
+async function configureNextShortcut(value) {
+  if (shortcutRecording) throw new Error('请先结束快捷键录制');
+  const normalized = normalizeNextShortcut(value);
+  if (normalized === nextShortcut && (!normalized || nextRegistered)) { shortcutError = ''; return nextShortcut; }
+  if (normalized) {
+    try { if (!globalShortcut.register(normalized, () => { void nextLetter(); })) throw new Error(); }
+    catch { shortcutError = '快捷键已被系统或其他应用占用，原快捷键保持不变'; throw new Error(shortcutError); }
+  }
+  const previous = nextShortcut, saved = workspace.nextShortcut;
+  workspace.nextShortcut = normalized;
+  try { await saveWorkspace(); } catch { workspace.nextShortcut = saved; if (normalized) globalShortcut.unregister(normalized); shortcutError = '快捷键设置无法保存，原快捷键保持不变'; throw new Error(shortcutError); }
+  if (previous && previous !== normalized) globalShortcut.unregister(previous);
+  nextVersion++; nextShortcut = normalized; nextRegistered = !!normalized; shortcutError = ''; return normalized;
+}
+function recordNextShortcut(recording) {
+  if (typeof recording !== 'boolean') throw new Error('无效录制状态');
+  clearTimeout(shortcutRecordingTimer);
+  if (recording) {
+    nextVersion++; shortcutRecording = true;
+    if (nextShortcut && nextRegistered) { globalShortcut.unregister(nextShortcut); nextRegistered = false; }
+    shortcutRecordingTimer = setTimeout(() => recordNextShortcut(false), 30000); shortcutRecordingTimer.unref?.();
+  } else if (shortcutRecording) {
+    shortcutRecording = false;
+    if (nextShortcut) {
+      try { if (!globalShortcut.register(nextShortcut, () => { void nextLetter(); })) throw new Error(); nextRegistered = true; }
+      catch { nextRegistered = false; shortcutError = '录制结束后无法恢复原下一封快捷键，请在设置中重新选择'; }
+    }
+  }
+  return shortcutRecording;
+}
+async function nextLetter() {
+  if (shortcutRecording) return;
+  const now = performance.now(); if (nextPending || now - lastNextAt < 600) return;
+  lastNextAt = now; nextPending = true; nextActionError = '';
+  try {
+    const scope = context(), version = nextVersion, receiverVersion = outputReceiverVersion;
+    const assertReady = () => { assertCurrent(scope); if (version !== nextVersion || receiverVersion !== outputReceiverVersion || pendingOutputClears || outputHeld || !displayWindow || !state.output || !outputReceiverId || outputDeadline <= performance.now()) throw new Error('展示窗口未就绪或操作已取消，请连接展示窗口后重新按下一封'); };
+    assertReady();
+    await writeCommand(async () => {
+      assertReady();
+      const current = await siteRequest(scope.site, { path: `/control/state?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' }); assertReady();
+      if (current.topicId !== activeTopic(scope.site) || !Number.isInteger(current.revision) || current.receivers < 1) throw new Error('当前话题没有在线展示窗口，请先连接展示窗口');
+      await siteRequest(scope.site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(scope.site), action: 'next', expectedRevision: current.revision, operationId: crypto.randomUUID() } }); assertReady();
+    });
+  } catch (error) { nextActionError = error.message || '下一封操作失败，请检查网站连接'; }
+  finally { nextPending = false; }
+}
 function encryptVault(sites, selectedId) {
   if (!safeStorage.isEncryptionAvailable()) throw new Error('系统凭据加密暂不可用，无法保存设备授权');
   return safeStorage.encryptString(JSON.stringify({ version: 1, sites, selected: selectedId }));
@@ -71,7 +195,7 @@ function persistImportedSite(site, assertAttempt) {
       catch { throw Object.assign(new Error(), { code: 'CREDENTIAL_SAVE_FAILED' }); }
       // Other connection mutations wait through the atomic rename and publication.
       state.sites = sites;
-      return { transition: selectSite(site.id, { persist: false }) };
+      return { transition: selectSite(site.id, { persist: false, tilesConfirmed: true }) };
     } finally { connectionCommit = null; release(); }
   });
 }
@@ -113,6 +237,7 @@ async function http(base, relative, method = 'GET', body, token, { binary = fals
 }
 function connectionFailure(error) {
   const messages = {
+    OPERATION_CANCELLED: '已取消连接，原信箱及未保存内容仍然保留',
     CONNECTION_KEY_INVALID: '连接密钥无效，请从网页重新复制完整密钥',
     CONNECTION_KEY_EXPIRED: '连接密钥已过期，请在网页生成新的密钥',
     CONNECTION_KEY_REVOKED: '连接密钥已被撤销，请在网页生成新的密钥',
@@ -148,6 +273,7 @@ async function importConnectionKey(input) {
     if (!Number.isFinite(Date.parse(identity.expiresAt)) || Date.parse(identity.expiresAt) <= Date.now()) throw Object.assign(new Error(), { code: 'CONNECTION_KEY_EXPIRED' });
     const existing = state.sites.find(site => site.origin === key.origin && site.siteId === key.siteId && site.token === key.token && site.topicId === identity.topicId);
     const site = restoreSite({ id: existing?.id ?? crypto.randomUUID(), origin: key.origin, siteId: identity.siteId, scope, topicId: identity.topicId, selectedTopicId: existing?.selectedTopicId ?? null, mailManagement: capability.features?.mailManagement === true, token: key.token, label: identity.label || identity.topicTitle || new URL(key.origin).hostname, expiresAt: identity.expiresAt });
+    if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '连接新信箱会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); assertAttempt(); }
     const committed = await persistImportedSite(site, assertAttempt);
     await committed.transition;
     return publicSite(site);
@@ -161,11 +287,16 @@ function writeCommand(operation) { const result = writeTail.then(operation); wri
 function siteRequest(site, request, options) { return http(`${site.origin}/api/mail/live`, request.path, request.method, request.body, site.token, { scoped: true, ...options }); }
 function assertWindow(event, kind) {
   const window = kind === 'display' ? displayWindow : controlWindow;
-  if (!window || event.sender.id !== window.webContents.id || event.senderFrame !== window.webContents.mainFrame) throw new Error('未经授权的窗口');
+  if (window && event.sender.id === window.webContents.id && event.senderFrame === window.webContents.mainFrame) return window;
+  if (kind === 'private') {
+    const tile = [...tiles.values()].find(item => event.sender.id === item.window.webContents.id && event.senderFrame === item.window.webContents.mainFrame);
+    if (tile) { assertTile(tile); return tile.window; }
+  }
+  throw new Error('未经授权的窗口');
 }
-function handle(channel, kind, operation) {
+function handle(channel, kind, operation, bound = false) {
   ipcMain.handle(channel, async (event, ...args) => {
-    try { assertWindow(event, kind); return { ok: true, data: await operation(...args) }; }
+    try { const window = assertWindow(event, kind), tile = tileFor(window); const data = await (bound ? operation(window, ...args) : operation(...args)); if (tile) assertTile(tile); return { ok: true, data }; }
     catch (error) { return { ok: false, error: error.message || '操作失败', code: error.code || 'DESKTOP_ERROR', status: error.status || 0 }; }
   });
 }
@@ -213,6 +344,7 @@ async function paintHeldOutput(held) {
   } finally { clearTimeout(timer); }
 }
 function blank(paint = true) {
+  nextVersion++;
   const held = { window: displayWindow, version: ++outputVersion, painted: Promise.resolve(false) };
   outputDeadline = 0; outputHeld = true;
   outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
@@ -287,10 +419,12 @@ function hideSite(site) {
   if (!site || !activeTopic(site)) return Promise.resolve();
   return writeCommand(() => siteRequest(site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(site), action: 'hide', expectedRevision: 0, operationId: crypto.randomUUID() } }));
 }
-async function selectSite(id, { persist = true } = {}) {
+async function selectSite(id, { persist = true, tilesConfirmed = false } = {}) {
   if (id !== null && !state.sites.some(site => site.id === id)) throw new Error('信箱不存在');
   if (!switching && state.selected === id) return selected() ? publicSite(selected()) : null;
+  if (!tilesConfirmed && dirtyTiles().length) { const previous = selectionVersion; await confirmDirty(dirtyTiles(), '切换网站会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); if (previous !== selectionVersion) throw Object.assign(new Error('信箱选择已更新'), { code: 'CONNECTION_CHANGED' }); }
   const oldSite = selected();
+  disposeTiles();
   const version = ++selectionVersion; switching = true; abortRequests(); closeOutput(); state.selected = id;
   await hideSite(oldSite).catch(() => {});
   if (version !== selectionVersion) throw Object.assign(new Error('信箱选择已更新'), { code: 'CONNECTION_CHANGED' });
@@ -308,6 +442,8 @@ async function selectTopic(id, connectionId) {
   const topic = await siteRequest(site, { path: `/control/topics/${encodeURIComponent(id)}`, method: 'GET' });
   await waitForConnectionCommit(); assertCurrent(scope);
   if (topic.id !== id) throw new Error('网站返回了不匹配的话题');
+  if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '切换话题会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); assertCurrent(scope); }
+  disposeTiles();
   const old = { ...site }, version = ++selectionVersion; switching = true; abortRequests(); closeOutput();
   await hideSite(old).catch(() => {});
   if (version !== selectionVersion) throw new Error('话题选择已更新');
@@ -326,13 +462,14 @@ function secureWindow(window, partition) {
   // Local renderers never make network requests. The main process has an allowlist.
   isolated.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] }, (_, callback) => callback({ cancel: true }));
 }
-async function openDisplay() {
+async function openDisplay(initiatingTile) {
+  if (initiatingTile) assertTile(initiatingTile);
   if (pendingOutputClears) throw new Error('正在隐藏展示，请稍候');
   if (displayWindow && !displayWindow.isDestroyed() && state.output) { if (outputHeld) await recoverOutput(); else displayWindow.show(); return; }
   const scope = context(), site = scope.site; closeOutput(); const version = outputVersion;
   if (!activeTopic(site)) throw new Error('请先选择话题');
   const grant = await siteRequest(site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(site), kind: 'display', label: '桌面展示窗口' } });
-  assertCurrent(scope); if (version !== outputVersion) throw new Error('展示请求已取消');
+  assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); if (version !== outputVersion) throw new Error('展示请求已取消');
   state.output = grant;
   const partition = `windchime-display-${crypto.randomUUID()}`;
   displayWindow = new BrowserWindow({ width: 960, height: 640, title: 'WindChime Display', transparent: true, backgroundColor: '#00000000', show: false, frame: false, webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false } });
@@ -347,6 +484,7 @@ async function openDisplay() {
 }
 async function start() {
   vaultPath = path.join(app.getPath('userData'), 'devices.v1.enc'); await readVault();
+  workspacePath = path.join(app.getPath('userData'), 'workspace.v1.json'); await readWorkspace();
   // Only explicit poster preferences use persistent browser storage. Network,
   // credentials, remote pages and inbox persistence remain unavailable here.
   const partition = 'persist:windchime-private';
@@ -355,7 +493,8 @@ async function start() {
     webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
-  handle('sites:list', 'control', () => ({ items: state.sites.map(publicSite), selectedId: state.selected }));
+  for (const event of ['blur', 'hide', 'closed']) controlWindow.on(event, () => recordNextShortcut(false));
+  ipcMain.handle('sites:list', async event => { try { const window = assertWindow(event, 'private'); return { ok: true, data: { items: (tileFor(window) ? state.sites.filter(site => site.id === state.selected) : state.sites).map(publicSite), selectedId: state.selected } }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
   handle('sites:import-key', 'control', importConnectionKey);
   handle('sites:pair', 'control', async input => {
     const origin = normalizeOrigin(input.origin); const label = String(input.label || new URL(origin).hostname).slice(0, 80);
@@ -372,24 +511,26 @@ async function start() {
     const site = { id: crypto.randomUUID(), label: pairing.label, origin: pairing.origin, siteId: pairing.siteId, topicId: result.topicId, token: result.token, expiresAt: result.expiresAt };
     await waitForConnectionCommit();
     if (state.pairings.get(id) !== pairing) return { status: 'expired' };
-    state.sites.push(site); state.pairings.delete(id); await selectSite(site.id); return { status: 'approved', site: publicSite(site) };
+    if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '连接新信箱会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); if (state.pairings.get(id) !== pairing) return { status: 'expired' }; }
+    state.sites.push(site); state.pairings.delete(id); await selectSite(site.id, { tilesConfirmed: true }); return { status: 'approved', site: publicSite(site) };
   });
   handle('sites:pair-cancel', 'control', id => { state.pairings.delete(id); });
   handle('sites:select', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); return selectSite(id); });
   handle('sites:select-topic', 'control', selectTopic);
   handle('sites:forget', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); if (id === state.selected) await selectSite(state.sites.find(site => site.id !== id)?.id ?? null); if (connectionCommit) await waitForConnectionCommit(); state.sites = state.sites.filter(site => site.id !== id); await saveVault(); });
-  handle('control:request', 'control', async input => {
+  handle('control:request', 'private', async (window, input) => {
+    const initiatingTile = tileFor(window);
     const scope = context(), site = scope.site;
     if (input.connectionId !== undefined && input.connectionId !== site.id) throw new Error('网站已切换，旧操作已取消');
     const request = validateRequest(input, 'control', activeTopic(site), site.scope ?? 'topic');
     try {
-      const execute = () => { assertCurrent(scope); return siteRequest(site, request, { binary: request.path.startsWith('/control/assets/') }); };
+      const execute = () => { assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); return siteRequest(site, request, { binary: request.path.startsWith('/control/assets/') }); };
       const perform = () => request.method === 'GET' ? execute() : writeCommand(execute);
       const result = await (request.body?.action === 'hide' || request.body?.action === 'end' ? clearOutputWith(perform) : perform()); assertCurrent(scope); return result;
     } catch (error) { if (isCurrent(scope) && (error.status === 401 || error.status === 403)) { blank(); state.output = null; } throw error; }
-  });
-  handle('control:hide', 'control', hide);
-  handle('control:upload', 'control', async input => {
+  }, true);
+  handle('control:hide', 'private', hide);
+  handle('control:upload', 'private', async input => {
     const scope = context(), site = scope.site;
     if (!input || typeof input.messageId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(input.messageId) || !(input.bytes instanceof Uint8Array) || input.bytes.byteLength > 5 * 1024 * 1024 || !['image/png', 'image/jpeg', 'image/webp'].includes(input.mimeType)) throw new Error('请上传不超过 5 MiB 的静态 PNG、JPEG 或 WebP 图片');
     if (input.connectionId !== undefined && input.connectionId !== site.id) throw new Error('网站已切换，旧操作已取消');
@@ -401,7 +542,7 @@ async function start() {
       const body = await response.json(); assertCurrent(scope); if (!response.ok) throw new Error(body.error || '图片上传失败'); return body.attachments?.[0] ?? body;
     } finally { clearTimeout(timeout); }
   });
-  handle('display:open', 'control', openDisplay);
+  handle('display:open', 'private', window => openDisplay(tileFor(window)), true);
   handle('display:request', 'display', async input => {
     const scope = context(), version = outputVersion;
     const request = validateRequest(input, 'display'); const output = state.output; if (!output) throw new Error('展示未连接');
@@ -434,12 +575,19 @@ async function start() {
       throw error;
     }
   });
-  handle('app:status', 'control', () => ({ connectionError: state.connectionError, displayOpen: !!displayWindow, shortcut: 'Ctrl+Shift+H' }));
-  handle('app:confirm', 'control', async input => {
+  ipcMain.handle('app:status', async event => { try { const window = assertWindow(event, 'private'); const tile = tileFor(window); return { ok: true, data: { connectionError: state.connectionError, displayOpen: !!displayWindow, shortcut: 'Ctrl+Shift+H', nextShortcut, shortcutRecording, shortcutError, nextActionError, nextPending, tiles: [...tiles.values()].map(tileMetadata), tile: tile ? tileMetadata(tile) : null, selectedMessageId, contextVersion: selectionVersion } }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  handle('tiles:open', 'control', openTile);
+  ipcMain.handle('tiles:close', async (event, module) => { try { const window = assertWindow(event, 'private'), own = tileFor(window); if (own && own.module !== module) throw new Error('不可关闭其他磁贴'); await closeTile(module); return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  ipcMain.handle('tiles:pin', async (event, module, pinned) => { try { const window = assertWindow(event, 'private'), own = tileFor(window), tile = tiles.get(module); if (!tile || typeof pinned !== 'boolean' || (own && own !== tile)) throw new Error('无效磁贴'); assertTile(tile); tile.pinned = pinned; tile.window.setAlwaysOnTop(pinned); rememberTile(tile); return { ok: true, data: tileMetadata(tile) }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  ipcMain.handle('tiles:dirty', async (event, dirty) => { try { const window = assertWindow(event, 'private'); if (typeof dirty !== 'boolean') throw new Error('无效编辑状态'); const tile = tileFor(window); if (tile) tile.dirty = dirty; else mainDirty = dirty; return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  handle('control:select-message', 'private', (window, id, connectionId, contextVersion) => chooseMessage(id, connectionId, contextVersion, window), true);
+  handle('app:next-shortcut', 'control', configureNextShortcut);
+  handle('app:shortcut-recording', 'control', recordNextShortcut);
+  handle('app:confirm', 'private', async (window, input) => {
     if (!input || typeof input.message !== 'string' || input.message.length > 500) throw new Error('无效确认内容');
-    const answer = await dialog.showMessageBox(controlWindow, { type: 'warning', title: '风铃', message: input.message, buttons: ['取消', '继续'], defaultId: 0, cancelId: 0, noLink: true });
+    const answer = await dialog.showMessageBox(window, { type: 'warning', title: '风铃', message: input.message, buttons: ['取消', '继续'], defaultId: 0, cancelId: 0, noLink: true });
     return answer.response === 1;
-  });
+  }, true);
   handle('files:save', 'control', async input => {
     if (!input || !['png', 'csv'].includes(input.kind) || typeof input.name !== 'string' || !/^[^<>:"/\\|?*\x00-\x1f]{1,100}$/.test(input.name)) throw new Error('无效导出文件');
     const bytes = input.kind === 'csv' && typeof input.content === 'string' ? Buffer.from(input.content, 'utf8') : input.bytes instanceof Uint8Array ? Buffer.from(input.bytes) : null;
@@ -470,8 +618,9 @@ async function start() {
   tray = new Tray(path.join(__dirname, 'build/tray.png')); tray.setToolTip('风铃 · Ctrl+Shift+H 一键隐藏');
   tray.setContextMenu(Menu.buildFromTemplate([{ label: '打开私人控制台', click: () => controlWindow.show() }, { label: '■ 一键隐藏', click: () => void hide().catch(() => {}) }, { label: '退出并结束展示', click: () => app.quit() }]));
   tray.on('double-click', () => controlWindow.show());
-  try { if (!globalShortcut.register('CommandOrControl+Shift+H', () => void hide().catch(() => {}))) connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
+  try { if (!globalShortcut.register(HIDE_SHORTCUT, () => void hide().catch(() => {}))) connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
   catch { connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
+  if (workspace.nextShortcut) { try { if (!globalShortcut.register(workspace.nextShortcut, () => { void nextLetter(); })) throw new Error(); nextShortcut = workspace.nextShortcut; nextRegistered = true; } catch { shortcutError = '保存的下一封快捷键无法注册，请在设置中选择其他快捷键'; } }
   powerMonitor.on('suspend', blank);
   powerMonitor.on('resume', () => { const held = blank(false); void resumeOutput(held); });
   // Main-process timers keep running if renderer timers/compositing stall.
@@ -480,6 +629,7 @@ async function start() {
 app.on('before-quit', event => {
   if (quitting) return; event.preventDefault(); quitting = true;
   const site = selected(); closeOutput();
+  disposeTiles();
   // Exit removes the output HWND. It must not start blank-document painting or
   // receiver recovery while Electron is already tearing down its WebContents.
   Promise.race([hideSite(site).catch(() => {}), new Promise(resolve => setTimeout(resolve, 2000))]).finally(() => { globalShortcut.unregisterAll(); app.quit(); });

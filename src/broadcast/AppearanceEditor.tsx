@@ -46,48 +46,44 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 
 function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance }) {
   const viewport = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  const [bounds, setBounds] = useState({ width: 512, contentWidth: 512, contentHeight: 0 });
+  const [previewWidth, setPreviewWidth] = useState(512);
   const [withImages, setWithImages] = useState(true);
+  const [longLetter, setLongLetter] = useState(false);
   const [lightCanvas, setLightCanvas] = useState(false);
   const canvasWidth = Math.max(1280, (appearance.maxWidth ?? 1200) + 80);
-  const canvasHeight = Math.max(canvasWidth * 9 / 16, bounds.contentHeight + 80);
-  const scale = bounds.contentWidth / canvasWidth;
-  const viewportHeight = bounds.width * 9 / 16;
-  const canScroll = canvasHeight * scale > viewportHeight + 1;
+  const canvasHeight = Math.max(canvasWidth * 9 / 16, (appearance.viewportHeight ?? 640) + 80);
+  const scale = previewWidth / canvasWidth;
+  const viewportHeight = canvasHeight * scale;
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
     const measure = () => {
       const width = element.getBoundingClientRect().width;
-      const next = { width, contentWidth: element.clientWidth || width, contentHeight: content.current?.scrollHeight ?? 0 };
       if (!width) return;
-      // Observe the intrinsic content, not the scaled canvas, so height updates cannot feed back into themselves.
-      setBounds(before => before.width === next.width && before.contentWidth === next.contentWidth && before.contentHeight === next.contentHeight ? before : next);
+      setPreviewWidth(element.clientWidth || width);
     };
     measure();
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(measure);
       observer.observe(element);
-      if (content.current) observer.observe(content.current);
       return () => observer.disconnect();
     }
     if (typeof window === 'undefined') return;
     window.addEventListener('resize', measure);
     element.addEventListener?.('load', measure, true);
     return () => { window.removeEventListener('resize', measure); element.removeEventListener?.('load', measure, true); };
-  }, [appearance, canvasWidth, withImages]);
+  }, []);
   const snapshot: WindChimeLiveSnapshot = {
     id: 'appearance-private-sample', messageId: 'appearance-private-sample',
-    nickname: '来自山间的风', text: '把今天的小小快乐，寄给此刻的你。\n愿每一封来信，都在这里得到温柔的回应。', linkUrl: null,
+    nickname: '来自山间的风', text: '把今天的小小快乐，寄给此刻的你。\n愿每一封来信，都在这里得到温柔的回应。\n'.repeat(longLetter ? 12 : 1).trim(), linkUrl: null,
     assets: withImages ? SAMPLE_ASSETS : [],
   };
   return <section className="wc-appearance-preview" aria-label="外观私下预览">
     <div className="wc-appearance-preview-head"><strong>即时预览</strong><span className="wc-appearance-caption">示例内容 · 不参与播出</span></div>
-    <div ref={viewport} className={`wc-appearance-viewport${lightCanvas ? ' wc-appearance-viewport-light' : ''}`} style={{ height: viewportHeight }} tabIndex={canScroll ? 0 : undefined} aria-label={canScroll ? '预览内容，可上下滚动查看完整来信' : '来信外观预览'}>
+    <div ref={viewport} className={`wc-appearance-viewport${lightCanvas ? ' wc-appearance-viewport-light' : ''}`} style={{ height: viewportHeight }} aria-label="固定视窗来信预览">
       <div className="wc-appearance-scroll-space" style={{ height: canvasHeight * scale }}>
         <div className="wc-appearance-canvas" style={{ width: canvasWidth, height: canvasHeight, transform: `scale(${scale})` }}>
-          <div ref={content} className="wc-appearance-preview-content">
+          <div className="wc-appearance-preview-content">
             <WindChimeLiveCard key={appearance.animation} snapshot={snapshot} appearance={appearance} assetUrls={SAMPLE_URLS} />
           </div>
         </div>
@@ -95,11 +91,12 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
     </div>
     <div className="wc-appearance-preview-options">
       <label className="wc-appearance-check"><input type="checkbox" checked={withImages} onChange={event => setWithImages(event.currentTarget.checked)} />预览示例图片</label>
+      <label className="wc-appearance-check"><input type="checkbox" checked={longLetter} onChange={event => setLongLetter(event.currentTarget.checked)} />预览长信循环</label>
       <div className="wc-appearance-canvas-options" role="group" aria-label="预览画布颜色">
         <button type="button" aria-pressed={!lightCanvas} onClick={() => setLightCanvas(false)}>深色画布</button>
         <button type="button" aria-pressed={lightCanvas} onClick={() => setLightCanvas(true)}>浅色画布</button>
       </div>
-      <span className="wc-appearance-caption">{canScroll ? '等比例预览 · 可上下滚动' : '等比例预览'}</span>
+      <span className="wc-appearance-caption">等比例固定视窗 · 与播出相同</span>
     </div>
   </section>;
 }
@@ -172,6 +169,19 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
         <ColorField label="强调颜色" value={appearance.accentColor ?? '#2de2e6'} onChange={value => change('accentColor', value)} />
       </div>
       <label className="wc-appearance-check wc-appearance-transparency"><input type="checkbox" checked={appearance.transparent} onChange={event => change('transparent', event.currentTarget.checked)} /><span><strong>透明背景</strong><span className="wc-appearance-caption">让直播画面透过来信背景</span></span></label>
+    </fieldset>
+
+    <fieldset className="wc-appearance-section">
+      <legend>展示视窗与长信</legend>
+      <p className="wc-appearance-section-note">图片按可用宽度等比例放大。长信在固定视窗内滚动到底，停留后回到顶部；仅循环当前来信，不切换下一封。</p>
+      <div className="wc-appearance-fields">
+        <NumberField label="展示高度" value={appearance.viewportHeight ?? 640} min={180} max={1080} onChange={value => change('viewportHeight', value)} />
+        <NumberField label="滚动速度" value={appearance.scrollSpeed ?? 24} min={5} max={120} unit="px/秒" onChange={value => change('scrollSpeed', value)} />
+        <NumberField label="顶部停留" value={appearance.scrollStartPauseMs ?? 2000} min={0} max={15000} step={100} unit="ms" onChange={value => change('scrollStartPauseMs', value)} />
+        <NumberField label="底部停留" value={appearance.scrollEndPauseMs ?? 2500} min={0} max={15000} step={100} unit="ms" onChange={value => change('scrollEndPauseMs', value)} />
+      </div>
+      <label className="wc-appearance-check"><input type="checkbox" checked={appearance.autoScroll ?? true} onChange={event => change('autoScroll', event.currentTarget.checked)} />长信自动循环滚动</label>
+      {appearance.autoScroll === false ? <p className="wc-appearance-caption">已关闭滚动：超出视窗的内容不会显示，请缩小字号或增大展示高度。</p> : null}
     </fieldset>
 
     <details className="wc-appearance-advanced">

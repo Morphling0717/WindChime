@@ -318,8 +318,8 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function evaluate(code) {
   return control.webContents.executeJavaScript(code);
 }
-async function until(test, label) {
-  for (let i = 0; i < 150; i++) {
+async function until(test, label, timeout = 15000) {
+  for (let i = 0; i < timeout / 100; i++) {
     try {
       if (await test()) return;
     } catch {}
@@ -470,26 +470,35 @@ async function verifyAppearanceDimensions() {
 
   await input('input[aria-label="最大宽度"]', "280");
   await input('input[aria-label="字号"]', "96");
-  await until(() => evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),content=document.querySelector('.wc-appearance-preview-content'),card=canvas.querySelector('.wc-display');return card.offsetWidth===280&&getComputedStyle(card).fontSize==='96px'&&canvas.offsetHeight>=content.scrollHeight+79&&viewport.scrollHeight>viewport.clientHeight+100})()`), "96px type in a 280px card reserves scrollable space for the entire content");
-  const tall = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),content=document.querySelector('.wc-appearance-preview-content'),card=canvas.querySelector('.wc-display');return {cardWidth:card.offsetWidth,cardHeight:card.offsetHeight,contentHeight:content.scrollHeight,canvasHeight:canvas.offsetHeight,scrollHeight:viewport.scrollHeight,visibleHeight:viewport.clientHeight,keyboardScrollable:viewport.tabIndex===0,overflowY:getComputedStyle(viewport).overflowY,previewHorizontalOverflow:viewport.scrollWidth>viewport.clientWidth+1,horizontalOverflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
+  await input('input[aria-label="滚动速度"]', "120");
+  await input('input[aria-label="顶部停留"]', "0");
+  await input('input[aria-label="底部停留"]', "15000");
+  await until(() => evaluate(`(()=>{const canvas=document.querySelector('.wc-appearance-canvas'),card=canvas.querySelector('.wc-display'),inner=card.querySelector('.wc-display-viewport');return card.offsetWidth===280&&getComputedStyle(card).fontSize==='96px'&&card.offsetHeight===640&&inner.scrollHeight>inner.clientHeight+100})()`), "96px type in a 280px card overflows only the fixed output viewport");
+  const tall = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),content=document.querySelector('.wc-appearance-preview-content'),card=canvas.querySelector('.wc-display'),inner=card.querySelector('.wc-display-viewport');return {cardWidth:card.offsetWidth,cardHeight:card.offsetHeight,contentHeight:content.scrollHeight,canvasHeight:canvas.offsetHeight,scrollHeight:inner.scrollHeight,visibleHeight:inner.clientHeight,outerScrollHeight:viewport.scrollHeight,outerHeight:viewport.clientHeight,overflowY:getComputedStyle(viewport).overflowY,previewHorizontalOverflow:viewport.scrollWidth>viewport.clientWidth+1,horizontalOverflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
   assert.equal(tall.cardWidth, 280);
-  assert(tall.cardHeight > 720, "stress sample exceeds the old fixed canvas height");
-  assert(tall.canvasHeight >= tall.contentHeight + 79);
-  assert.equal(tall.keyboardScrollable, true);
-  assert.equal(tall.overflowY, "auto");
+  assert.equal(tall.cardHeight, 640, "even an extreme long letter keeps the explicitly selected output height");
+  assert.equal(tall.canvasHeight, 720);
+  assert(tall.scrollHeight > tall.visibleHeight + 100);
+  assert(tall.outerScrollHeight <= tall.outerHeight + 1, "the private outer canvas stays fixed instead of adding a second scroll area");
+  assert.equal(tall.overflowY, "hidden");
   assert.equal(tall.previewHorizontalOverflow, false);
   assert.equal(tall.horizontalOverflow, false);
   await captureAppearance("appearance-tall-content-top", 760, 1050);
-  const textEndVisible = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),text=viewport.querySelector('.wc-display-text'),range=document.createRange();range.selectNodeContents(text);range.setStart(text.firstChild,text.firstChild.textContent.length-1);const before=range.getBoundingClientRect(),bounds=viewport.getBoundingClientRect();viewport.scrollTop+=before.bottom-bounds.bottom+20;const after=range.getBoundingClientRect();return after.top>=bounds.top&&after.bottom<=bounds.bottom;})()`);
-  assert.equal(textEndVisible, true, "the final text character can be scrolled fully into view");
-  const tail = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport');viewport.scrollTop=viewport.scrollHeight;const bounds=viewport.getBoundingClientRect(),figure=viewport.querySelector('.wc-display-media figure:last-child'),image=figure.querySelector('img'),caption=figure.querySelector('figcaption'),visible=node=>{const rect=node.getBoundingClientRect();return rect.top>=bounds.top&&rect.bottom<=bounds.bottom};return {lastCaption:caption.textContent,lastImageVisible:visible(image),lastCaptionVisible:visible(caption),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
+  let textEndVisible = false;
+  await until(async () => {
+    const frame = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-preview .wc-display-viewport'),text=viewport.querySelector('.wc-display-text'),range=document.createRange();range.selectNodeContents(text);range.setStart(text.firstChild,text.firstChild.textContent.length-1);const glyph=range.getBoundingClientRect(),bounds=viewport.getBoundingClientRect();return {textEndVisible:glyph.top>=bounds.top&&glyph.bottom<=bounds.bottom,phase:viewport.dataset.scrollPhase};})()`);
+    textEndVisible ||= frame.textEndVisible;
+    return frame.phase === 'bottom';
+  }, "automatic scroll reaches the end of the extreme sample", 60000);
+  assert.equal(textEndVisible, true, "the final text character scrolls fully into view without manual scrolling");
+  const tail = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-preview .wc-display-viewport'),bounds=viewport.getBoundingClientRect(),figure=viewport.querySelector('.wc-display-media figure:last-child'),image=figure.querySelector('img'),caption=figure.querySelector('figcaption'),visible=node=>{const rect=node.getBoundingClientRect();return rect.top>=bounds.top&&rect.bottom<=bounds.bottom+1};return {lastCaption:caption.textContent,lastImageVisible:visible(image),lastCaptionVisible:visible(caption),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
   assert.equal(tail.lastCaption, "月下微风");
   assert.equal(tail.lastImageVisible, true, "the complete final image is reachable");
   assert.equal(tail.lastCaptionVisible, true, "the complete final caption is reachable");
   assert(Math.abs(tail.scrollTop - tail.maxScroll) < 1, "preview reaches the actual end without a clipped tail");
   appearanceStressCases.push({ name: "fontSize96-maxWidth280", ...tall, ...tail });
   await captureAppearance("appearance-tall-content-bottom", 760, 1050);
-  checks.push("1920px maximum width expands the real preview canvas; 96px type in a 280px card preserves all text and both images in a keyboard-scrollable preview, including the final caption, without horizontal overflow");
+  checks.push("1920px maximum width expands the real preview canvas; 96px type in a 280px card stays inside a fixed 640px output and automatically scrolls through the final text, image and caption, without a second outer scroll area or horizontal overflow");
 }
 async function verifyAppearanceEditor() {
   await until(() => evaluate("!!document.querySelector('.wc-appearance-editor')&&!document.querySelector('.wc-appearance-apply').disabled"), "new appearance controls loaded");

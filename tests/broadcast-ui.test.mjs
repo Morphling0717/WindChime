@@ -312,7 +312,7 @@ test('appearance preview falls back to window resize when ResizeObserver is unav
   }
 });
 
-test('appearance preview scales its widest card and reserves scroll space for tall content', async () => {
+test('appearance preview scales its widest card while long content stays inside the fixed display viewport', async () => {
   const oldObserver = globalThis.ResizeObserver;
   const observers = [];
   globalThis.ResizeObserver = class {
@@ -322,26 +322,24 @@ test('appearance preview scales its widest card and reserves scroll space for ta
   };
   let renderer;
   const viewportNode = { clientWidth: 800, getBoundingClientRect: () => ({ width: 800 }) };
-  const contentNode = { scrollHeight: 480 };
   try {
     const studio = { state: { appearance: { ...appearance, maxWidth: 1920 } }, connected: true, pending: false, actWithResult: async () => null };
     await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} }), {
-      createNodeMock: element => element.props.className === 'wc-appearance-viewport' ? viewportNode : element.props.className === 'wc-appearance-preview-content' ? contentNode : null,
+      createNodeMock: element => element.props.className === 'wc-appearance-viewport' ? viewportNode : null,
     }); });
     const canvas = () => renderer.root.findByProps({ className: 'wc-appearance-canvas' });
     assert.equal(canvas().props.style.width, 2000, '1920px card receives its full width plus two 40px margins');
     assert.equal(canvas().props.style.transform, 'scale(0.4)');
     assert.equal(canvas().props.style.height, 1125, 'the initial canvas is at least 16:9');
-    assert.equal(observers.at(-1).nodes.length, 2, 'viewport and intrinsic content are observed');
+    assert.equal(observers.at(-1).nodes.length, 1, 'only the preview width is observed; moving content cannot enlarge its canvas');
     const input = label => renderer.root.findAllByType('label').find(node => node.children[0] === label).findByType('input');
     await act(async () => { input('字号').props.onChange({ target: { value: '96' } }); input('最大宽度').props.onChange({ target: { value: '280' } }); });
     assert.equal(canvas().props.style.width, 1280, 'narrow cards retain the original canvas size');
-    contentNode.scrollHeight = 4200;
-    await act(async () => observers.at(-1).callback());
-    assert.equal(canvas().props.style.height, 4280, 'the full card height and both margins are reserved');
-    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-scroll-space' }).props.style.height, 2675);
-    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-viewport' }).props.tabIndex, 0, 'overflow can be reached with keyboard scrolling');
-    assert(JSON.stringify(renderer.toJSON()).includes('等比例预览 · 可上下滚动'));
+    assert.equal(canvas().props.style.height, 720, 'font size and narrow text do not change the fixed 640px output height');
+    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-scroll-space' }).props.style.height, 450);
+    await act(async () => input('展示高度').props.onChange({ target: { value: '1000' } }));
+    assert.equal(canvas().props.style.height, 1080, 'only the explicitly selected display height expands the canvas');
+    assert(JSON.stringify(renderer.toJSON()).includes('等比例固定视窗 · 与播出相同'));
     assert(observers.slice(0, -1).every(observer => observer.disconnected), 'replaced observers are disconnected');
     await act(async () => renderer.unmount()); renderer = null;
     assert(observers.every(observer => observer.disconnected), 'unmount releases the final observer');

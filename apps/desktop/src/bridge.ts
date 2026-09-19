@@ -2,6 +2,14 @@ import type {
   WindChimeLiveRequest,
   WindChimeLiveTransport,
 } from "../../../src/client/live";
+import type { WindChimeLiveModule } from "../../../src/broadcast/ControlPanel";
+export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: boolean; connectionId: string; topicId: string; contextVersion: number };
+export type DesktopStatus = {
+  connectionError: string; displayOpen: boolean; shortcut: string;
+  nextShortcut: string; shortcutError: string; nextActionError: string;
+  selectedMessageId: string | null; contextVersion: number;
+  tiles: TileInfo[]; tile: TileInfo | null;
+};
 type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; code: string; status: number };
@@ -44,9 +52,14 @@ type Bridge = {
   }): Promise<Result<{ id: string }>>;
   openDisplay(): Promise<Result<void>>;
   hide(): Promise<Result<void>>;
-  status(): Promise<
-    Result<{ connectionError: string; displayOpen: boolean; shortcut: string }>
-  >;
+  status(): Promise<Result<DesktopStatus>>;
+  openTile(module: WindChimeLiveModule): Promise<Result<void>>;
+  setTilePinned(module: WindChimeLiveModule, pinned: boolean): Promise<Result<void>>;
+  closeTile(module: WindChimeLiveModule): Promise<Result<void>>;
+  setTileDirty(dirty: boolean): Promise<Result<void>>;
+  selectMessage(id: string | null, connectionId: string, contextVersion?: number): Promise<Result<void>>;
+  setNextShortcut(accelerator: string): Promise<Result<void>>;
+  setShortcutRecording(recording: boolean): Promise<Result<void>>;
   confirm(message: string): Promise<Result<boolean>>;
   saveFile(input: {
     kind: "png" | "csv";
@@ -76,6 +89,7 @@ export async function unwrap<T>(result: Promise<Result<T>>): Promise<T> {
   error.status = value.status;
   throw error;
 }
+export function shortcutLabel(value: string) { return value.replace(/CommandOrControl|Control/g, 'Ctrl').replace(/Super/g, 'Win'); }
 export function transport(
   bridge: Pick<Bridge, "request">,
 ): WindChimeLiveTransport {

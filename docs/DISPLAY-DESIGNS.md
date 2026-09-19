@@ -6,12 +6,14 @@
 
 | 独立选择 | 首批选项 | 负责内容 |
 | --- | --- | --- |
-| 内容排版 | 纵向信笺、图文双栏、横向条幅 | 称呼、正文和图片的位置；双栏纯文字在窄宽度回到单栏，长文自然增长 |
+| 内容排版 | 纵向信笺、图文双栏、横向条幅 | 称呼、正文和图片的位置；双栏纯文字在窄宽度回到单栏，长内容在固定视窗内滚动 |
 | 视觉主题 | 纯净、UliUli 夜航、Mia 星祷 | 背景、颜色、边框、圆角、装饰及字体预设 |
 
 每个主题适用全部三种排版。`applyLiveTheme()` 不修改布局、图片排列、字号、内边距、行高、字距、最大宽度或动画，编辑器也不自动改变这些设置。
 
-长信自然增加卡片高度，不自动删字、截断或滚动播出；实际采集时仍需按画面尺寸调整字号与展示窗口。设计样板提供长信和窄宽度开关，便于提前检查。
+展示卡片默认固定 640px 高度。正文和图片超出可见区域时，顶部停留 2 秒，以每秒 24px 向下滚动；到底停留 2.5 秒，再回到顶部循环。字体和图片保持原样，不删字、不压扁图片；边框和背景固定不动。设置可调整画面高度、速度、顶部/底部停留时间，或关闭自动滚动。短信不滚动；该循环只发生在当前已批准信件内部，不自动换到下一封。
+
+图片按所在区域的宽度放大，保持原图比例，取消旧的 180/400px 高度上限；双栏给图片较宽的区域。长竖图和末尾说明也在同一滚动内容中完整经过画面。观众端不再显示 UliUli、Mia 或固定品牌行，私人界面保留主题名称供选择。
 
 - **纯净**：默认透明、白色文字、无装饰、无边框，保留现有简洁展示用途。用户仍可自行调整字体、颜色和背景。
 - **UliUli 夜航**：参考 UliUli 的 `#050508` 深黑、`#2de2e6` 霓虹青与深蓝氛围，采用细描边、短折角、信号环和清晰黑体；装饰避开正文重点区域。
@@ -29,13 +31,13 @@ node scripts/build-display-designs.mjs
 
 输出 `.work/display-designs/WindChime-Display-Designs.html`，可在浏览器离线打开。支持自由搭配、九组合总览、360/640/960px 宽度、图片、长信及隐藏示例。文件自包含且 CSP 禁止网络请求；示例信件和插图均为合成内容。
 
-桌面源码的“设置与外观”已接入同一渲染器，可先预览再应用。预览画布按最大宽度扩展并等比例缩放；高字号或窄卡片产生长内容时，私人预览可用鼠标或键盘上下滚动查看完整文字及图片，不改变直播端的展示方式。未保存调整保留、跨控制端外观冲突需确认。旧站点缺少新版外观字段时，预览仍可使用，“应用外观”禁用并明确说明需要升级网站。
+桌面源码的“设置与外观”已接入同一渲染器，可先预览再应用。预览按画面尺寸等比例缩放，并以与观众端相同的固定视窗和循环规则显示示例；支持长信示例。未保存调整保留、跨控制端外观冲突需确认。旧站点缺少新版外观字段时，预览仍可使用，“应用外观”禁用并明确说明需要升级网站。独立磁贴和下一封热键见 [使用说明](FLOATING-TILES.md)。
 
 开发者可继续通过 `WindChimeLiveDisplay` 的 `render` 参数完全替换组件；默认 `WindChimeLiveCard` 及主题/排版工具从 `/broadcast` 导出。渲染器仍只接收当前已批准快照及已授权图片 URL。
 
 ## 配置兼容与发行注意
 
-新增 `theme`、`accentColor`、`borderWidth`、`lineHeight`、`letterSpacing`、`maxWidth`；类型为可选以保留现有下游构造，服务端返回补齐默认值。旧 `card/letter/minimal` 值仍可读并映射为纵向信笺；旧信笺边线不再作为排版的一部分，改由主题与边框设置负责。
+新增 `theme`、`accentColor`、`borderWidth`、`lineHeight`、`letterSpacing`、`maxWidth`，以及 `viewportHeight`、`autoScroll`、`scrollSpeed`、`scrollStartPauseMs`、`scrollEndPauseMs`。类型为可选以保留现有下游构造，服务端返回补齐默认值。旧 `card/letter/minimal` 值仍可读并映射为纵向信笺；旧信笺边线不再作为排版的一部分，改由主题与边框设置负责。
 
 配置仍保存在既有 `mail_live_channels.appearance` JSON 中，不新增表。新版本服务端严格校验字段、枚举、有限数值范围和十六进制颜色，拒绝任意 CSS/外链资源输入。外观操作不修改原文、审核快照、批准状态、队列或当前播放对象。
 
@@ -43,12 +45,16 @@ node scripts/build-display-designs.mjs
 
 ## 实际验证
 
-- `npm test`：最终共享库 **156/156** 通过，含外观 patch 独立性、持久化、旧配置兼容、非法输入、审核/播放独立、三主题与三布局内容及转义、旧站点保存提示、外观并发保护、预览尺寸及观察器清理。
-- `node --test apps/desktop/tests/*.test.cjs`：桌面单元与生命周期 **48/48** 通过。
-- `node apps/desktop/node_modules/electron/cli.js scripts/display-designs-smoke.cjs`：真实 Electron **54 个组合**通过（3主题×3布局×3宽度×纯文字/带图），0 控制台错误；确认列数适应宽度、文字与图片完整、无横向溢出、长信不裁切，隐藏时装饰一起移除。
-- `npm run build`（`apps/desktop`）：桌面生产构建通过；`node scripts/run-management-smoke.cjs`（同目录）：真实 Electron 私人控制台 **14 组检查**通过，0 控制台错误。使用隔离配置与合成 HTTP 站点，验证外观预览不发保存请求、应用后保存、重新进入保留选择、换主题保留排版、取消话题切换保留未保存外观，以及宽窄窗口。另验证 1920px 卡片按真实宽度预览，96px 字号配 280px 窄卡片时可滚动看到末字、末图和末说明；第二个独立进程的海报设置恢复检查通过。以上不代表两站生产联调。
-- 初次样板与新 SSR 测试发现已有 React 19.2.8 / React DOM 19.2.5 不匹配；固定开发依赖后重跑通过。注入断言曾误把已转义 caption 中的 `onerror` 当真实属性，改为检查真实标签/属性并加危险原始标签反例后通过；没有改成隐藏正文。
+本轮最终结果记录在 [磁贴与展示验收](DESKTOP-TILES-VALIDATION.md)。
 
-独立样板、单元测试与桌面界面测试不代表 OBS/直播姬实机窗口采集或安装/卸载验收。本轮未运行安装器。
+- `npm test`：共享库 **167/167** 通过，覆盖主题/排版、滚动配置、旧数据兼容、输入校验、审核与播放独立、动画取消、轮询不反复回顶、模块隔离与首次状态到达前紧急隐藏。
+- `node --test apps/desktop/tests/*.test.cjs`：桌面单元与生命周期 **61/61** 通过。
+- `node apps/desktop/node_modules/electron/cli.js scripts/display-designs-smoke.cjs`：真实 Electron **54 个组合**及长信完整循环、图片比例、底部说明、移除品牌、隐藏取消动画检查通过，0 控制台错误。
+- `node scripts/run-management-smoke.cjs`（桌面目录）：**14 组**管理/外观回归，以及第二独立进程海报设置恢复通过。1920px 卡片按真实宽度预览，96px 字号配 280px 窄卡片时在固定 640px 视窗内自动滚到末字、末图和末说明。数据为合成站点，没有连接生产网站。
+- `node apps/desktop/node_modules/electron/cli.js apps/desktop/scripts/display-viewport-smoke.cjs`：真实输出入口 **4 组**检查通过。900px 配置受较矮原生窗口约束，缩小到 300px 后仍能滚到最后图片说明；后台仍保持有效连接与滚动，隐藏后新连接保持空白。
 
-证据：[组合渲染报告](evidence/display-designs/verification.json)、[九种组合](evidence/display-designs/nine-combinations.png)、[UliUli 图文双栏](evidence/display-designs/uliuli-split.png)、[Mia 图文双栏](evidence/display-designs/mia-split.png)、[桌面操作报告](evidence/display-designs/desktop-management.json)、[独立进程恢复报告](evidence/display-designs/desktop-restart.json)、[桌面宽窗口](evidence/display-designs/desktop-mia-wide.png)、[桌面窄窗口](evidence/display-designs/desktop-uliuli-narrow.png)、[长内容底部预览](evidence/display-designs/desktop-tall-bottom.png)。
+隐藏、结束、连接失效时仍卸载整个观众卡片，取消滚动回调；切换快照或实际外观改动会回到顶部。正常状态轮询不会重复回顶。输出窗口保留 `backgroundThrottling: false`；休眠恢复继续执行展示连接失效与默认空白规则。
+
+独立样板、单元测试与桌面界面测试不代表 OBS/直播姬实机窗口采集、真实系统按键或安装/卸载验收。本轮未运行安装器。
+
+证据：[组合渲染报告](evidence/display-designs/verification.json)、[九种组合](evidence/display-designs/nine-combinations.png)、[UliUli 图文双栏](evidence/display-designs/uliuli-split.png)、[Mia 图文双栏](evidence/display-designs/mia-split.png)、[长信底部](evidence/display-designs/long-letter-bottom.png)、[竖图最后说明](evidence/display-designs/portrait-bottom.png)、[桌面操作报告](evidence/display-designs/desktop-management.json)、[独立进程恢复报告](evidence/display-designs/desktop-restart.json)、[输出尺寸报告](evidence/display-designs/output-viewport.json)、[小窗口底部](evidence/display-designs/output-small-window-bottom.png)。

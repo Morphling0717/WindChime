@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { createWindChimeLiveClient } from "../../../src/client/live";
 import { createWindChimeClient } from "../../../src/client";
 import type { WindChimeAdminTopic } from "../../../src/core";
-import { WindChimeLiveControlPanel } from "../../../src/broadcast/ControlPanel";
+import { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from "../../../src/broadcast/ControlPanel";
 import { windChimeControlCss } from "../../../src/broadcast/styles";
 import {
   assetTransport,
@@ -11,7 +11,10 @@ import {
   unwrap,
   managementFetch,
   type Site,
+  type DesktopStatus,
 } from "./bridge";
+import { TileApp } from "./tiles";
+import { Hotkeys } from "./Hotkeys";
 import { Inbox, Topics, Share, GlobalSettings } from "./Management";
 import { parseWindChimeConnectionKey } from "../../../src/core/connection-key";
 import "./glass.css";
@@ -113,11 +116,15 @@ function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState({
+  const [status, setStatus] = useState<DesktopStatus>({
     connectionError: "",
     displayOpen: false,
     shortcut: "Ctrl+Shift+H",
+    nextShortcut: '', shortcutError: '', nextActionError: '',
+    selectedMessageId: null, contextVersion: 0, tiles: [], tile: null,
   });
+  const refreshStatus = useCallback(async () => { setStatus(await unwrap(bridge.status())); }, []);
+  useEffect(() => { void unwrap(bridge.setTileDirty(studioDirty || topicDirty || settingsDirty)).catch(() => {}); }, [studioDirty, topicDirty, settingsDirty]);
   const selected = sites.find((site) => site.id === selectedId);
   const selectedRef = useRef(selectedId);
   selectedRef.current = selectedId;
@@ -557,6 +564,7 @@ function App() {
               {status.connectionError}
             </p>
           ) : null}
+          {status.nextActionError ? <p className="wc-error" role="alert">{status.nextActionError}</p> : null}
           {notice ? (
             <p className="wc-notice" role="status">
               {notice}
@@ -778,6 +786,10 @@ function App() {
                   onDirtyChange={setStudioDirty}
                   onConfirmDiscard={confirmDiscard}
                   onOpenDisplay={() => unwrap(bridge.openDisplay())}
+                  onHideDisplay={() => unwrap(bridge.hide())}
+                  onOpenTile={view === 'studio' ? module => unwrap(bridge.openTile(module)) : undefined}
+                  selectedMessageId={status.selectedMessageId}
+                  onSelectMessage={async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); }}
                 />
               </div>
             )}
@@ -812,7 +824,7 @@ function App() {
               />
             )}
             {view === "settings" && (
-              <GlobalSettings
+              <><Hotkeys status={status} onSaved={refreshStatus} /><GlobalSettings
                 key={`${selected.id}:${topicId}`}
                 client={mailClient}
                 siteScope={selected.scope === "site"}
@@ -820,7 +832,7 @@ function App() {
                 onKeywordChange={updateKeyword}
                 onError={reportError}
                 onDirtyChange={setSettingsDirty}
-              />
+              /></>
             )}
           </>
         ) : null}
@@ -832,4 +844,5 @@ function App() {
     </div>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+const tileModule = WINDCHIME_LIVE_MODULES.find(item => item.id === new URLSearchParams(window.location.search).get('tile'))?.id;
+createRoot(document.getElementById("root")!).render(tileModule ? <TileApp module={tileModule} /> : <App />);

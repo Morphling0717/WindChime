@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "independentProcess": true,
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-tiles-KV8gKv",
+  "checks": [
+    "saved shortcut restored from preference file in a second independent Electron process",
+    "no floating tiles, prior review selection, or display restored",
+    "next callback with no output fails privately and cannot reopen or play old content"
+  ],
+  "at": "2026-09-19T16:46:20.599Z"
+}

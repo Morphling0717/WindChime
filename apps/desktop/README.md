@@ -1,6 +1,6 @@
 # 风铃桌面控制台 0.7.1（Windows x64）
 
-开发分支已加入下一版的[展示主题与排版设计](../../docs/DISPLAY-DESIGNS.md)：纯净、UliUli、Mia 可与三种排版自由搭配。先使用[交互样板](../../examples/display-designs/README.md)查看；下文 0.7.1 仍指已发布安装包，新设计尚未发布到该包或生产网站。
+开发分支已加入下一版的[展示主题与循环滚动](../../docs/DISPLAY-DESIGNS.md)、[置顶磁贴和下一封热键](../../docs/FLOATING-TILES.md)。先使用[交互样板](../../examples/display-designs/README.md)查看展示效果；下文 0.7.1 仍指已发布安装包，新功能尚未发布到该包或生产网站。
 
 主播在私人控制台审信，OBS 或直播姬只捕获 **WindChime Display** 窗口。程序直接连接兼容的风铃网站，不需要 B 站项目、密钥、主播身份码或接入网关。
 

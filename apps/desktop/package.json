@@ -18,6 +18,7 @@
     "test:sites": "npm run build && node scripts/run-site-smoke.cjs",
     "test:keys": "npm run build && node scripts/run-key-smoke.cjs",
     "test:visual": "npm run test:management",
+    "test:tiles": "npm run build && node scripts/run-tiles-smoke.cjs",
     "test:management": "npm run build && node scripts/run-management-smoke.cjs"
   },
   "config": {
