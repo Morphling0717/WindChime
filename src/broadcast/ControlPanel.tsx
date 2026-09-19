@@ -10,23 +10,31 @@ import { AppearanceEditor } from './AppearanceEditor.js';
 
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
+type PrivateAsset = { url: string; mimeType: string; width: number; height: number };
 function usePrivateAssets(client: WindChimeLiveClient, topicId: string, ids: string[]) {
-  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [loaded, setLoaded] = useState<{ client: WindChimeLiveClient; topicId: string; signature: string; assets: Record<string, PrivateAsset> } | null>(null);
   const signature = ids.join('|');
   useEffect(() => {
-    let cancelled = false; const controller = new AbortController(); const owned: string[] = [];
-    setUrls({});
+    let cancelled = false; const controller = new AbortController(); const owned = new Set<string>();
+    const release = () => { cancelled = true; controller.abort(); owned.forEach(url => URL.revokeObjectURL(url)); owned.clear(); };
+    setLoaded(null);
     void Promise.all(ids.map(async id => {
       const blob = await client.asset(topicId, id, controller.signal);
-      if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type)) throw new Error('图片格式无效');
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) || blob.size > 5 * 1024 * 1024) throw new Error('图片格式无效');
       if (cancelled || controller.signal.aborted) throw new Error('已取消图片加载');
-      const url = URL.createObjectURL(blob); owned.push(url); return [id, url] as const;
-    })).then(entries => { if (!cancelled) setUrls(Object.fromEntries(entries)); }).catch(() => {});
-    return () => { cancelled = true; controller.abort(); owned.forEach(url => URL.revokeObjectURL(url)); };
+      const decoded = await createImageBitmap(blob);
+      try {
+        if (cancelled || controller.signal.aborted) throw new Error('已取消图片加载');
+        if (!(decoded.width > 0 && decoded.height > 0)) throw new Error('图片尺寸无效');
+        const url = URL.createObjectURL(blob); owned.add(url);
+        return [id, { url, mimeType: blob.type, width: decoded.width, height: decoded.height }] as const;
+      } finally { decoded.close(); }
+    })).then(entries => { if (!cancelled) setLoaded({ client, topicId, signature, assets: Object.fromEntries(entries) }); }).catch(release);
+    return release;
     // IDs define the requested bytes; their order is significant only for presentation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, topicId, signature]);
-  return urls;
+  return loaded?.client === client && loaded.topicId === topicId && loaded.signature === signature ? loaded.assets : {};
 }
 function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blockedTermsEnabled }: { message: WindChimeLiveMessage; studio: Studio; client: WindChimeLiveClient; topicId: string; onDirtyChange: (dirty: boolean) => void; blockedTermsEnabled: boolean }) {
   const [{ draft, basis }, setEditor] = useState(() => ({ draft: structuredClone(message.draft), basis: { draft: structuredClone(message.draft), revision: message.draftRevision } }));
@@ -39,8 +47,12 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
   useEffect(() => { onDirtyChange(dirty || uploading); }, [dirty, uploading, onDirtyChange]);
   useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
   const conflict = basis.revision !== message.draftRevision;
-  const urls = usePrivateAssets(client, topicId, [...new Set([...message.source.assets, ...draft.assets].map(a => a.id))]);
-  const snapshot: WindChimeLiveSnapshot = { ...draft, id: message.snapshotId ?? `preview-${message.id}`, messageId: message.id, assets: draft.assets.map(a => ({ ...a, mimeType: 'image/png', width: 0, height: 0, sha256: '' })) };
+  const privateAssets = usePrivateAssets(client, topicId, [...new Set([...message.source.assets, ...draft.assets].map(a => a.id))]);
+  const urls = Object.fromEntries(Object.entries(privateAssets).map(([id, asset]) => [id, asset.url]));
+  const snapshot: WindChimeLiveSnapshot = { ...draft, id: message.snapshotId ?? `preview-${message.id}`, messageId: message.id, assets: draft.assets.flatMap(a => {
+    const asset = privateAssets[a.id];
+    return asset ? [{ ...a, mimeType: asset.mimeType, width: asset.width, height: asset.height, sha256: '' }] : [];
+  }) };
   const act = async (action: 'approve' | 'reject' | 'revoke' | 'draft') => {
     const submittedDraft = structuredClone(draft), submittedRevision = basis.revision;
     const result = await studio.actWithResult({ action, messageId: message.id, expectedDraftRevision: submittedRevision, ...(action === 'draft' ? { draft: submittedDraft } : {}) });

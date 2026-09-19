@@ -35,7 +35,10 @@ export function useWindChimeResource<T>(
     isLoading: boolean;
     error: WindChimeClientError | null;
   }>({ client, scope, data: null, isLoading: enabled, error: null });
-  const reload = useCallback(async () => {
+  const loadResource = useCallback(async (background = false) => {
+    // A timer must not continually replace a request slower than its interval.
+    // Explicit invalidations still supersede reads made before a mutation.
+    if (background && controller.current && !controller.current.signal.aborted) return;
     controller.current?.abort();
     const sequence = ++serial.current;
     if (!enabled) {
@@ -71,8 +74,11 @@ export function useWindChimeResource<T>(
           isLoading: false,
           error: asWindChimeClientError(error),
         }));
+    } finally {
+      if (controller.current === current) controller.current = null;
     }
   }, [scope, enabled, client]);
+  const reload = useCallback(() => loadResource(), [loadResource]);
   useEffect(() => {
     void reload();
     const unsubscribe = client.subscribe((changed) => {
@@ -81,11 +87,11 @@ export function useWindChimeResource<T>(
     const timer =
       enabled && options.pollIntervalMs
         ? setInterval(() => {
-            if (typeof document === "undefined" || document.visibilityState !== "hidden") void reload();
+            if (typeof document === "undefined" || document.visibilityState !== "hidden") void loadResource(true);
           }, options.pollIntervalMs)
         : undefined;
     const resume = () => {
-      if (enabled && (typeof document === "undefined" || document.visibilityState !== "hidden")) void reload();
+      if (enabled && (typeof document === "undefined" || document.visibilityState !== "hidden")) void loadResource(true);
     };
     if (typeof window !== "undefined") window.addEventListener?.("focus", resume);
     if (typeof document !== "undefined") document.addEventListener?.("visibilitychange", resume);
@@ -97,7 +103,7 @@ export function useWindChimeResource<T>(
       if (typeof window !== "undefined") window.removeEventListener?.("focus", resume);
       if (typeof document !== "undefined") document.removeEventListener?.("visibilitychange", resume);
     };
-  }, [client, resource, reload, enabled, options.pollIntervalMs]);
+  }, [client, resource, reload, loadResource, enabled, options.pollIntervalMs]);
   return {
     ...(state.scope === scope && state.client === client && enabled
       ? state

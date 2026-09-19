@@ -147,17 +147,23 @@ export function Inbox({
   }, [active, client, topicId, onError]);
   useEffect(() => {
     const abort = new AbortController();
+    let polling = false, refreshAgain = false;
     const wake = () => {
-      if (!busy && document.visibilityState !== "hidden")
+      if (!busy && !polling && !abort.signal.aborted && document.visibilityState !== "hidden") {
+        polling = true;
         void load(abort.signal).catch((e) => {
           if (!abort.signal.aborted) onError(message(e));
+        }).finally(() => {
+          polling = false;
+          if (refreshAgain) { refreshAgain = false; wake(); }
         });
+      }
     };
     wake();
     const timer = setInterval(wake, 3000);
     window.addEventListener("focus", wake);
     document.addEventListener("visibilitychange", wake);
-    const unsubscribe = client.subscribe(wake);
+    const unsubscribe = client.subscribe(() => { if (polling) refreshAgain = true; else wake(); });
     return () => {
       abort.abort();
       generation.current++;
@@ -842,9 +848,10 @@ export function GlobalSettings({
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
   }, [dirty, onDirtyChange]);
-  const refreshResources = useCallback(async () => {
+  const refreshResources = useCallback(async (background = false) => {
     if (!siteScope || !resourceMounted.current || mutationPending.current)
       return;
+    if (background && resourceController.current && !resourceController.current.signal.aborted) return;
     resourceController.current?.abort();
     const abort = new AbortController(),
       version = ++resourceVersion.current;
@@ -884,12 +891,14 @@ export function GlobalSettings({
       }
     } catch (error) {
       if (current()) onError(message(error));
+    } finally {
+      if (resourceController.current === abort) resourceController.current = null;
     }
   }, [client, siteScope, onError, onKeywordChange]);
   useEffect(() => {
     resourceMounted.current = true;
     const resume = () => {
-      if (document.visibilityState !== "hidden") void refreshResources();
+      if (document.visibilityState !== "hidden") void refreshResources(true);
     };
     const unsubscribe = client.subscribe((resources) => {
       if (
@@ -897,7 +906,7 @@ export function GlobalSettings({
           ["settings", "blockedTerms", "blocklist"].includes(resource),
         )
       )
-        resume();
+        void refreshResources();
     });
     const timer = siteScope ? setInterval(resume, 3000) : undefined;
     window.addEventListener("focus", resume);

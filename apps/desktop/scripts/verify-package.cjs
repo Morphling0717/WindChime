@@ -237,9 +237,10 @@ async function verifyGlassWrapper(setup, stage, packaged, temporary) {
     assert.equal(actual.bytes, expected.bytes, `Glass setup contains a different ${name} size`);
   }
   const manifest = JSON.parse((await fs.readFile(resources.get('Payload.json').path, 'utf8')).replace(/^\uFEFF/, ''));
-  assert.deepEqual(Object.keys(manifest).sort(), ['appId', 'engineSha256', 'files', 'version']);
+  assert.deepEqual(Object.keys(manifest).sort(), ['appId', 'engineBytes', 'engineSha256', 'files', 'version']);
   assert.equal(manifest.version, version); assert.equal(manifest.appId, 'org.windchime.desktop');
   assert.equal(manifest.engineSha256, resources.get('Engine.exe').sha256);
+  assert.equal(manifest.engineBytes, resources.get('Engine.exe').bytes);
   assert(Array.isArray(manifest.files) && manifest.files.length > 0);
   const stageFiles = await treeFiles(packaged);
   assert.deepEqual(manifest.files.map(item => safeRelative(item.path)).sort(), stageFiles, 'Glass setup verification manifest does not describe the complete packaged runtime');
@@ -299,25 +300,26 @@ async function verifyPackage(stageArgument) {
   const sevenZip = await resolveSevenZip({ nsis: true });
   const setup = path.join(artifacts, setupName);
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), `windchime-package-verification-${version}-`));
-  const glass = await verifyGlassWrapper(setup, stage, packaged, temporary);
+  const installPayload=path.join(stage,'nsis/transaction-payload');
+  const glass = await verifyGlassWrapper(setup, stage, installPayload, temporary);
   const engine = glass.engine;
   const outer = listArchive(sevenZip, engine);
   assert(/^Type = Nsis\r?$/m.test(outer.header), 'Embedded engine must be a readable NSIS archive');
-  const payloads = outer.records.filter(item => /(?:^|\/)app-64\.7z$/.test(item.name));
-  assert.equal(payloads.length, 1, 'Expected exactly one x64 runtime payload');
-  const payload = path.join(temporary, 'app-64.7z');
-  const descriptor = openSync(payload, 'wx');
-  try {
-    // The embedded engine is archive DATA. Neither installer is ever executed.
-    execFileSync(sevenZip, ['e', '-so', '-bd', '-bb0', '--', engine, payloads[0].original], { windowsHide: true, timeout: 60000, stdio: ['ignore', descriptor, 'pipe'] });
-  } finally { closeSync(descriptor); }
-  const payloadEntries = listArchive(sevenZip, payload);
+  const executableEntries=outer.records.filter(item=>/\/WindChime\.exe$/.test(item.name));
+  assert.equal(executableEntries.length,1,'Expected a single staged executable');
+  const payloadPrefix=path.posix.dirname(executableEntries[0].name);
+  assert(/^\$_\d+_$|^\$INSTDIR$/.test(payloadPrefix),'Expected one internal NSIS staging variable');
+  const payloadEntries=outer.records.filter(item=>item.name.startsWith(payloadPrefix+'/'));
   const stageFiles = await treeFiles(packaged);
-  assert.deepEqual(payloadEntries.records.filter(item => !item.directory).map(item => item.name).sort(), stageFiles, 'NSIS runtime payload file list differs from the packaged runtime');
+  const installerFiles=await treeFiles(installPayload);
+  assert.deepEqual(installerFiles,[...stageFiles,'Uninstall WindChime.exe','resources/windchime-install.ini'].sort(),'Installer may add only its generated uninstaller and ownership marker');
+  assert.deepEqual(payloadEntries.filter(item => !item.directory).map(item => item.name.slice(payloadPrefix.length+1)).sort(), installerFiles, 'NSIS staged payload differs from the complete verification manifest');
+  assert(outer.records.every(item=>item.name.startsWith(payloadPrefix+'/')||item.name.startsWith('$PLUGINSDIR/')),'Unapproved engine path');
   const payloadRoot = path.join(temporary, 'runtime'); await fs.mkdir(payloadRoot);
   // Every path was validated against the known package before isolated extraction.
-  execFileSync(sevenZip, ['x', '-y', '-bd', '-bb0', `-o${payloadRoot}`, '--', payload], { windowsHide: true, timeout: 60000, stdio: ['ignore', 'pipe', 'pipe'] });
-  for (const name of stageFiles) assert.deepEqual(await hashFile(path.join(payloadRoot, name)), await hashFile(path.join(packaged, name)), `NSIS payload content differs: ${name}`);
+  execFileSync(sevenZip, ['x', '-y', '-bd', '-bb0', `-o${payloadRoot}`, '--', engine], { windowsHide: true, timeout: 60000, stdio: ['ignore', 'pipe', 'pipe'] });
+  for (const name of installerFiles) assert.deepEqual(await hashFile(path.join(payloadRoot,payloadPrefix,name)), await hashFile(path.join(installPayload,name)), `NSIS staged content differs: ${name}`);
+  for (const name of stageFiles) assert.deepEqual(await hashFile(path.join(installPayload,name)), await hashFile(path.join(packaged,name)), `Installer runtime differs from portable runtime: ${name}`);
   const zip = path.join(artifacts, zipName), portable = listArchive(sevenZip, zip);
   assert.deepEqual(portable.records.filter(item => !item.directory).map(item => item.name).sort(), stageFiles, 'Portable file list differs from NSIS runtime');
   for (const name of ['resources/app.asar', 'WindChime.exe', ...runtimeDocuments]) {
@@ -327,19 +329,23 @@ async function verifyPackage(stageArgument) {
   // The MIT license is checked inside the installed ASAR, not merely in source
   // configuration. Inspect embedded plugin bytes against their attribution scope.
   const embeddedComponents = [];
-  for (const record of outer.records.filter(item => /\.dll$/i.test(item.name))) {
+  const uninstallerPath=path.join(payloadRoot,payloadPrefix,'Uninstall WindChime.exe');
+  const uninstallArchive=listArchive(sevenZip,uninstallerPath);
+  assert(/^Type = Nsis\r?$/m.test(uninstallArchive.header),'Installed uninstaller must be an inspectable NSIS program');
+  for (const container of [{file:engine,entries:outer.records,scope:'extractor'},{file:uninstallerPath,entries:uninstallArchive.records,scope:'uninstaller'}])
+  for (const record of container.entries.filter(item => /\.dll$/i.test(item.name))) {
     const component = licenses.components.get(path.posix.basename(record.name, path.posix.extname(record.name)).toLowerCase());
     if (!component) continue;
-    const bytes = extractBytes(sevenZip, engine, record.original, 4 * 1024 * 1024);
+    const bytes = extractBytes(sevenZip, container.file, record.original, 4 * 1024 * 1024);
     assert.equal(sha256(bytes), component.binarySha256, `Embedded installer component differs from its notice manifest: ${component.name}`);
-    embeddedComponents.push({ name: component.name, entry: record.name, sha256: component.binarySha256 });
+    embeddedComponents.push({ name: component.name, entry: record.name, scope:container.scope, sha256: component.binarySha256 });
   }
   assert(embeddedComponents.length > 0, 'No declared NSIS plugin could be verified');
   return {
     date: new Date().toISOString(), version, passed: true, archive, entryCount: entries.length,
     runtimeAllowlist: true, noCredentialLiterals: true, matchedFiles: allowedFiles,
     licenses: { manifestScoped: true, projectMIT: true, documentHashes: licenses.hashes, electronOriginals: runtimeLicenseHashes, embeddedComponents },
-    installer: { format: 'WPF managed PE with embedded Nsis engine', managedPE: glass.managed, manifestFilesMatched: glass.manifestFiles, runtimePayload: payloads[0].name, payloadFilesMatched: stageFiles.length, temporary, sevenZip },
+    installer: { format: 'WPF managed PE with staged transaction Nsis engine', managedPE: glass.managed, manifestFilesMatched: glass.manifestFiles, runtimePayload: payloadPrefix, payloadFilesMatched: installerFiles.length, temporary, sevenZip },
     checksumManifest: 'SHA256SUMS.txt', hashes, portableRuntimeMatches: true, executedInstaller: false,
   };
 }

@@ -114,6 +114,7 @@ function App() {
     }
   }, [connectionKey]);
   const [error, setError] = useState("");
+  const [pairingPaused, setPairingPaused] = useState(false);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<DesktopStatus>({
@@ -167,12 +168,11 @@ function App() {
     [],
   );
   const change = async (operation: () => Promise<unknown>) => {
-    if (
-      (studioDirty || topicDirty || settingsDirty) &&
-      !(await confirmDiscard())
-    )
-      return;
-    await act(operation);
+    await act(async () => {
+      // The main process checks all private windows once, at commit time.
+      await unwrap(bridge.setTileDirty(studioDirty || topicDirty || settingsDirty));
+      await operation();
+    });
   };
   const navigate = async (next: View) => {
     if (view === next) return;
@@ -281,7 +281,7 @@ function App() {
     return () => clearInterval(interval);
   }, [refresh]);
   useEffect(() => {
-    if (!pairing) return;
+    if (!pairing || pairingPaused) return;
     let disposed = false;
     let polling = false;
     const interval = setInterval(async () => {
@@ -300,7 +300,7 @@ function App() {
         }
       } catch (e) {
         if (!disposed) {
-          setPairing(null);
+          setPairingPaused(true);
           setError(e instanceof Error ? e.message : "配对失败");
         }
       } finally {
@@ -311,7 +311,7 @@ function App() {
       disposed = true;
       clearInterval(interval);
     };
-  }, [pairing, refresh]);
+  }, [pairing, pairingPaused, refresh]);
   const client = useMemo(
     () =>
       createWindChimeLiveClient({
@@ -706,11 +706,12 @@ function App() {
                     className="wc-primary"
                     disabled={busy || !origin || !!pairing}
                     onClick={() =>
-                      void change(async () =>
+                      void change(async () => {
+                        setPairingPaused(false);
                         setPairing(
                           await unwrap(bridge.pair({ origin, label })),
-                        ),
-                      )
+                        );
+                      })
                     }
                   >
                     在浏览器中登录并授权
@@ -720,12 +721,14 @@ function App() {
                   <div className="wc-notice" style={{ marginTop: 12 }}>
                     <strong>设备配对码：{pairing.userCode}</strong>
                     <p>请在已打开的网站后台选择信箱，确认配对码后批准设备。</p>
+                    {pairingPaused ? <button onClick={() => { setError(""); setPairingPaused(false); }}>重试连接</button> : null}
                     <button
                       style={{ marginTop: 8 }}
                       onClick={() =>
                         void act(async () => {
-                          await unwrap(bridge.cancelPairing(pairing.id));
+                          const result = await unwrap(bridge.cancelPairing(pairing.id));
                           setPairing(null);
+                          if (result.connected) setNotice("连接已经保存，当前信箱已同步；可以在网站连接中移除此连接。");
                         })
                       }
                     >

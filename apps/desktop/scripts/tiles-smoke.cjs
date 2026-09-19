@@ -303,7 +303,18 @@ async function run() {
   await until(() => requests.filter(item => item.route === '/api/mail/live/display/open').length > opensBeforeHide, 'new display handshake completes after hide');
   await until(async () => (await state()).receivers > 0, 'new receiver ready after native emergency hide');
   await until(() => evaluate(queue, '!document.querySelector(".wc-queue li[aria-current=true]")&&Array.from(document.querySelectorAll("button")).some(node=>node.textContent.trim()==="上屏"&&!node.disabled)'), 'queue synchronizes the new revision after emergency hide');
+  const afterHideRequest = requests.length;
   await click(queue, '上屏');
+  await until(() => requests.slice(afterHideRequest).some(item => item.action === 'show' && item.status), 'manual show result after receiver replacement');
+  const afterHideShow = requests.slice(afterHideRequest).find(item => item.action === 'show');
+  if (afterHideShow.status === 409) {
+    await until(() => evaluate(queue, 'document.body.innerText.includes("其他控制端已更新")'), 'revision conflict is visible');
+    await pause(2200);
+    assert(await evaluate(queue, 'document.body.innerText.includes("其他控制端已更新")'), 'successful background polls retain operation conflict');
+    assert.equal(requests.slice(afterHideRequest).filter(item => item.action === 'show').length, 1, 'no automatic retry');
+    assert.equal((await state()).current, null);
+    await click(queue, '上屏'); // A second deliberate user action, never an app retry.
+  } else assert.equal(afterHideShow.status, 200);
   await displayed('APPROVED_FROM_PRIVATE_TILE');
   await click(review, '撤销批准并撤下');
   await displayBlank('tile revocation withdraws the approved snapshot');

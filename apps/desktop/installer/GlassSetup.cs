@@ -22,12 +22,12 @@ using Microsoft.Win32;
 
 namespace WindChime.Setup {
   public sealed class PayloadFile { public string path {get;set;} public long bytes {get;set;} public string sha256 {get;set;} }
-  public sealed class PayloadManifest { public string version {get;set;} public string appId {get;set;} public string engineSha256 {get;set;} public List<PayloadFile> files {get;set;} }
+  public sealed class PayloadManifest { public string version {get;set;} public string appId {get;set;} public string engineSha256 {get;set;} public long engineBytes {get;set;} public List<PayloadFile> files {get;set;} }
   public static class InstallPolicy {
     public const string AppId="org.windchime.desktop", RegistryId="e76db02f-8e92-5190-9ffc-b8c1df592d69";
     public static string NormalizeDirectory(string input) {
       if(String.IsNullOrWhiteSpace(input)||!Regex.IsMatch(input.Trim(),@"^[A-Za-z]:[\\/]")||input.IndexOfAny(new[]{'\r','\n','"','\0'})>=0) throw new InvalidOperationException("请选择带盘符的有效安装文件夹。");
-      var full=Path.GetFullPath(input.Trim());
+      var full=ExpandExistingPath(input.Trim());
       var result=full.Length==3?full:full.TrimEnd(Path.DirectorySeparatorChar);
       if(result.StartsWith("\\\\",StringComparison.Ordinal)||!Path.IsPathRooted(result))throw new InvalidOperationException("请选择本机磁盘上的文件夹。");
       if(!String.Equals(Path.GetFileName(result),"WindChime",StringComparison.OrdinalIgnoreCase)) result=Path.Combine(result,"WindChime");
@@ -35,8 +35,20 @@ namespace WindChime.Setup {
     }
     public static bool Within(string candidate,string root) {
       if(String.IsNullOrWhiteSpace(root))return false;
-      return (Path.GetFullPath(candidate).TrimEnd('\\')+"\\").StartsWith(Path.GetFullPath(root).TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase);
+      return (ExpandExistingPath(candidate).TrimEnd('\\')+"\\").StartsWith(ExpandExistingPath(root).TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase);
     }
+    public static bool SamePath(string left,string right){return !String.IsNullOrWhiteSpace(left)&&!String.IsNullOrWhiteSpace(right)&&String.Equals(ExpandExistingPath(left).TrimEnd('\\'),ExpandExistingPath(right).TrimEnd('\\'),StringComparison.OrdinalIgnoreCase);}
+    // Resolve existing DOS 8.3 ancestors before protected-root comparisons.
+    // The new stage-only engine does not repeat the old builder's path policy.
+    static string ExpandExistingPath(string input) {
+      var full=Path.GetFullPath(input);var cursor=full;var suffix=new Stack<string>();
+      while(!Directory.Exists(cursor)&&!File.Exists(cursor)) {var parent=Path.GetDirectoryName(cursor);if(String.IsNullOrEmpty(parent)||parent==cursor)break;suffix.Push(Path.GetFileName(cursor));cursor=parent;}
+      var expanded=new StringBuilder(32768);var length=GetLongPathName(cursor,expanded,expanded.Capacity);
+      if(length>0&&length<expanded.Capacity)cursor=expanded.ToString();
+      while(suffix.Count>0)cursor=Path.Combine(cursor,suffix.Pop());return cursor;
+    }
+    [System.Runtime.InteropServices.DllImport("kernel32.dll",CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+    static extern uint GetLongPathName(string input,StringBuilder output,int capacity);
     public static string RegisteredDirectory() {
       using(var key=Registry.CurrentUser.OpenSubKey("Software\\"+RegistryId))return key==null?null:key.GetValue("InstallLocation") as string;
     }
@@ -61,7 +73,7 @@ namespace WindChime.Setup {
       for(var cursor=new DirectoryInfo(directory);cursor!=null;cursor=cursor.Parent)if(cursor.Exists&&(cursor.Attributes&FileAttributes.ReparsePoint)!=0)throw new InvalidOperationException("安装位置不能经过目录链接，请选择普通文件夹。");
       if(!Directory.Exists(directory)||!Directory.EnumerateFileSystemEntries(directory).Any())return;
       var registered=RegisteredDirectory();
-      if(registered!=null&&String.Equals(Path.GetFullPath(registered).TrimEnd('\\'),directory.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)&&HasInstallMarker(directory))return;
+      if(registered!=null&&SamePath(registered,directory)&&HasInstallMarker(directory))return;
       throw new InvalidOperationException("这个文件夹已有其他文件。请选择新的空文件夹，或此前由本向导安装风铃的位置。");
     }
     public static bool HasInstallMarker(string directory) {
@@ -73,10 +85,11 @@ namespace WindChime.Setup {
     }
     [System.Runtime.InteropServices.DllImport("kernel32.dll",CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
     static extern uint GetPrivateProfileString(string section,string key,string fallback,StringBuilder result,int size,string file);
-    public static string CreateRequest(string directory,string token,bool desktop,bool menu) {
-      var normalized=NormalizeDirectory(directory);
-      if(!Regex.IsMatch(token??"",@"\A[0-9a-f]{32}\z"))throw new InvalidOperationException("安装确认信息无效。");
-      return "[WindChime]\r\nProtocol=1\r\nAppId="+AppId+"\r\nToken="+token+"\r\nDirectory="+normalized+"\r\nDesktop="+(desktop?"1":"0")+"\r\nStartMenu="+(menu?"1":"0")+"\r\n";
+    public static string CreateRequest(string stage,string transaction,string token) {
+      if(!Regex.IsMatch(token??"",@"\A[0-9a-f]{32}\z")||!Regex.IsMatch(transaction??"",@"\A[0-9a-f]{32}\z")||String.IsNullOrWhiteSpace(stage)||!Regex.IsMatch(stage,@"^[A-Za-z]:[\\/]")||stage.IndexOfAny(new[]{'\r','\n','"','\0'})>=0)throw new InvalidOperationException("安装确认信息无效。");
+      var normalized=ExpandExistingPath(stage);
+      if(Path.GetFileName(normalized)!="new"||Path.GetFileName(Path.GetDirectoryName(normalized))!=InstallTransaction.Prefix+transaction)throw new InvalidOperationException("安装暂存位置无效。");
+      return "[WindChime]\r\nProtocol=2\r\nAppId="+AppId+"\r\nToken="+token+"\r\nTransaction="+transaction+"\r\nStage="+normalized+"\r\n";
     }
     public static string PayloadPath(string directory,string relative) {
       if(String.IsNullOrWhiteSpace(relative)||Path.IsPathRooted(relative)||relative.Split('/','\\').Any(p=>p==".."||p=="."||p==""))throw new InvalidOperationException("安装文件清单无效。");
@@ -87,6 +100,8 @@ namespace WindChime.Setup {
   }
   public sealed class GlassSetup {
     Window window; int page; bool working; string installDirectory; PayloadManifest manifest;
+    CancellationTokenSource cancellation; InstallTransaction transaction; bool publishing;
+    string PendingPath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WindChimeSetup","pending.json");}}
     readonly Assembly assembly=Assembly.GetExecutingAssembly();
     T UI<T>(string name) where T:class { var value=window.FindName(name) as T;if(value==null)throw new InvalidOperationException("缺少界面组件："+name);return value; }
     Stream Resource(string name) { var stream=assembly.GetManifestResourceStream("WindChime.Install."+name);if(stream==null)throw new InvalidOperationException("安装文件不完整，请重新下载安装包。");return stream; }
@@ -102,16 +117,21 @@ namespace WindChime.Setup {
       using(var stream=Resource("Icon.png")){var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.StreamSource=stream;image.EndInit();window.Icon=image;}
       UI<TextBox>("LicenseBody").Text=ReadResource("LICENSE.txt");
       var current=InstallPolicy.RegisteredDirectory();
-      UI<TextBox>("PathBox").Text=String.IsNullOrWhiteSpace(current)?Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","WindChime"):current;
+      var pending=ReadPending();
+      UI<TextBox>("PathBox").Text=pending!=null?pending["target"]:String.IsNullOrWhiteSpace(current)?Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","WindChime"):current;
+      // Relocation is separate from upgrade: a same-volume swap can reliably
+      // restore the old program if any later installation step fails.
+      UI<TextBox>("PathBox").IsReadOnly=pending!=null||!String.IsNullOrWhiteSpace(current);
+      UI<Button>("BrowseButton").IsEnabled=pending==null&&String.IsNullOrWhiteSpace(current);
       UI<Border>("LegacyNotice").Visibility=InstallPolicy.HasLegacy()?Visibility.Visible:Visibility.Collapsed;
       UI<Button>("CloseButton").Click+=(s,e)=>window.Close();
       UI<Button>("MinimizeButton").Click+=(s,e)=>window.WindowState=WindowState.Minimized;
-      UI<Button>("CancelButton").Click+=(s,e)=>window.Close();
+      UI<Button>("CancelButton").Click+=(s,e)=>{if(working)Cancel();else window.Close();};
       UI<Button>("BackButton").Click+=(s,e)=>{if(!working&&page>0&&page<3)Show(page-1);};
       UI<Button>("NextButton").Click+=async(s,e)=>await Next();
       UI<Button>("BrowseButton").Click+=(s,e)=>Browse();
       UI<FrameworkElement>("TitleBar").MouseLeftButtonDown+=(s,e)=>{if(e.OriginalSource is Button)return;window.DragMove();};
-      window.Closing+=(s,e)=>{if(working){e.Cancel=true;Error("正在安装，请等待完成后关闭窗口。");}};
+      window.Closing+=(s,e)=>{if(working){e.Cancel=true;Cancel();}};
       window.MaxHeight=SystemParameters.WorkArea.Height-24;window.MaxWidth=SystemParameters.WorkArea.Width-24;
       Show(0);new Application().Run(window);
     }
@@ -130,7 +150,7 @@ namespace WindChime.Setup {
       UI<Button>("CancelButton").Visibility=page==4?Visibility.Collapsed:Visibility.Visible;
       UI<Button>("NextButton").Content=new[]{"开始设置  →","继续  →","安装风铃","正在安装…","完成"}[page];
       UI<Button>("NextButton").IsEnabled=page!=3;
-      UI<Button>("CancelButton").IsEnabled=page!=3;
+      UI<Button>("CancelButton").IsEnabled=true;
       for(int i=1;i<=5;i++) {
         bool active=page==i-1;
         UI<Border>("Step"+i+"Dot").Background=(Brush)new BrushConverter().ConvertFromString(active?"#6C9DAD":"#BDFFFFFF");
@@ -147,38 +167,57 @@ namespace WindChime.Setup {
       try {
         installDirectory=InstallPolicy.NormalizeDirectory(UI<TextBox>("PathBox").Text);
         UI<TextBox>("PathBox").Text=installDirectory;
-        InstallPolicy.ValidateDirectory(installDirectory);
-        if(Process.GetProcessesByName("WindChime").Any())throw new InvalidOperationException("风铃仍在运行。请保存编辑内容，从托盘选择“退出并结束展示”，再点击安装。安装器不会强制关闭程序。");
-        var disk=new DriveInfo(Path.GetPathRoot(installDirectory));
-        if(disk.AvailableFreeSpace<manifest.files.Sum(f=>f.bytes)+128L*1024*1024)throw new InvalidOperationException("所选磁盘空间不足，请更换安装位置。");
+        RequireStopped();RecoverPending();InstallPolicy.ValidateDirectory(installDirectory);
+        InstallTransaction.CheckSpace(installDirectory,manifest.files.Sum(f=>f.bytes),manifest.engineBytes);
         bool desktop=UI<CheckBox>("DesktopCheck").IsChecked==true,menu=UI<CheckBox>("MenuCheck").IsChecked==true;
         working=true;Show(3);
         await Install(desktop,menu);
         working=false;UI<TextBlock>("FinishPath").Text=installDirectory;Show(4);
-      } catch(Exception ex) {working=false;Show(2);Error(ex.Message);}
+        if(transaction!=null&&!String.IsNullOrEmpty(transaction.CleanupWarning))Error(transaction.CleanupWarning);
+      } catch(Exception ex) {working=false;Show(2);Error(ex is OperationCanceledException?"已取消安装，原程序和个人设置保留。":ex.Message);}
+    }
+    void Cancel(){if(publishing||(transaction!=null&&transaction.Committing)){Error("正在安全切换程序文件，请等待完成。发生错误会恢复原版本。");return;}if(cancellation!=null){cancellation.Cancel();Error("正在取消并恢复，请稍候…");}}
+    static void RequireStopped(){if(Process.GetProcessesByName("WindChime").Any())throw new InvalidOperationException("风铃仍在运行。请保存编辑内容，从托盘选择“退出并结束展示”，再点击安装。安装器不会强制关闭程序。");}
+    Dictionary<string,string> ReadPending(){InstallTransaction.RequireOrdinaryPath(PendingPath);if(!File.Exists(PendingPath))return null;return new JavaScriptSerializer().Deserialize<Dictionary<string,string>>(File.ReadAllText(PendingPath));}
+    void SavePending(InstallTransaction value){var folder=Path.GetDirectoryName(PendingPath);InstallTransaction.RequireOrdinaryPath(folder);Directory.CreateDirectory(folder);var temporary=PendingPath+".next";File.WriteAllText(temporary,new JavaScriptSerializer().Serialize(new Dictionary<string,string>{{"root",value.Root},{"target",value.Journal.target}}),Encoding.UTF8);if(File.Exists(PendingPath))File.Replace(temporary,PendingPath,null);else File.Move(temporary,PendingPath);}
+    void RecoverPending() {
+      var pending=ReadPending();
+      var roots=pending==null?InstallTransaction.FindPending(installDirectory).ToArray():new[]{pending["root"]};
+      foreach(var root in roots) {
+        string target=pending==null?installDirectory:pending["target"];
+        if(!String.Equals(Path.GetDirectoryName(Path.GetFullPath(root)),Path.GetDirectoryName(Path.GetFullPath(target)),StringComparison.OrdinalIgnoreCase)||!Regex.IsMatch(Path.GetFileName(root),@"\A\.WindChime-Setup-[0-9a-f]{32}\z"))throw new IOException("安装恢复位置无效。");
+        InstallTransaction.RequireOrdinaryPath(root);
+        // Cleanup can finish just before the process exits, leaving only the
+        // private index. No installation data is touched in this case.
+        if(!Directory.Exists(root))continue;
+        if(!File.Exists(Path.Combine(root,"journal.json"))&&!Directory.EnumerateFileSystemEntries(root).Any()){Directory.Delete(root,false);continue;}
+        var recovering=InstallTransaction.Load(root,target,new WindowsInstallMetadata(),null,RequireStopped);
+        if(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(recovering.Engine)).Any())throw new IOException("上次安装的解包进程仍在结束，请稍后重试。原程序尚未被替换。");
+        recovering.Recover();
+      }
+      if(pending!=null)File.Delete(PendingPath);
     }
     async Task Install(bool desktop,bool menu) {
-      var work=Path.Combine(Path.GetTempPath(),"WindChimeSetup-"+Guid.NewGuid().ToString("N"));
-      var security=new DirectorySecurity();security.SetAccessRuleProtection(true,false);
-      security.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().User,FileSystemRights.FullControl,InheritanceFlags.ContainerInherit|InheritanceFlags.ObjectInherit,PropagationFlags.None,AccessControlType.Allow));
-      Directory.CreateDirectory(work,security);
-      string engine=Path.Combine(work,"engine.exe"),token=Guid.NewGuid().ToString("N"),request=Path.Combine(work,"request.ini");
+      cancellation=new CancellationTokenSource();var cancel=cancellation.Token;
+      transaction=InstallTransaction.Begin(installDirectory,manifest.version,desktop,menu,new WindowsInstallMetadata(),null,RequireStopped);
+      SavePending(transaction);
+      string engine=transaction.Engine,token=Guid.NewGuid().ToString("N"),request=Path.Combine(transaction.Root,"request.ini");
       try {
       var progress=UI<ProgressBar>("ProgressBar");var caption=UI<TextBlock>("ProgressCaption");
       caption.Text="正在准备安装文件…";progress.IsIndeterminate=false;progress.Value=0;UI<TextBlock>("ProgressPercent").Visibility=Visibility.Visible;
       using(var source=Resource("Engine.exe"))using(var destination=new FileStream(engine,FileMode.CreateNew,FileAccess.Write,FileShare.None,131072,true)) {
         var buffer=new byte[131072];int count;long copied=0;
-        while((count=await source.ReadAsync(buffer,0,buffer.Length))>0){await destination.WriteAsync(buffer,0,count);copied+=count;progress.Value=100d*copied/source.Length;}
+        while((count=await source.ReadAsync(buffer,0,buffer.Length,cancel))>0){await destination.WriteAsync(buffer,0,count,cancel);copied+=count;progress.Value=100d*copied/source.Length;}
       }
       if(!String.Equals(await Task.Run(()=>HashFile(engine)),manifest.engineSha256,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("安装引擎校验失败，请重新下载安装包。");
-      InstallPolicy.ValidateDirectory(installDirectory);
-      // Only the confirmed form values enter a private per-run request. No shell
-      // is involved; the engine independently checks directory and running-app rules.
-      File.WriteAllText(request,InstallPolicy.CreateRequest(installDirectory,token,desktop,menu),Encoding.Unicode);
+      // No shell is involved. The engine independently restricts extraction to
+      // this fresh private stage; the transaction checks running apps at commit.
+      File.WriteAllText(request,InstallPolicy.CreateRequest(transaction.Stage,transaction.Journal.id,token),Encoding.Unicode);
       caption.Text="正在解压并写入程序文件…";progress.IsIndeterminate=true;UI<TextBlock>("ProgressPercent").Visibility=Visibility.Collapsed;
-      var start=new ProcessStartInfo(engine,"/S /WC_BOOTSTRAP="+token){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=work};
+      var start=new ProcessStartInfo(engine,"/S /WC_BOOTSTRAP="+token){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=transaction.Root};
       using(var process=Process.Start(start)) {
-        await Task.Run(()=>process.WaitForExit());
+        using(cancel.Register(()=>{try{if(!process.HasExited)process.Kill();}catch(InvalidOperationException){}catch(Win32Exception){}}))await Task.Run(()=>process.WaitForExit());
+        cancel.ThrowIfCancellationRequested();
         if(process.ExitCode!=0) {
           if(process.ExitCode==32)throw new InvalidOperationException("风铃尚未退出，请从托盘退出后重试。");
           if(process.ExitCode==87)throw new InvalidOperationException("安装位置或确认信息校验失败，请重新选择安装位置。");
@@ -187,16 +226,20 @@ namespace WindChime.Setup {
       }
       caption.Text="正在核对安装文件…";progress.IsIndeterminate=false;progress.Value=0;UI<TextBlock>("ProgressPercent").Visibility=Visibility.Visible;long verified=0,total=manifest.files.Sum(f=>f.bytes);
       foreach(var item in manifest.files) {
-        var file=InstallPolicy.PayloadPath(installDirectory,item.path);
+        cancel.ThrowIfCancellationRequested();var file=InstallPolicy.PayloadPath(transaction.Stage,item.path);
         if(!File.Exists(file)||new FileInfo(file).Length!=item.bytes||!String.Equals(await Task.Run(()=>HashFile(file)),item.sha256,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("安装文件核对失败，请重新运行安装包修复。个人连接设置未被删除。");
         verified+=item.bytes;progress.Value=100d*verified/total;
       }
+      await Task.Run(()=>transaction.Prepared(manifest.files));cancel.ThrowIfCancellationRequested();
+      publishing=true;caption.Text="正在安全切换程序并保存安装选项…";progress.IsIndeterminate=true;
+      await Task.Run(()=>transaction.Commit());
+      if(!Directory.Exists(transaction.Root))File.Delete(PendingPath);
       caption.Text="安装完成";progress.Value=100;
-      } finally {
-        // Remove only the two exact files created by this invocation. No recursive
-        // cleanup, registry changes or old installation files are involved.
-        try {File.Delete(request);File.Delete(engine);Directory.Delete(work,false);}catch(IOException){}catch(UnauthorizedAccessException){}
-      }
+      } catch(Exception original) {
+        try {transaction.Recover();File.Delete(PendingPath);}
+        catch(Exception recovery){throw new IOException("安装未完成，恢复记录已保留。重新运行本安装向导可继续恢复。原因："+recovery.Message,original);}
+        throw;
+      } finally {publishing=false;cancellation.Dispose();cancellation=null;}
     }
     [STAThread] public static int Main() {
       try {

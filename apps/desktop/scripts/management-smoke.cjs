@@ -89,6 +89,7 @@ const requests = [],
   appearanceLayouts = [],
   appearanceStressCases = [],
   approved = new Set();
+const responseDelays = new Map();
 const appearance = {
   fontFamily: "system-ui",
   fontSize: 32,
@@ -147,6 +148,7 @@ const server = createServer(async (req, res) => {
     for await (const chunk of req) chunks.push(chunk);
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks)) : {};
     requests.push({ method: req.method, route, ...(route === "/control/action" ? { action: body.action } : {}) });
+    if (req.method === 'GET' && responseDelays.has(route)) await new Promise(resolve => setTimeout(resolve, responseDelays.get(route)));
     const json = (value, status = 200) => {
       res.writeHead(status, {
         "content-type": "application/json",
@@ -611,11 +613,14 @@ async function run() {
       token,
     }),
   );
+  responseDelays.set('/control/messages', 4500);
   await click("使用密钥连接");
   await until(
     () => evaluate('document.querySelectorAll(".inbox-row").length===2'),
     "site import and default topic",
   );
+  responseDelays.delete('/control/messages');
+  checks.push('inbox requests taking 4.5 seconds complete across the 3-second poll interval without response starvation');
   checks.push(
     "site key imports through real form; default topic selected; historical flagged mail visible with keyword filter disabled",
   );
@@ -788,11 +793,15 @@ async function run() {
     "poster title/signature/avatar preferences survive share view remount without persisting credentials or mail",
   );
   await capture("share-wide");
+  for (const route of ['/control/settings', '/control/blocklist', '/control/grants']) responseDelays.set(route, 4500);
   await nav("settings", "设置与外观");
   await until(
     () => evaluate('!!document.querySelector(".setting-toggle input")'),
     "settings loaded",
   );
+  await until(() => evaluate('Array.from(document.querySelectorAll(".blocked-sender")).some(node=>node.textContent.includes("另一台电脑"))'), 'slow settings and grant requests complete');
+  responseDelays.clear();
+  checks.push('settings, blocklist and grants taking 4.5 seconds finish without being repeatedly cancelled by polling');
   await verifyAppearanceEditor();
   await evaluate(
     'document.querySelectorAll(".setting-toggle input")[1].click()',

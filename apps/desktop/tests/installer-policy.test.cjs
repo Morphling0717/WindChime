@@ -26,6 +26,8 @@ describe('Windows installer destination and confirmation protocol', { skip: proc
       ...['WindowsBase', 'PresentationCore', 'PresentationFramework'].map(name => '/reference:' + path.join(framework, 'WPF', name + '.dll')),
       path.join(desktop, 'installer/GlassSetup.cs'),
       path.join(desktop, 'installer/FolderPicker.cs'),
+      path.join(desktop, 'installer/InstallTransaction.cs'),
+      path.join(desktop, 'installer/InstallMetadata.cs'),
     ], { windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024 });
   });
 
@@ -42,11 +44,16 @@ foreach ($operation in $request.operations) {
     switch ($operation.kind) {
       'normalize' { $value = [WindChime.Setup.InstallPolicy]::NormalizeDirectory($operation.input) }
       'within' { $value = [WindChime.Setup.InstallPolicy]::Within($operation.input, $operation.root) }
+      'same' { $value = [WindChime.Setup.InstallPolicy]::SamePath($operation.input, $operation.root) }
+      'short' {
+        Add-Type -TypeDefinition 'using System;using System.Text;using System.Runtime.InteropServices;public static class ShortNameFixture{[DllImport("kernel32.dll",CharSet=CharSet.Unicode)]static extern uint GetShortPathName(string input,StringBuilder output,int size);public static string Read(string path){var value=new StringBuilder(32768);return GetShortPathName(path,value,value.Capacity)>0?value.ToString():path;}}'
+        $value = [ShortNameFixture]::Read($operation.input)
+      }
       'payload' { $value = [WindChime.Setup.InstallPolicy]::PayloadPath($operation.root, $operation.input) }
       'validate' { [WindChime.Setup.InstallPolicy]::ValidateDirectory($operation.input); $value = $true }
       'marker' { $value = [WindChime.Setup.InstallPolicy]::HasInstallMarker($operation.input) }
       'identity' { $value = [pscustomobject]@{appId=[WindChime.Setup.InstallPolicy]::AppId;registryId=[WindChime.Setup.InstallPolicy]::RegistryId} }
-      'request' { $value = [WindChime.Setup.InstallPolicy]::CreateRequest($operation.input, $operation.token, $operation.desktop, $operation.menu) }
+      'request' { $value = [WindChime.Setup.InstallPolicy]::CreateRequest($operation.input, $operation.transaction, $operation.token) }
       default { throw 'Unknown policy fixture operation' }
     }
     $results += [pscustomobject]@{ok=$true; value=$value}
@@ -95,6 +102,14 @@ ConvertTo-Json -InputObject @($results) -Depth 5 -Compress
     const results = await policy(cases.map(([input]) => ({ kind: 'within', input, root: base })));
     results.forEach((result, i) => { assert(result.ok); assert.equal(result.value, cases[i][1]); });
     assert.equal((await policy([{ kind: 'within', input: base, root: '' }]))[0].value, false);
+  });
+
+  test('registered locations and shortcuts treat existing DOS aliases as the same path', async t => {
+    const directory=path.join(temporary,'Long installed location fixture','WindChime');await fs.mkdir(directory,{recursive:true});
+    const alias=(await policy([{kind:'short',input:directory}]))[0];assert(alias.ok);
+    const results=await policy([{kind:'same',input:alias.value,root:directory},{kind:'same',input:path.join(alias.value,'WindChime.exe'),root:path.join(directory,'WindChime.exe')},{kind:'normalize',input:alias.value}]);
+    assert.equal(results[0].value,true);assert.equal(results[1].value,true);assert.equal(results[2].value,directory);
+    if(!alias.value.includes('~'))t.diagnostic('This Windows volume returned no shortened alias; canonical equality verified without assuming 8.3 creation is enabled.');
   });
 
   test('runtime verification paths cannot escape, alias a stream or name an absolute file', async () => {
@@ -169,10 +184,11 @@ ConvertTo-Json -InputObject @($results) -Depth 5 -Compress
     assert.equal(identity.value.registryId, guid);
   });
 
-  test('confirmed request survives the real Windows INI parser with exact choices and Unicode', async () => {
-    const directory = path.join(temporary, '中文 空格=测试', 'WindChime'), token = '0123456789abcdef0123456789abcdef';
-    const variants = [[false, false], [true, false], [false, true], [true, true]];
-    const results = await policy(variants.map(([desktop, menu]) => ({ kind: 'request', input: directory, token, desktop, menu })));
+  test('private staging request survives the real Windows INI parser with exact scope and Unicode', async () => {
+    const directory = path.join(temporary, '中文 空格=测试'), token = '0123456789abcdef0123456789abcdef';
+    const variants = ['0','1','2','3'].map(n=>n.repeat(32));
+    const stage = id => path.join(directory,'.WindChime-Setup-'+id,'new');
+    const results = await policy(variants.map(transaction => ({ kind: 'request', input: stage(transaction), token, transaction })));
     for (let index = 0; index < results.length; index++) {
       assert(results[index].ok, 'InstallPolicy.CreateRequest must serialize the confirmed request');
       await fs.writeFile(path.join(temporary, `request-${index}.ini`), '\uFEFF' + results[index].value, 'utf16le');
@@ -181,17 +197,16 @@ ConvertTo-Json -InputObject @($results) -Depth 5 -Compress
     const parser = String.raw`
 $ErrorActionPreference='Stop';[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 Add-Type -TypeDefinition 'using System; using System.Text; using System.Runtime.InteropServices; public static class IniFixture { [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern uint GetPrivateProfileString(string section,string key,string fallback,StringBuilder result,uint size,string path); public static string Read(string path,string key) { var output=new StringBuilder(32768);GetPrivateProfileString("WindChime",key,"<missing>",output,32768,path);return output.ToString();} }'
-$results=@(); foreach($index in 0..3) { $file=Join-Path $env:WINDCHIME_INI_FIXTURE ("request-"+$index+".ini");$row=@{};foreach($key in @('Protocol','AppId','Token','Directory','Desktop','StartMenu')){$row[$key]=[IniFixture]::Read($file,$key)};$results+=$row };ConvertTo-Json -InputObject @($results) -Compress
+$results=@(); foreach($index in 0..3) { $file=Join-Path $env:WINDCHIME_INI_FIXTURE ("request-"+$index+".ini");$row=@{};foreach($key in @('Protocol','AppId','Token','Transaction','Stage')){$row[$key]=[IniFixture]::Read($file,$key)};$results+=$row };ConvertTo-Json -InputObject @($results) -Compress
 `;
     const { stdout } = await exec(path.join(process.env.WINDIR || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', parser], {
       windowsHide: true, timeout: 30000, env: { ...process.env, WINDCHIME_INI_FIXTURE: temporary },
     });
     const parsed = JSON.parse(stdout.trim());
-    parsed.forEach((row, i) => assert.deepEqual(row, { Protocol: '1', AppId: 'org.windchime.desktop', Token: token, Directory: directory,
-      Desktop: variants[i][0] ? '1' : '0', StartMenu: variants[i][1] ? '1' : '0' }));
-    const invalid = await policy(['', 'a'.repeat(31), 'x'.repeat(32), 'a'.repeat(32) + '\r\nDesktop=1'].map(value => ({ kind: 'request', input: directory, token: value, desktop: true, menu: true })));
+    parsed.forEach((row, i) => assert.deepEqual(row, { Protocol: '2', AppId: 'org.windchime.desktop', Token: token, Transaction:variants[i],Stage:stage(variants[i]) }));
+    const invalid = await policy(['', 'a'.repeat(31), 'x'.repeat(32), 'a'.repeat(32) + '\r\nDesktop=1'].map(value => ({ kind: 'request', input: stage(variants[0]), token: value, transaction:variants[0] })));
     invalid.forEach(result => assert.equal(result.ok, false, 'Malformed protocol tokens must not serialize'));
-    const injected = await policy([rootDrive.slice(0, 2) + 'relative', directory + '\r\nStartMenu=1', directory + '\0suffix'].map(input => ({ kind: 'request', input, token, desktop: false, menu: false })));
+    const injected = await policy([rootDrive.slice(0, 2) + 'relative', directory + '\r\nStartMenu=1', directory + '\0suffix',path.join(directory,'wrong-stage')].map(input => ({ kind: 'request', input, token, transaction:variants[0] })));
     injected.forEach(result => assert.equal(result.ok, false, 'Malformed destination must not enter a confirmed request'));
   });
 });

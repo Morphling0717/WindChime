@@ -20,6 +20,7 @@ assert(Number.isInteger(occlusionMs) && (faultsOnly || occlusionMs >= 70000) && 
 const report = { date: new Date().toISOString(), site: origin, checks: [], screenshots: [], platformRequests: 0 };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 let control, topic, messageId, socket, sceneName, inputName;
+let captureTitle = 'WindChime Display';
 let receiverOpens = 0, heldHide = null, silentDisconnect = false, lastConfirmedFrame = 0;
 const check = (label, condition, details) => { report.checks.push({ label, passed: !!condition, ...(details ? { details } : {}) }); assert(condition, label); };
 async function until(predicate, label, timeout = 10000) {
@@ -43,7 +44,7 @@ async function command(action, more = {}) {
   return invoke('request', { path: '/control/action', method: 'POST', body: { topicId: topic.id, action, messageId,
     expectedRevision: before.revision, expectedDraftRevision: message?.draftRevision, operationId: randomUUID(), ...more } });
 }
-const display = () => BrowserWindow.getAllWindows().find(window => window.getTitle() === 'WindChime Display');
+const display = () => BrowserWindow.getAllWindows().find(window => window.getTitle() === captureTitle);
 const pending = new Map();
 async function connectObs() {
   await fs.access(path.join(portable, 'portable_mode.txt'));
@@ -139,6 +140,16 @@ async function run() {
     return response;
   };
   require('../main.cjs');
+  // OBS strict-title matching ignores the executable. Keep this disposable
+  // acceptance process distinct from an already running installed WindChime,
+  // including renderer recovery and native window recreation. Do not touch it.
+  captureTitle = `WindChime Display · acceptance ${slug}`;
+  report.captureTitle = captureTitle;
+  app.on('browser-window-created', (_, window) => {
+    if (window.getTitle() !== 'WindChime Display') return;
+    window.on('page-title-updated', event => { event.preventDefault(); window.setTitle(captureTitle); });
+    window.setTitle(captureTitle);
+  });
   control = await until(() => BrowserWindow.getAllWindows().find(window => window.getTitle().includes('私人控制台')), 'private controller');
   await until(() => control.webContents.executeJavaScript('!!window.windchimeDesktop').catch(() => false), 'private preload');
   await invoke('openDisplay'); await until(() => display(), 'display window');
@@ -153,7 +164,9 @@ async function run() {
   await rpc('CreateScene', { sceneName });
   const captured = await rpc('CreateInput', { sceneName, inputName, inputKind: 'window_capture', inputSettings: { method: 2, priority: 1, cursor: false, client_area: true, capture_audio: false, force_sdr: true }, sceneItemEnabled: true });
   const windows = await rpc('GetInputPropertiesListPropertyItems', { inputName, propertyName: 'window' });
-  const choices = windows.propertyItems.filter(item => item.itemEnabled && /WindChime Display/.test(item.itemName));
+  // The acceptance runner uses Electron, never the user's installed WindChime.
+  // A running installed app may own another display with the same capture title.
+  const choices = windows.propertyItems.filter(item => item.itemEnabled && item.itemName.includes(captureTitle) && /electron\.exe/i.test(item.itemValue));
   assert.equal(choices.length, 1, 'OBS must enumerate exactly one display window');
   report.selectedWindow = choices[0].itemName;
   await rpc('SetInputSettings', { inputName, inputSettings: { window: choices[0].itemValue, method: 2, priority: 1, force_sdr: true }, overlay: true });
@@ -186,7 +199,9 @@ async function run() {
   check('Closing output never captures private controller', (await screenshot(inputName, '07-closed-source.png')).visible === 0);
   await invoke('openDisplay'); await delay(2000);
   check('Reopened display stays blank', (await screenshot(inputName, '08-reopened-source.png')).visible === 0);
-  await command('show'); await until(async () => (await screenshot(inputName, '09-reopened-show.png')).visible > 0, 'manual show after reopening');
+  await command('show');
+  await until(() => display().webContents.executeJavaScript('document.body.innerText.includes("WindChime window capture")'), 'reopened display renders manual show');
+  await until(async () => (await screenshot(inputName, '09-reopened-show.png')).visible > 0, 'manual show after reopening');
   check('Reopened window is captured after new manual show', true);
   // A capture source normally sits behind a private controller or live software.
   // Keep it fully covered long enough to expose Chromium background throttling.

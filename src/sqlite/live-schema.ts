@@ -51,10 +51,28 @@ export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
     WHEN NEW.revoked_at IS NOT NULL AND OLD.revoked_at IS NULL BEGIN
     UPDATE mail_live_grants SET revoked_at=NEW.revoked_at WHERE parent_grant_id=OLD.id AND revoked_at IS NULL;
     END`);
+  // Replace the old topic-wide invalidation without rewriting any mailbox data.
+  // The caller's schema transaction makes this upgrade atomic and repeatable.
+  const invalidationMigration = "0.8.2-live-queue-invalidation";
+  if (!(await db.get("SELECT id FROM windchime_migrations WHERE id=?", [invalidationMigration]))) {
+    await db.run("DROP TRIGGER IF EXISTS live_message_changed");
+    await db.run("DROP TRIGGER IF EXISTS live_message_deleted");
+  }
+  // Preserve the next position when the last shown item leaves the queue. This
+  // also covers source edits, old host SQL, batch deletion and sender blocking.
+  await db.run(`CREATE TRIGGER IF NOT EXISTS live_queue_cursor_removed BEFORE DELETE ON mail_live_queue
+    WHEN EXISTS(SELECT 1 FROM mail_live_channels WHERE topic_id=OLD.topic_id AND last_shown=OLD.message_id) BEGIN
+    UPDATE mail_live_channels SET last_shown=(
+      SELECT message_id FROM mail_live_queue WHERE topic_id=OLD.topic_id
+        AND (position<OLD.position OR (position=OLD.position AND message_id<OLD.message_id))
+      ORDER BY position DESC,message_id DESC LIMIT 1
+    ) WHERE topic_id=OLD.topic_id AND last_shown=OLD.message_id;
+    END`);
   // SQL triggers also cover old host writes, batch deletion, sender blocking and topic purge.
   const invalidateMessage = `
-    UPDATE mail_live_channels SET revision=revision+1, activation=activation+1,
-      current_snapshot=NULL WHERE topic_id=OLD.topic_id;
+    UPDATE mail_live_channels SET activation=activation+1,current_snapshot=NULL
+      WHERE topic_id=OLD.topic_id AND current_snapshot IN(SELECT id FROM mail_live_snapshots WHERE message_id=OLD.id);
+    UPDATE mail_live_channels SET revision=revision+1 WHERE topic_id=OLD.topic_id;
     DELETE FROM mail_live_queue WHERE message_id=OLD.id;
     UPDATE mail_live_drafts SET status='pending', snapshot_id=NULL, revision=revision+1 WHERE message_id=OLD.id;`;
   await db.run(`CREATE TRIGGER IF NOT EXISTS live_message_changed AFTER UPDATE ON mail_messages
@@ -82,4 +100,5 @@ export async function initializeWindChimeLiveSchema(db: WindChimeSqlExecutor) {
     END`);
   await db.run("INSERT OR IGNORE INTO windchime_migrations(id,applied_at) VALUES('0.6.0-live',?)", [new Date().toISOString()]);
   await db.run("INSERT OR IGNORE INTO windchime_migrations(id,applied_at) VALUES('0.7.0-site-control',?)", [new Date().toISOString()]);
+  await db.run("INSERT OR IGNORE INTO windchime_migrations(id,applied_at) VALUES(?,?)", [invalidationMigration, new Date().toISOString()]);
 }

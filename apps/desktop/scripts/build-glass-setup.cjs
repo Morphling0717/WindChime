@@ -20,7 +20,7 @@ async function listPayload(directory, prefix='') {
 async function buildGlassSetup({root,packaged,engine,output}) {
   const {version}=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
   const work=path.join(path.dirname(engine),'glass-build');await fs.mkdir(work,{recursive:true});
-  const payload={version,appId:'org.windchime.desktop',engineSha256:await hashFile(engine),files:await listPayload(packaged)};
+  const payload={version,appId:'org.windchime.desktop',engineSha256:await hashFile(engine),engineBytes:(await fs.stat(engine)).size,files:await listPayload(packaged)};
   const payloadFile=path.join(work,'Payload.json');await fs.writeFile(payloadFile,JSON.stringify(payload,null,2)+'\n');
   const assemblyFile=path.join(work,'AssemblyInfo.cs');
   await fs.writeFile(assemblyFile,`using System.Reflection;\n[assembly:AssemblyTitle("WindChime 安装")]\n[assembly:AssemblyProduct("WindChime")]\n[assembly:AssemblyVersion("${version}.0")]\n[assembly:AssemblyFileVersion("${version}.0")]\n[assembly:AssemblyCopyright("Copyright (c) 2026 WindChime contributors")]\n`);
@@ -37,7 +37,7 @@ async function buildGlassSetup({root,packaged,engine,output}) {
     '/reference:System.dll','/reference:System.Core.dll','/reference:System.Xaml.dll','/reference:System.Web.Extensions.dll',
     ...['WindowsBase','PresentationCore','PresentationFramework'].map(name=>'/reference:'+path.join(framework,'WPF',name+'.dll')),
     ...Object.entries(resources).map(([name,file])=>'/resource:'+file+',WindChime.Install.'+name),
-    path.join(root,'installer/GlassSetup.cs'),path.join(root,'installer/FolderPicker.cs'),assemblyFile];
+    path.join(root,'installer/GlassSetup.cs'),path.join(root,'installer/FolderPicker.cs'),path.join(root,'installer/InstallTransaction.cs'),path.join(root,'installer/InstallMetadata.cs'),assemblyFile];
   const result=await exec(path.join(framework,'csc.exe'),args,{windowsHide:true,maxBuffer:4*1024*1024});
   if(result.stdout.trim())console.log(result.stdout.trim());
   await fs.writeFile(path.join(work,'resources.json'),JSON.stringify({version,output,resources:await Promise.all(Object.entries(resources).map(async([name,file])=>({name:'WindChime.Install.'+name,sha256:await hashFile(file),bytes:(await fs.stat(file)).size})))},null,2)+'\n');

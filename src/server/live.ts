@@ -77,7 +77,9 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
     } else if (d.source_hash !== s.hash || d.topic_id !== row.topic_id) {
       await db.run("UPDATE mail_live_drafts SET topic_id=?,source_hash=?,draft_json=?,revision=revision+1,status='pending',snapshot_id=NULL WHERE message_id=?", [row.topic_id, s.hash, JSON.stringify(s.draft), row.id]);
       await db.run("DELETE FROM mail_live_queue WHERE message_id=?", [row.id]);
-      await db.run("UPDATE mail_live_channels SET revision=revision+1,activation=activation+1,current_snapshot=NULL WHERE topic_id IN(?,?)", [row.topic_id, d.topic_id]);
+      await db.run(`UPDATE mail_live_channels SET activation=activation+1,current_snapshot=NULL
+        WHERE topic_id IN(?,?) AND current_snapshot IN(SELECT id FROM mail_live_snapshots WHERE message_id=?)`, [row.topic_id, d.topic_id, row.id]);
+      await db.run("UPDATE mail_live_channels SET revision=revision+1 WHERE topic_id IN(?,?)", [row.topic_id, d.topic_id]);
     }
     d = (await db.get<DraftRow>("SELECT * FROM mail_live_drafts WHERE message_id=?", [row.id]))!;
     return { d, s };
@@ -140,7 +142,13 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
         await db.run("DELETE FROM mail_live_queue WHERE message_id=?", [selected!.id]); hide = before.current?.messageId === selected!.id;
       } else if (input.action === "show" || input.action === "next") {
         let id = selected?.id;
-        if (input.action === "next") { const last = c.runtime_epoch === epoch ? c.last_shown : null; const index = last ? before.queue.indexOf(last) + 1 : 0; id = before.queue[index]; }
+        if (input.action === "next") {
+          const last = c.runtime_epoch === epoch ? c.last_shown : null;
+          const index = last ? before.queue.indexOf(last) : -1;
+          // A legacy/stale cursor must not silently replay the queue from the top.
+          // Queue-removal triggers normally move it to the removed item's predecessor.
+          id = last && index < 0 ? undefined : before.queue[index + 1];
+        }
         if (!id) hide = true;
         else {
           const chosen = before.messages.find((m) => m.id === id);

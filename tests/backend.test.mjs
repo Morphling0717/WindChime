@@ -98,7 +98,7 @@ test("new database initializes default and independent migration record; service
   assert.equal((await f.service.getSettings()).enabled, true);
   assert.equal(
     (await f.storage.all("SELECT * FROM windchime_migrations")).length,
-    3,
+    4,
   );
   assert.ok(hostReadyCalls >= 3);
   assert.equal(
@@ -145,7 +145,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   await second.ready;
   assert.equal(
     (await second.all("SELECT * FROM windchime_migrations")).length,
-    3,
+    4,
   );
   assert.equal(
     (await second.all("SELECT * FROM mail_rate_limit_hits")).length,
@@ -790,7 +790,7 @@ test("eight independent connections can initialize the same brand new schema con
   );
   assert.equal(
     (await connections[7].all("SELECT id FROM windchime_migrations")).length,
-    3,
+    4,
   );
 });
 

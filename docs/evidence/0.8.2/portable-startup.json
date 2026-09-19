@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "testedAt": "2026-09-19T22:41:45.533Z",
+  "hostNode": "v22.22.3",
+  "os": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64"
+  },
+  "archive": "C:\\Users\\ASUS\\Documents\\ChatGPT\\风铃\\WindChime\\apps\\desktop\\out\\releases\\0.8.2\\WindChime-win32-x64-0.8.2.zip",
+  "temporary": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-0.8.2-QtMXln",
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-0.8.2-QtMXln\\profile",
+  "processId": 74916,
+  "version": "0.8.2",
+  "electron": "44.3.0",
+  "node": "24.20.0",
+  "packaged": true,
+  "userData": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-0.8.2-QtMXln\\profile",
+  "exe": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-0.8.2-QtMXln\\portable\\WindChime.exe",
+  "windows": [
+    {
+      "title": "风铃 · 私人控制台",
+      "visible": false,
+      "url": "file:///C:/Users/ASUS/AppData/Local/Temp/windchime-portable-0.8.2-QtMXln/portable/resources/app.asar/build/control.html"
+    }
+  ],
+  "preferences": {
+    "sandbox": true,
+    "contextIsolation": true,
+    "nodeIntegration": false
+  },
+  "storagePath": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-0.8.2-QtMXln\\profile\\Partitions\\windchime-private",
+  "screenshotPath": "C:\\Users\\ASUS\\Documents\\ChatGPT\\风铃\\WindChime\\apps\\desktop\\out\\releases\\0.8.2\\portable-startup.png",
+  "runtimeLicenses": [
+    {
+      "name": "LICENSE",
+      "bytes": 1096,
+      "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d"
+    },
+    {
+      "name": "LICENSES.chromium.html",
+      "bytes": 20472830,
+      "sha256": "7b328b8c7463ac9bfc7dc648c751533517c8441a0b5b21047d6c0b2620e60d70"
+    }
+  ],
+  "checks": [
+    "New portable ZIP extracted into a unique temporary directory; no installer or uninstall executed",
+    "Packaged version 0.8.2 launches its own isolated userData, not an installed application profile",
+    "Electron LICENSE and LICENSES.chromium.html match the original runtime distribution",
+    "Exactly one private control window; no automatic display output opened",
+    "Approved brand asset and connection-key interface render from packaged ASAR",
+    "Private renderer sandbox/context isolation enabled; Node integration disabled",
+    "Closing private window retains independent tray process; reopening works",
+    "Fresh profile has no prior connection inputs or encrypted device vault"
+  ],
+  "limitations": [
+    "Does not verify installer execution or uninstall",
+    "Does not verify real OBS or LiveHime window capture"
+  ],
+  "gracefulExit": true,
+  "unhandledRuntimeErrors": false
+}

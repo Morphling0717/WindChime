@@ -10,6 +10,7 @@ const state = { sites: [], selected: null, pairings: new Map(), output: null, co
 let controlWindow, displayWindow, tray, quitting = false, vaultPath;
 let selectionVersion = 0, outputVersion = 0, switching = false;
 let importVersion = 0;
+let connectionIntent = 0;
 let connectionCommit = null;
 const tiles = new Map();
 let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
@@ -180,30 +181,47 @@ function queueVault(operation) {
   const write = vaultTail.then(operation);
   vaultTail = write.catch(() => {}); return write;
 }
-function saveVault() {
-  const ciphertext = encryptVault(state.sites, state.selected);
-  return queueVault(async () => { const temporary = `${vaultPath}.tmp`; await fs.writeFile(temporary, ciphertext); await fs.rename(temporary, vaultPath); });
-}
 async function waitForConnectionCommit() { while (connectionCommit) await connectionCommit; }
-function persistImportedSite(site, assertAttempt) {
+function connectionChanged() { return Object.assign(new Error('信箱选择已更新，旧操作已取消'), { code: 'CONNECTION_CHANGED' }); }
+function connectionAttempt() {
+  const intent = ++connectionIntent, version = selectionVersion, sites = state.sites;
+  return () => { if (intent !== connectionIntent || version !== selectionVersion || sites !== state.sites || switching) throw connectionChanged(); };
+}
+function persistConnections(sites, selectedId, assertAttempt) {
   return queueVault(async () => {
     assertAttempt();
-    const sites = state.sites.some(item => item.id === site.id) ? state.sites.map(item => item.id === site.id ? site : item) : [...state.sites, site];
+    const previous = selected(), next = sites.find(site => site.id === selectedId);
+    const changing = state.selected !== selectedId || activeTopic(previous) !== activeTopic(next);
     const temporary = `${vaultPath}.tmp`;
-    try { await fs.writeFile(temporary, encryptVault(sites, site.id)); }
-    catch { throw Object.assign(new Error(), { code: 'CREDENTIAL_SAVE_FAILED' }); }
-    // Any newer selection/import/list edit during the write cancels this candidate.
+    try { await fs.writeFile(temporary, encryptVault(sites, selectedId)); }
+    catch { throw Object.assign(new Error('设备授权无法保存，原连接保持不变'), { code: 'CREDENTIAL_SAVE_FAILED' }); }
     assertAttempt();
+    // Check every private editor at the actual commit boundary, including edits
+    // made while network validation or the temporary encrypted write was pending.
+    if (changing) {
+      await confirmDirty(dirtyTiles(), '切换信箱会放弃主窗口和悬浮磁贴中未保存的修改。', true);
+      assertAttempt();
+    }
     let release;
     connectionCommit = new Promise(resolve => { release = resolve; });
     try {
       try { await fs.rename(temporary, vaultPath); }
-      catch { throw Object.assign(new Error(), { code: 'CREDENTIAL_SAVE_FAILED' }); }
-      // Other connection mutations wait through the atomic rename and publication.
+      catch { throw Object.assign(new Error('设备授权无法保存，原连接保持不变'), { code: 'CREDENTIAL_SAVE_FAILED' }); }
+      // Publish only after the encrypted file commits. Other connection changes
+      // wait through publication and the old output's withdrawal.
       state.sites = sites;
-      return { transition: selectSite(site.id, { persist: false, tilesConfirmed: true }) };
+      state.selected = selectedId;
+      if (changing) {
+        disposeTiles(); ++selectionVersion; switching = true; abortRequests(); closeOutput();
+        try { await hideSite(previous).catch(() => {}); } finally { switching = false; }
+      }
+      return next ? publicSite(next) : null;
     } finally { connectionCommit = null; release(); }
   });
+}
+function persistImportedSite(site, assertAttempt) {
+  const sites = state.sites.some(item => item.id === site.id) ? state.sites.map(item => item.id === site.id ? site : item) : [...state.sites, site];
+  return persistConnections(sites, site.id, assertAttempt);
 }
 async function readVault() {
   try {
@@ -265,7 +283,8 @@ async function importConnectionKey(input) {
   try { key = parseWindChimeConnectionKey(input); } catch { throw Object.assign(new Error('连接密钥格式无效或版本不支持，请复制网页生成的完整密钥'), { code: 'CONNECTION_KEY_INVALID', status: 0 }); }
   await waitForConnectionCommit();
   const attempt = ++importVersion, selectedVersion = selectionVersion, sites = state.sites;
-  const assertAttempt = () => { if (attempt !== importVersion || selectedVersion !== selectionVersion || sites !== state.sites || switching) throw Object.assign(new Error(), { code: 'CONNECTION_CHANGED' }); };
+  const assertConnection = connectionAttempt();
+  const assertAttempt = () => { assertConnection(); if (attempt !== importVersion || selectedVersion !== selectionVersion || sites !== state.sites || switching) throw connectionChanged(); };
   try {
     if (!safeStorage.isEncryptionAvailable()) throw Object.assign(new Error(), { code: 'CREDENTIAL_ENCRYPTION_UNAVAILABLE' });
     const capability = await http(`${key.origin}/api/mail/live`, '/capabilities'); assertAttempt();
@@ -279,9 +298,7 @@ async function importConnectionKey(input) {
     if (!Number.isFinite(Date.parse(identity.expiresAt)) || Date.parse(identity.expiresAt) <= Date.now()) throw Object.assign(new Error(), { code: 'CONNECTION_KEY_EXPIRED' });
     const existing = state.sites.find(site => site.origin === key.origin && site.siteId === key.siteId && site.token === key.token && site.topicId === identity.topicId);
     const site = restoreSite({ id: existing?.id ?? crypto.randomUUID(), origin: key.origin, siteId: identity.siteId, scope, topicId: identity.topicId, selectedTopicId: existing?.selectedTopicId ?? null, mailManagement: capability.features?.mailManagement === true, token: key.token, label: identity.label || identity.topicTitle || new URL(key.origin).hostname, expiresAt: identity.expiresAt });
-    if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '连接新信箱会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); assertAttempt(); }
-    const committed = await persistImportedSite(site, assertAttempt);
-    await committed.transition;
+    await persistImportedSite(site, assertAttempt);
     return publicSite(site);
   } catch (error) { throw connectionFailure(error); }
 }
@@ -425,17 +442,12 @@ function hideSite(site) {
   if (!site || !activeTopic(site)) return Promise.resolve();
   return writeCommand(() => siteRequest(site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(site), action: 'hide', expectedRevision: 0, operationId: crypto.randomUUID() } }));
 }
-async function selectSite(id, { persist = true, tilesConfirmed = false } = {}) {
+async function selectSite(id) {
+  await waitForConnectionCommit();
   if (id !== null && !state.sites.some(site => site.id === id)) throw new Error('信箱不存在');
+  const assertAttempt = connectionAttempt();
   if (!switching && state.selected === id) return selected() ? publicSite(selected()) : null;
-  if (!tilesConfirmed && dirtyTiles().length) { const previous = selectionVersion; await confirmDirty(dirtyTiles(), '切换网站会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); if (previous !== selectionVersion) throw Object.assign(new Error('信箱选择已更新'), { code: 'CONNECTION_CHANGED' }); }
-  const oldSite = selected();
-  disposeTiles();
-  const version = ++selectionVersion; switching = true; abortRequests(); closeOutput(); state.selected = id;
-  await hideSite(oldSite).catch(() => {});
-  if (version !== selectionVersion) throw Object.assign(new Error('信箱选择已更新'), { code: 'CONNECTION_CHANGED' });
-  switching = false; if (persist) await saveVault();
-  return selected() ? publicSite(selected()) : null;
+  return persistConnections(state.sites, id, assertAttempt);
 }
 async function selectTopic(id, connectionId) {
   await waitForConnectionCommit();
@@ -444,16 +456,13 @@ async function selectTopic(id, connectionId) {
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(id)) throw new Error('无效话题');
   if (site.scope !== 'site' && id !== site.topicId) throw new Error('旧版话题密钥只能访问原话题，请在网站生成站点密钥');
   if (activeTopic(site) === id) return publicSite(site);
+  const assertAttempt = connectionAttempt();
   // Verify membership before disturbing the currently selected mailbox.
   const topic = await siteRequest(site, { path: `/control/topics/${encodeURIComponent(id)}`, method: 'GET' });
-  await waitForConnectionCommit(); assertCurrent(scope);
+  await waitForConnectionCommit(); assertCurrent(scope); assertAttempt();
   if (topic.id !== id) throw new Error('网站返回了不匹配的话题');
-  if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '切换话题会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); assertCurrent(scope); }
-  disposeTiles();
-  const old = { ...site }, version = ++selectionVersion; switching = true; abortRequests(); closeOutput();
-  await hideSite(old).catch(() => {});
-  if (version !== selectionVersion) throw new Error('话题选择已更新');
-  site.selectedTopicId = id; switching = false; await saveVault(); return publicSite(site);
+  const next = { ...site, selectedTopicId: id };
+  return persistConnections(state.sites.map(item => item.id === site.id ? next : item), site.id, assertAttempt);
 }
 async function hide() {
   return clearOutputWith(() => hideSite(selected()));
@@ -512,18 +521,36 @@ async function start() {
   });
   handle('sites:pair-status', 'control', async id => {
     const pairing = state.pairings.get(id); if (!pairing) return { status: 'expired' };
-    const result = await http(`${pairing.origin}/api/mail/live`, '/devices/poll', 'POST', { deviceCode: pairing.deviceCode, verifier: pairing.verifier });
-    if (result.status !== 'approved') return { status: result.status };
-    const site = { id: crypto.randomUUID(), label: pairing.label, origin: pairing.origin, siteId: pairing.siteId, topicId: result.topicId, token: result.token, expiresAt: result.expiresAt };
+    const pendingIntent = connectionIntent, pendingVersion = selectionVersion, pendingSites = state.sites;
+    if (!pairing.approvedSite) {
+      const result = await http(`${pairing.origin}/api/mail/live`, '/devices/poll', 'POST', { deviceCode: pairing.deviceCode, verifier: pairing.verifier });
+      if (result.status !== 'approved') return { status: result.status };
+      pairing.approvedSite = restoreSite({ id: crypto.randomUUID(), label: pairing.label, origin: pairing.origin, siteId: pairing.siteId, topicId: result.topicId, token: result.token, expiresAt: result.expiresAt });
+    }
+    const site = pairing.approvedSite;
     await waitForConnectionCommit();
     if (state.pairings.get(id) !== pairing) return { status: 'expired' };
-    if (dirtyTiles().length) { await confirmDirty(dirtyTiles(), '连接新信箱会关闭悬浮磁贴，并放弃磁贴中未保存的修改。'); if (state.pairings.get(id) !== pairing) return { status: 'expired' }; }
-    state.sites.push(site); state.pairings.delete(id); await selectSite(site.id, { tilesConfirmed: true }); return { status: 'approved', site: publicSite(site) };
+    if (pendingIntent !== connectionIntent || pendingVersion !== selectionVersion || pendingSites !== state.sites) throw connectionChanged();
+    const assertConnection = connectionAttempt();
+    const assertAttempt = () => { assertConnection(); if (state.pairings.get(id) !== pairing) throw connectionChanged(); };
+    await persistImportedSite(site, assertAttempt);
+    state.pairings.delete(id); return { status: 'approved', site: publicSite(site) };
   });
-  handle('sites:pair-cancel', 'control', id => { state.pairings.delete(id); });
+  handle('sites:pair-cancel', 'control', async id => {
+    const approvedId = state.pairings.get(id)?.approvedSite?.id;
+    state.pairings.delete(id);
+    // A completed atomic rename cannot be cancelled. Wait for publication so
+    // the caller refreshes the actual connection, rather than an obsolete list.
+    await waitForConnectionCommit();
+    return { connected: !!approvedId && state.sites.some(site => site.id === approvedId) };
+  });
   handle('sites:select', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); return selectSite(id); });
   handle('sites:select-topic', 'control', selectTopic);
-  handle('sites:forget', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); if (id === state.selected) await selectSite(state.sites.find(site => site.id !== id)?.id ?? null); if (connectionCommit) await waitForConnectionCommit(); state.sites = state.sites.filter(site => site.id !== id); await saveVault(); });
+  handle('sites:forget', 'control', async id => {
+    await waitForConnectionCommit();
+    const assertAttempt = connectionAttempt(), sites = state.sites.filter(site => site.id !== id);
+    await persistConnections(sites, id === state.selected ? sites[0]?.id ?? null : state.selected, assertAttempt);
+  });
   handle('control:request', 'private', async (window, input) => {
     const initiatingTile = tileFor(window);
     const scope = context(), site = scope.site;
@@ -557,12 +584,17 @@ async function start() {
     if (opening && outputSnapshotId) { void recoverOutput(); throw new Error('展示连接已更新'); }
     if (opening) { outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputDeadline = 0; }
     const receiverVersion = outputReceiverVersion;
-    const receiverId = new URL(request.path, 'https://local.invalid').searchParams.get('receiverId');
+    const requestUrl = new URL(request.path, 'https://local.invalid');
+    const receiverId = requestUrl.searchParams.get('receiverId');
     if (!opening && (!outputReceiverId || receiverId !== outputReceiverId)) throw new Error('展示接收端已更新');
+    const assetRequest = request.path.startsWith('/display/assets/');
+    const assetSnapshotId = outputSnapshotId;
+    const ownsAsset = () => !assetRequest || (assetSnapshotId === outputSnapshotId && requestUrl.searchParams.get('activation') === String(output.frameActivation));
     const startedAt = performance.now();
     try {
-      const result = await http(`${scope.site.origin}/api/mail/live`, request.path, request.method, request.body, output.token, { binary: request.path.startsWith('/display/assets/'), timeout: 2400 });
+      const result = await http(`${scope.site.origin}/api/mail/live`, request.path, request.method, request.body, output.token, { binary: assetRequest, timeout: 2400 });
       assertCurrent(scope); if (version !== outputVersion || output !== state.output || receiverVersion !== outputReceiverVersion) throw new Error('展示连接已更新');
+      if (!ownsAsset()) throw new Error('图片所属展示已切换');
       if (opening) { if (typeof result.receiverId !== 'string' || typeof result.epoch !== 'string') throw new Error('展示接收端无效'); outputReceiverId = result.receiverId; outputEpoch = result.epoch; }
       if (request.path.startsWith('/display/frame?')) {
         if (result.receiverId !== outputReceiverId || result.epoch !== outputEpoch) throw new Error('展示接收端已更新');
@@ -570,13 +602,17 @@ async function start() {
         // was cleared. Withdrawals replace the native renderer as well.
         if (outputSnapshotId && !result.snapshot) { void recoverOutput(); throw new Error('当前展示已撤下'); }
         outputSnapshotId = result.snapshot?.id ?? null;
+        output.frameActivation = result.activation;
       }
       if (opening || request.path.startsWith('/display/frame?')) confirmOutputLease(result, startedAt);
       return result;
     } catch (error) {
       if (isCurrent(scope) && version === outputVersion && output === state.output && receiverVersion === outputReceiverVersion) {
         if (error.status === 401 || error.status === 403) { blank(); state.output = null; }
-        else if (outputSnapshotId || outputDeadline) void recoverOutput();
+        // A cancelled renderer request still finishes in the main process. An
+        // old image failure must not withdraw a newer activation; grant failures
+        // above still invalidate the current output, regardless of the image.
+        else if (ownsAsset() && (outputSnapshotId || outputDeadline)) void recoverOutput();
       }
       throw error;
     }

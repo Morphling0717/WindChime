@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "version": "0.8.2",
+  "testedAt": "2026-09-19T22:38:42.103Z",
+  "stage": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-make-x7L40V",
+  "temporary": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-full-stage-fixture-HjdSDu",
+  "elapsedMs": 12281,
+  "payloadFilesMatched": 75,
+  "engineSha256": "f882a785a64dc2d837efce09b32bfb60a0027edc1fa54a729818cae2279ce625",
+  "existingSyntheticProgramUnchanged": true,
+  "executedStageOnlyEngine": true,
+  "executedPublicSetup": false,
+  "registeredApplication": false,
+  "executedUninstaller": false,
+  "limitations": [
+    "This verifies full extraction only; Windows registry/shortcut install and uninstall have not been performed."
+  ]
+}

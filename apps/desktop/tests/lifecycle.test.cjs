@@ -111,7 +111,7 @@ test('edits created while a selected-message read is pending still require disca
 test('dirty tile native close and key import ask before closing or committing new credentials',async()=>{
   const h=await harness();const site=await h.pair(3011);await h.invoke('display:open');const output=h.output;await h.invoke('tiles:open',['appearance']);const tile=h.windows.at(-1);await h.invoke('tiles:dirty',[true],tile);
   let prevented=false;tile.emit('close',{preventDefault:()=>{prevented=true;}});await flush();assert(prevented);assert.equal(tile.closeRequested,undefined);
-  const writes=h.vaultWrites.length;assert.equal((await h.invoke('sites:import-key',[keyFor(3012)])).code,'OPERATION_CANCELLED');assert.equal(h.vaultWrites.length,writes);assert.equal((await h.invoke('sites:list')).data.selectedId,site.id);assert.equal(output.hideCount,0);
+  const commits=h.vaultCommits.length;assert.equal((await h.invoke('sites:import-key',[keyFor(3012)])).code,'OPERATION_CANCELLED');assert.equal(h.vaultCommits.length,commits);assert.equal((await h.invoke('sites:list')).data.selectedId,site.id);assert.equal(output.hideCount,0);
   h.setConfirmation(1);assert((await h.invoke('sites:import-key',[keyFor(3012)])).ok);assert(tile.closeRequested);assert(output.hideCount>0);
 });
 
@@ -164,11 +164,11 @@ test('a delayed output grant never opens a window after changing the selected ma
   const old=h.invoke('display:open');await flush();await h.invoke('sites:select',[b.id]);
   response.resolve(Response.json({id:'old',token:'wc_disp_old'}));assert.equal((await old).ok,false);assert.equal(h.output,undefined);
 });
-test('switching blanks immediately and orders the old mailbox hide after its in-flight show',async()=>{
+test('committed switching blanks before waiting for the old mailbox in-flight show',async()=>{
   const h=await harness();const a=await h.pair(3011),b=await h.pair(3012);await h.invoke('sites:select',[a.id]);await h.invoke('display:open');const output=h.output;
   const response=deferred();h.setRoute(r=>r.body?.action==='show'?response.promise:null);
   const show=h.invoke('control:request',[{path:'/control/action',method:'POST',body:{topicId:'3011',action:'show'}}]);await flush();
-  const switchResult=h.invoke('sites:select',[b.id]);assert(output.hideCount>0);assert(output.closeRequested);
+  const switchResult=h.invoke('sites:select',[b.id]);await flush();assert(output.hideCount>0);assert(output.closeRequested);
   const before=h.requests.length;await flush();assert.equal(h.requests.length,before,'hide must await the old write');
   response.resolve(Response.json({}));assert.equal((await show).ok,false);assert((await switchResult).ok);
   assert.equal(h.requests.at(-1).body.action,'hide');assert.equal(h.requests.at(-1).body.topicId,'3011');
@@ -387,6 +387,75 @@ test('quit during revoked-output painting closes the native output without start
 
 const { encodeWindChimeConnectionKey } = require('../build/connection-key.cjs');
 const keyFor = (port, seed = 5) => encodeWindChimeConnectionKey({ origin: `http://localhost:${port}`, siteId: String(port), token: 'wc_ctl_' + Buffer.alloc(32,seed).toString('base64url') });
+
+test('automatic browser pairing protects main drafts and retries the already redeemed approval',async()=>{
+  const h=await harness(),old=await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  const pending=await h.invoke('sites:pair',[{origin:'http://localhost:3012',label:'Second'}]);
+  await h.invoke('tiles:dirty',[true]);const commits=h.vaultCommits.length;
+  const denied=await h.invoke('sites:pair-status',[pending.data.id]);
+  assert.equal(denied.code,'OPERATION_CANCELLED');assert.equal(h.confirmations.length,1);
+  assert.equal((await h.invoke('sites:list')).data.selectedId,old.id);assert.equal(h.vaultCommits.length,commits);assert.equal(output.hideCount,0);
+  h.setConfirmation(1);h.setPersistence({rename:()=>{throw new Error('secret disk failure');}});
+  assert.equal((await h.invoke('sites:pair-status',[pending.data.id])).code,'CREDENTIAL_SAVE_FAILED');
+  assert.equal((await h.invoke('sites:list')).data.items.length,1);assert.equal(output.hideCount,0);
+  h.setPersistence({});const retry=await h.invoke('sites:pair-status',[pending.data.id]);assert(retry.ok,retry.error);
+  assert.equal(h.requests.filter(r=>r.url.includes(':3012/')&&r.url.endsWith('/devices/poll')).length,1,'a redeemed approval remains in memory for retry');
+  assert.equal((await h.invoke('sites:list')).data.items.length,2);assert(output.hideCount>0);
+});
+
+test('late pairing approval cannot override a newer manual site choice but can be explicitly retried',async()=>{
+  const h=await harness(),a=await h.pair(3011),b=await h.pair(3012);await h.invoke('sites:select',[a.id]);
+  const pairing=await h.invoke('sites:pair',[{origin:'http://localhost:3013',label:'Pending C'}]),gate=deferred();
+  h.setRoute(r=>r.url.includes(':3013/')&&r.url.endsWith('/devices/poll')?gate.promise:null);
+  const polling=h.invoke('sites:pair-status',[pairing.data.id]);await flush();
+  assert((await h.invoke('sites:select',[b.id])).ok);await h.invoke('display:open');const output=h.output;
+  gate.resolve(Response.json({status:'approved',topicId:'3013',token:'wc_ctl_approved',expiresAt:'2099-01-01T00:00:00Z'}));
+  assert.equal((await polling).code,'CONNECTION_CHANGED');assert.equal((await h.invoke('sites:list')).data.selectedId,b.id);assert.equal(output.hideCount,0);
+  const retry=await h.invoke('sites:pair-status',[pairing.data.id]);assert(retry.ok,retry.error);assert.equal(retry.data.site.label,'Pending C');
+  assert.equal(h.requests.filter(r=>r.url.includes(':3013/')&&r.url.endsWith('/devices/poll')).length,1);assert(output.hideCount>0);
+});
+
+test('pair cancellation waits for an atomic commit but cancels an uncommitted disk candidate',async()=>{
+  for(const stage of ['write','rename']) {
+    const h=await harness(),old=await h.pair(3011);
+    const pairing=await h.invoke('sites:pair',[{origin:'http://localhost:3012',label:'Pending B'}]),gate=deferred();
+    h.setPersistence({[stage]:()=>gate.promise});
+    const polling=h.invoke('sites:pair-status',[pairing.data.id]);await flush();await flush();
+    let cancellationDone=false;
+    const cancellation=h.invoke('sites:pair-cancel',[pairing.data.id]).then(result=>{cancellationDone=true;return result;});
+    await flush();assert.equal(cancellationDone,stage==='write');
+    gate.resolve();const [cancelled,polled]=await Promise.all([cancellation,polling]);
+    assert(cancelled.ok);assert.equal(cancelled.data.connected,stage==='rename');
+    assert.equal(polled.ok,stage==='rename');
+    assert.equal((await h.invoke('sites:list')).data.selectedId===old.id,stage==='write');
+  }
+});
+
+test('site selection and forgetting are atomic when encrypt, write or rename fails',async()=>{
+  for(const operation of ['select','forget-current','forget-other'])for(const stage of ['encrypt','write','rename']){
+    const h=await harness(),a=await h.pair(3011),b=await h.pair(3012);await h.invoke('display:open');const output=h.output;
+    const before=(await h.invoke('sites:list')).data,commits=h.vaultCommits.length;
+    h.setPersistence({[stage]:()=>{throw new Error('SECRET_STORAGE');}});
+    const result=await h.invoke(operation==='select'?'sites:select':'sites:forget',[operation==='forget-current'?b.id:a.id]);
+    assert.equal(result.code,'CREDENTIAL_SAVE_FAILED',`${operation}/${stage}`);assert(!JSON.stringify(result).includes('SECRET_STORAGE'));
+    assert.deepEqual((await h.invoke('sites:list')).data,before);assert.equal(h.vaultCommits.length,commits);assert.equal(output.hideCount,0);
+  }
+});
+
+test('topic persistence failures and drafts created during disk writes preserve the old context',async()=>{
+  const h=await harness();
+  h.setRoute(r=>r.url.endsWith('/capabilities')?Response.json({protocolVersion:1,siteId:'3011',features:{connectionKeys:true,siteControl:true}}):r.url.endsWith('/control/identity')?Response.json({scope:'site',siteId:'3011',topicId:null,topicTitle:null,label:'Site',grantId:'grant',expiresAt:'2099-01-01T00:00:00Z'}):r.url.includes('/control/topics/')?Response.json({id:r.url.split('/').at(-1)}):null);
+  const site=await h.invoke('sites:import-key',[keyFor(3011)]);assert(site.ok);await h.invoke('sites:select-topic',['A',site.data.id]);await h.invoke('display:open');const output=h.output;
+  for(const stage of ['encrypt','write','rename']){
+    h.setPersistence({[stage]:()=>{throw new Error('storage failed');}});
+    assert.equal((await h.invoke('sites:select-topic',['B',site.data.id])).code,'CREDENTIAL_SAVE_FAILED');
+    assert.equal((await h.invoke('sites:list')).data.items[0].selectedTopicId,'A');assert.equal(output.hideCount,0);
+  }
+  const disk=deferred();h.setPersistence({write:()=>disk.promise});
+  const selecting=h.invoke('sites:select-topic',['B',site.data.id]);await flush();await h.invoke('tiles:dirty',[true]);
+  disk.resolve();assert.equal((await selecting).code,'OPERATION_CANCELLED');assert.equal(h.confirmations.length,1);
+  assert.equal((await h.invoke('sites:list')).data.items[0].selectedTopicId,'A');assert.equal(output.hideCount,0);
+});
 test('connection key validates identity before selection, saves v1 encrypted credentials and returns no token',async()=>{
   const h=await harness();const key=keyFor(3011);
   const first=await h.invoke('sites:import-key',[key]);assert(first.ok,first.error);
@@ -469,7 +538,7 @@ test('a newer selection during candidate disk write cancels import before it can
   const gate=deferred();let writing=false;
   h.setPersistence({write:candidate=>{if(candidate.sites.some(site=>site.topicId==='3013')){writing=true;return gate.promise;}}});
   const importing=h.invoke('sites:import-key',[keyFor(3013)]);await flush();await flush();assert(writing);assert.equal(output.hideCount,0);
-  const selecting=h.invoke('sites:select',[b.id]);await flush();assert.equal((await h.invoke('sites:list')).data.selectedId,b.id);
+  const selecting=h.invoke('sites:select',[b.id]);await flush();assert.equal((await h.invoke('sites:list')).data.selectedId,a.id,'selection waits for encrypted commit');
   gate.resolve();assert.equal((await importing).code,'CONNECTION_CHANGED');assert((await selecting).ok);
   assert.equal(h.vaultCommits.at(-1).selected,b.id);assert(!h.vaultCommits.some(v=>v.sites.some(site=>site.topicId==='3013')));
   assert(!(await h.invoke('sites:list')).data.items.some(site=>site.topicId==='3013'));
@@ -479,7 +548,7 @@ test('forgetting an unselected mailbox during import cannot be undone by its pen
   const h=await harness(),a=await h.pair(3011),b=await h.pair(3012),gate=deferred();let writing=false;
   h.setPersistence({write:candidate=>{if(candidate.sites.some(site=>site.topicId==='3013')){writing=true;return gate.promise;}}});
   const importing=h.invoke('sites:import-key',[keyFor(3013)]);await flush();await flush();assert(writing);
-  const forgetting=h.invoke('sites:forget',[a.id]);await flush();assert.equal((await h.invoke('sites:list')).data.items.length,1);
+  const forgetting=h.invoke('sites:forget',[a.id]);await flush();assert.equal((await h.invoke('sites:list')).data.items.length,2,'removal waits for encrypted commit');
   gate.resolve();assert.equal((await importing).code,'CONNECTION_CHANGED');assert((await forgetting).ok);
   const final=(await h.invoke('sites:list')).data;assert.equal(final.selectedId,b.id);assert.deepEqual(Array.from(final.items,site=>site.id),[b.id]);
   assert.deepEqual(h.vaultCommits.at(-1).sites.map(site=>site.id),[b.id]);
@@ -549,4 +618,42 @@ test('topic membership arriving inside a new import rename cannot publish or per
   const importing=h.invoke('sites:import-key',[keyFor(3012)]);await flush();await flush();assert(renaming);
   const commits=h.vaultCommits.length;membership.resolve(Response.json({id:'topic-A'}));await flush();await flush();assert.equal(h.vaultCommits.length,commits);assert.equal((await h.invoke('sites:list')).data.items[0].selectedTopicId,null);
   rename.resolve();const imported=await importing;assert(imported.ok,imported.error);assert.equal((await selecting).ok,false);assert.equal(h.vaultCommits.at(-1).selected,imported.data.id);assert.equal((await h.invoke('sites:list')).data.selectedId,imported.data.id);
+});
+
+
+for (const outcome of ['conflict', 'timeout', 'success']) for (const replay of [false, true]) test('late image '+outcome+' cannot withdraw a newer '+(replay?'activation of the same snapshot':'letter'),async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  const frame=(id,activation)=>Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:activation+1,activation,snapshot:{id,text:id}});
+  h.setRoute(r=>r.url.includes('/display/frame')?frame('A',1):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  let finish,fail;const pending=new Promise((resolve,reject)=>{finish=resolve;fail=reject;});
+  h.setRoute(r=>r.url.includes('/display/assets/asset_A')?pending:r.url.includes('/display/frame')?frame(replay?'A':'B',2):null);
+  const late=h.invoke('display:request',[{path:'/display/assets/asset_A?receiverId=r&activation=1',method:'GET'}],output);await flush();
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  if(outcome==='timeout')fail(Object.assign(new Error('synthetic timeout'),{code:'REMOTE_TIMEOUT',status:0}));
+  else finish(outcome==='conflict'?Response.json({error:'old activation'},{status:409}):new Response(new Uint8Array([1,2,3]),{headers:{'content-type':'image/png'}}));
+  assert.equal((await late).ok,false,'old bytes/errors are not delivered to the new activation');await flush();await flush();
+  assert.equal(output.crashCount,0);assert.equal(output.loadCount,1);assert.equal(output.hideCount,0);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+});
+
+for(const status of [401,403]) for(const switched of [false,true]) test('display grant '+status+' still blanks after '+(switched?'an activation switch':'a current image request'),async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  const frame=(id,activation)=>Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:activation+1,activation,snapshot:{id,text:id}});
+  h.setRoute(r=>r.url.includes('/display/frame')?frame('A',1):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  const pending=deferred();h.setRoute(r=>r.url.includes('/display/assets/')?pending.promise:r.url.includes('/display/frame')?frame('B',2):null);
+  const request=h.invoke('display:request',[{path:'/display/assets/asset_A?receiverId=r&activation=1',method:'GET'}],output);await flush();
+  if(switched)assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  pending.resolve(Response.json({error:'grant invalid'},{status}));assert.equal((await request).ok,false);await flush();await flush();
+  assert.equal(output.crashCount,1);assert.equal((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok,false);
+});
+
+for(const outcome of ['conflict','timeout']) test('a current activation image '+outcome+' still clears output',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,snapshot:{id:'A',text:'A'}}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  h.setRoute(r=>r.url.includes('/display/assets/')?(outcome==='conflict'?Response.json({error:'asset unavailable'},{status:409}):Promise.reject(Object.assign(new Error('synthetic timeout'),{code:'REMOTE_TIMEOUT',status:0}))):null);
+  assert.equal((await h.invoke('display:request',[{path:'/display/assets/asset_A?receiverId=r&activation=1',method:'GET'}],output)).ok,false);
+  await flush();await flush();assert.equal(output.crashCount,1);
 });

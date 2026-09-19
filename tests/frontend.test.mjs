@@ -13,8 +13,40 @@ import {
   useWindChimeSubmission,
 } from "../dist/react/index.js";
 import { readWindChimePosterConfig } from "../dist/media/index.js";
+import { useWindChimeResource } from "../dist/react/resource.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+test('background polling lets slow requests finish; invalidation and scope changes still discard obsolete reads', async t => {
+  const interval = globalThis.setInterval, clear = globalThis.clearInterval;
+  let tick, value, root, invalidate;
+  const pending = [];
+  globalThis.setInterval = fn => { tick = fn; return 1; };
+  globalThis.clearInterval = () => {};
+  const source = { subscribe(fn) { invalidate = fn; return () => {}; } };
+  function Harness({ scope }) {
+    value = useWindChimeResource(source, 'messages', scope, signal => new Promise(resolve => pending.push({signal, resolve, scope})), { pollIntervalMs: 3000 });
+    return null;
+  }
+  t.after(async () => { await act(async () => root?.unmount()); globalThis.setInterval = interval; globalThis.clearInterval = clear; });
+  await act(async () => { root = create(React.createElement(Harness, {scope:'A'})); });
+  await act(async () => { tick(); tick(); tick(); });
+  assert.equal(pending.length, 1); assert.equal(pending[0].signal.aborted, false);
+  await act(async () => pending[0].resolve('slow response'));
+  assert.equal(value.data, 'slow response'); assert.equal(value.isLoading, false);
+  await act(async () => tick());
+  await act(async () => invalidate(['messages']));
+  assert.equal(pending[1].signal.aborted, true);
+  await act(async () => { pending[1].resolve('before mutation'); pending[2].resolve('after mutation'); });
+  assert.equal(value.data, 'after mutation');
+  await act(async () => tick());
+  await act(async () => root.update(React.createElement(Harness, {scope:'B'})));
+  assert.equal(pending[3].signal.aborted, true);
+  await act(async () => pending[3].resolve('late A'));
+  assert.equal(value.data, null);
+  await act(async () => pending[4].resolve('B'));
+  assert.equal(value.data, 'B');
+});
 
 test('submission keyword hints require the explicit site switch and follow changes without remounting', async t => {
   let form, tree; const sent = [];

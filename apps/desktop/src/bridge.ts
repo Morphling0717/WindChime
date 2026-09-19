@@ -38,7 +38,7 @@ type Bridge = {
     label: string;
   }): Promise<Result<{ id: string; userCode: string; expiresAt: string }>>;
   pairingStatus(id: string): Promise<Result<{ status: string; site?: Site }>>;
-  cancelPairing(id: string): Promise<Result<void>>;
+  cancelPairing(id: string): Promise<Result<{ connected: boolean }>>;
   selectSite(id: string): Promise<Result<Site>>;
   selectTopic(id: string, connectionId: string): Promise<Result<Site>>;
   forgetSite(id: string): Promise<Result<void>>;
