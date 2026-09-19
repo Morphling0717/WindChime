@@ -263,6 +263,31 @@ test('older sites allow private theme previews but never receive new appearance 
   assert.deepEqual(state.appearance, legacyAppearance, 'local previews never mutate the server response');
 });
 
+test('sites with original themes but without fixed image support cannot receive new layout or media settings', async t => {
+  const legacyAppearance = { ...appearance, theme: 'uliuli', layout: 'split' };
+  delete legacyAppearance.imageHeightPercent;
+  const calls = [];
+  const studio = { state: { appearance: structuredClone(legacyAppearance) }, connected: true, pending: false, actWithResult: async command => {
+    calls.push(command); return studio.state;
+  } };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} })); });
+  t.after(async () => { await act(async () => renderer.unmount()); });
+  const save = () => renderer.root.findAllByType('button').find(node => node.children.join('') === '应用外观');
+  assert.equal(save().props.disabled, true);
+  assert(JSON.stringify(renderer.toJSON()).includes('此网站需要升级到风铃 0.8.0 才能保存新版外观。现在可以先预览。'));
+  await act(async () => renderer.root.findByProps({ className: 'wc-appearance-layout-sample wc-appearance-layout-sidebar' }).parent.props.onClick());
+  const imageHeight = renderer.root.findAllByType('input').find(node => node.props['aria-label'] === '图片区域占比');
+  await act(async () => imageHeight.props.onChange({ target: { value: '60' } }));
+  const preview = renderer.root.findByType(WindChimeLiveCard).props.appearance;
+  assert.equal(preview.layout, 'sidebar'); assert.equal(preview.imageHeightPercent, 60);
+  assert.equal(save().props.disabled, true, 'local edits cannot claim the server supports fixed images');
+  await act(async () => save().props.onClick());
+  await act(async () => renderer.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  assert.deepEqual(calls, []);
+  assert.deepEqual(studio.state.appearance, legacyAppearance);
+});
+
 test('appearance presets keep the selected layout and text metrics private until explicitly applied', async t => {
   const initial = { ...appearance, layout: 'split', imageLayout: 'grid', fontSize: 38, padding: 21, lineHeight: 1.8, letterSpacing: 0.3, maxWidth: 900, animation: 'none' };
   const calls = [], notifications = [];
@@ -288,6 +313,37 @@ test('appearance presets keep the selected layout and text metrics private until
   assert.equal(calls[0].appearance.fontSize, 42);
   assert.equal(calls[0].appearance.layout, 'split');
   assert.equal(notifications.at(-1), false);
+});
+
+test('vertical layouts offer explicit recommended sizes and keep theme, image allocation and other edits independent', async t => {
+  const initial = { ...appearance, theme: 'mia', layout: 'stack', maxWidth: 960, viewportHeight: 560, fontSize: 30, imageHeightPercent: 55 };
+  const calls = [];
+  const studio = { state: { appearance: structuredClone(initial) }, connected: true, pending: false, actWithResult: async command => {
+    calls.push(structuredClone(command)); studio.state = { appearance: structuredClone(command.appearance) }; return studio.state;
+  } };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} })); });
+  t.after(async () => { await act(async () => renderer.unmount()); });
+  const button = label => renderer.root.findAllByType('button').find(node => node.children.join('') === label);
+  const preview = () => renderer.root.findByType(WindChimeLiveCard).props.appearance;
+  for (const [layout, width, height] of [['sidebar', 360, 800], ['portrait', 480, 860], ['focus', 600, 900]]) {
+    const before = structuredClone(preview());
+    await act(async () => renderer.root.findByProps({ className: `wc-appearance-layout-sample wc-appearance-layout-${layout}` }).parent.props.onClick());
+    assert.equal(preview().layout, layout); assert.equal(preview().theme, 'mia');
+    assert.equal(preview().maxWidth, before.maxWidth, 'choosing layout alone never overrides width');
+    assert.equal(preview().viewportHeight, before.viewportHeight, 'choosing layout alone never overrides height');
+    await act(async () => button('使用推荐尺寸').props.onClick());
+    assert.equal(preview().maxWidth, width); assert.equal(preview().viewportHeight, height);
+    assert.equal(preview().fontSize, initial.fontSize); assert.equal(preview().imageHeightPercent, 55);
+    assert.equal(renderer.root.findByProps({ className: 'wc-appearance-canvas' }).props.style.width, Math.max(440, width + 80), 'vertical preview uses a portrait canvas instead of an empty landscape stage');
+    assert.equal(calls.length, 0, 'layout and size remain private until Apply');
+  }
+  const imageHeight = renderer.root.findAllByType('input').find(node => node.props['aria-label'] === '图片区域占比');
+  assert.equal(imageHeight.props.min, 20); assert.equal(imageHeight.props.max, 70);
+  await act(async () => imageHeight.props.onChange({ target: { value: '65' } }));
+  await act(async () => button('应用外观').props.onClick());
+  assert.equal(calls.length, 1); assert.equal(calls[0].appearance.layout, 'focus');
+  assert.equal(calls[0].appearance.theme, 'mia'); assert.equal(calls[0].appearance.imageHeightPercent, 65);
 });
 
 test('appearance preview falls back to window resize when ResizeObserver is unavailable', async () => {

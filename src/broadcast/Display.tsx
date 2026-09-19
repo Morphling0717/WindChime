@@ -1,7 +1,7 @@
 'use client';
 import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { WindChimeDisplayClient } from '../client/live.js';
-import type { WindChimeLiveAppearance, WindChimeLiveAsset, WindChimeLiveSnapshot } from '../core/live.js';
+import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/live.js';
 import { WindChimeDisplayReceiver, type WindChimeDisplayValue } from './receiver.js';
 import { resolveLiveLayout } from './appearance.js';
 import { windChimeDisplayCss } from './display-styles.js';
@@ -12,6 +12,7 @@ const metric = (value: number | undefined, fallback: number, min: number, max: n
 
 function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRenderProps) {
   const viewport = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
+  const assets = snapshot.assets.filter(asset => assetUrls[asset.id]);
   useEffect(() => {
     if (!viewport.current || !content.current || typeof requestAnimationFrame !== 'function') return;
     return startDisplayScroll(viewport.current, content.current, {
@@ -21,20 +22,25 @@ function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRende
       endPauseMs: metric(appearance.scrollEndPauseMs, 2500, 0, 15000),
     });
   }, []); // The parent remounts this subtree whenever the approved content or appearance changes.
-  return <div className="wc-display-viewport" ref={viewport} data-scroll-phase="top">
-    <div className="wc-display-grid" ref={content}>
-      {snapshot.nickname ? <div className="wc-display-author">{snapshot.nickname}</div> : null}
-      <div className="wc-display-copy">
-        <div className="wc-display-text">{snapshot.text}</div>
-        {snapshot.linkUrl ? <div className="wc-display-link">{snapshot.linkUrl}</div> : null}
+  return <div className="wc-display-body">
+    <div className="wc-display-viewport" ref={viewport} data-scroll-phase="top">
+      <div className="wc-display-grid" ref={content}>
+        {snapshot.nickname ? <div className="wc-display-author">{snapshot.nickname}</div> : null}
+        <div className="wc-display-copy">
+          <div className="wc-display-text">{snapshot.text}</div>
+          {snapshot.linkUrl ? <div className="wc-display-link">{snapshot.linkUrl}</div> : null}
+        </div>
+        {assets.some(asset => asset.caption) ? <div className="wc-display-image-captions">
+          {assets.map((asset, index) => asset.caption ? <p key={asset.id}><span className="wc-display-caption-label">图片 {index + 1} · </span>{asset.caption}</p> : null)}
+        </div> : null}
       </div>
-      {snapshot.assets.length ? <div className="wc-display-media" data-arrangement={appearance.imageLayout ?? 'column'}>
-        {(snapshot.assets as WindChimeLiveAsset[]).map(asset => assetUrls[asset.id] ? <figure key={asset.id}>
-          <img src={assetUrls[asset.id]} alt={asset.caption} width={asset.width} height={asset.height} />
-          {asset.caption ? <figcaption>{asset.caption}</figcaption> : null}
-        </figure> : null)}
-      </div> : null}
     </div>
+    {assets.length ? <div className="wc-display-media" data-arrangement={appearance.imageLayout ?? 'column'} data-count={assets.length} style={{ '--wc-display-image-count': assets.length } as CSSProperties}>
+      {assets.map((asset, index) => <figure key={asset.id}>
+        <img src={assetUrls[asset.id]} alt={asset.caption} width={asset.width} height={asset.height} style={{ '--wc-display-image-ratio': asset.width / asset.height } as CSSProperties} />
+        {assets.length > 1 || asset.caption ? <span className="wc-display-image-number" aria-hidden="true">{index + 1}</span> : null}
+      </figure>)}
+    </div> : null}
   </div>;
 }
 export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChimeLiveRenderProps) {
@@ -51,6 +57,7 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChime
       '--wc-display-accent': appearance.accentColor ?? '#2de2e6',
       '--wc-display-leading': metric(appearance.lineHeight, 1.65, 1.1, 2.4),
       '--wc-display-tracking': `${metric(appearance.letterSpacing, 0, -1, 6)}px`,
+      '--wc-display-media-height': `${metric(appearance.imageHeightPercent, 45, 20, 70)}%`,
     } as CSSProperties,
     width: metric(appearance.maxWidth, 1200, 280, 1920),
     height: metric(appearance.viewportHeight, 640, 180, 1080),

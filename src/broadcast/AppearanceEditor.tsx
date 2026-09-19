@@ -50,7 +50,8 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
   const [withImages, setWithImages] = useState(true);
   const [longLetter, setLongLetter] = useState(false);
   const [lightCanvas, setLightCanvas] = useState(false);
-  const canvasWidth = Math.max(1280, (appearance.maxWidth ?? 1200) + 80);
+  const verticalLayout = ['sidebar', 'portrait', 'focus'].includes(resolveLiveLayout(appearance.layout));
+  const canvasWidth = Math.max(verticalLayout ? 440 : 1280, (appearance.maxWidth ?? 1200) + 80);
   const canvasHeight = Math.max(canvasWidth * 9 / 16, (appearance.viewportHeight ?? 640) + 80);
   const scale = previewWidth / canvasWidth;
   const viewportHeight = canvasHeight * scale;
@@ -105,7 +106,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
   const form = useRef<HTMLFormElement>(null);
   const [appearance, setAppearance] = useState(studio.state!.appearance);
   const [basis, setBasis] = useState(studio.state!.appearance);
-  const canSaveAppearance = studio.state!.appearance.theme !== undefined;
+  const canSaveAppearance = studio.state!.appearance.theme !== undefined && studio.state!.appearance.imageHeightPercent !== undefined;
   const dirty = JSON.stringify(appearance) !== JSON.stringify(basis);
   const conflict = JSON.stringify(studio.state!.appearance) !== JSON.stringify(basis);
   useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
@@ -124,6 +125,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
   };
   const change = <K extends keyof WindChimeLiveAppearance>(key: K, value: WindChimeLiveAppearance[K]) => setAppearance(before => ({ ...before, [key]: value }));
   const selectedTheme = appearance.theme ?? 'pure';
+  const selectedLayout = LIVE_LAYOUTS.find(layout => layout.id === resolveLiveLayout(appearance.layout))!;
   return <form ref={form} className="wc-appearance-editor" onSubmit={event => { event.preventDefault(); void save(); }} onInvalid={event => {
     const details = (event.target as HTMLElement).closest('details');
     if (details) details.open = true;
@@ -144,13 +146,17 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
     </fieldset>
 
     <fieldset className="wc-appearance-section">
-      <legend>内容排版</legend><p className="wc-appearance-section-note">决定文字与图片的位置，可搭配任意主题。</p>
+      <legend>内容排版</legend><p className="wc-appearance-section-note">决定文字的阅读方式，可搭配任意主题。图片始终固定在文字下方。</p>
       <div className="wc-appearance-choices">
         {LIVE_LAYOUTS.map(layout => <button key={layout.id} type="button" className="wc-appearance-choice wc-appearance-layout-choice" aria-pressed={resolveLiveLayout(appearance.layout) === layout.id} onClick={() => change('layout', layout.id)}>
           <span className={`wc-appearance-layout-sample wc-appearance-layout-${layout.id}`} aria-hidden="true"><span className="wc-appearance-layout-copy"><i /><i /><i /></span><span className="wc-appearance-layout-image" /></span>
           <span className="wc-appearance-choice-name">{layout.name}<span className="wc-appearance-selected" aria-hidden="true">{resolveLiveLayout(appearance.layout) === layout.id ? '✓' : ''}</span></span>
           <span className="wc-appearance-choice-note">{layout.description}</span>
         </button>)}
+      </div>
+      <div className="wc-appearance-recommended-size">
+        <span>推荐尺寸 <strong>{selectedLayout.recommendedWidth} × {selectedLayout.recommendedHeight}</strong><span className="wc-appearance-caption">选择排版会保留当前尺寸</span></span>
+        <button type="button" onClick={() => setAppearance(before => ({ ...before, maxWidth: selectedLayout.recommendedWidth, viewportHeight: selectedLayout.recommendedHeight }))}>使用推荐尺寸</button>
       </div>
     </fieldset>
 
@@ -173,13 +179,15 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
 
     <fieldset className="wc-appearance-section">
       <legend>展示视窗与长信</legend>
-      <p className="wc-appearance-section-note">图片按可用宽度等比例放大。长信在固定视窗内滚动到底，停留后回到顶部；仅循环当前来信，不切换下一封。</p>
+      <p className="wc-appearance-section-note">长信只有文字滚动到底，停留后回到顶部。图片保持原比例，固定显示在下方；仅循环当前来信，不切换下一封。</p>
       <div className="wc-appearance-fields">
         <NumberField label="展示高度" value={appearance.viewportHeight ?? 640} min={180} max={1080} onChange={value => change('viewportHeight', value)} />
+        <NumberField label="图片区域占比" value={appearance.imageHeightPercent ?? 45} min={20} max={70} unit="%" onChange={value => change('imageHeightPercent', value)} />
         <NumberField label="滚动速度" value={appearance.scrollSpeed ?? 24} min={5} max={120} unit="px/秒" onChange={value => change('scrollSpeed', value)} />
         <NumberField label="顶部停留" value={appearance.scrollStartPauseMs ?? 2000} min={0} max={15000} step={100} unit="ms" onChange={value => change('scrollStartPauseMs', value)} />
         <NumberField label="底部停留" value={appearance.scrollEndPauseMs ?? 2500} min={0} max={15000} step={100} unit="ms" onChange={value => change('scrollEndPauseMs', value)} />
       </div>
+      <p className="wc-appearance-caption">图片占比调整下方图片区域的高度；较矮的窗口会自动为文字留出空间。没有图片时，文字使用完整空间。</p>
       <label className="wc-appearance-check"><input type="checkbox" checked={appearance.autoScroll ?? true} onChange={event => change('autoScroll', event.currentTarget.checked)} />长信自动循环滚动</label>
       {appearance.autoScroll === false ? <p className="wc-appearance-caption">已关闭滚动：超出视窗的内容不会显示，请缩小字号或增大展示高度。</p> : null}
     </fieldset>

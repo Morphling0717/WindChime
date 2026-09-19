@@ -103,6 +103,7 @@ const appearance = {
   letterSpacing: 0,
   maxWidth: 1200,
   imageLayout: "column",
+  imageHeightPercent: 45,
   animation: "fade",
   borderRadius: 24,
   padding: 32,
@@ -491,20 +492,21 @@ async function verifyAppearanceDimensions() {
     return frame.phase === 'bottom';
   }, "automatic scroll reaches the end of the extreme sample", 60000);
   assert.equal(textEndVisible, true, "the final text character scrolls fully into view without manual scrolling");
-  const tail = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-preview .wc-display-viewport'),bounds=viewport.getBoundingClientRect(),figure=viewport.querySelector('.wc-display-media figure:last-child'),image=figure.querySelector('img'),caption=figure.querySelector('figcaption'),visible=node=>{const rect=node.getBoundingClientRect();return rect.top>=bounds.top&&rect.bottom<=bounds.bottom+1};return {lastCaption:caption.textContent,lastImageVisible:visible(image),lastCaptionVisible:visible(caption),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
-  assert.equal(tail.lastCaption, "月下微风");
-  assert.equal(tail.lastImageVisible, true, "the complete final image is reachable");
+  const tail = await evaluate(`(()=>{const card=document.querySelector('.wc-appearance-preview .wc-display'),viewport=card.querySelector('.wc-display-viewport'),bounds=viewport.getBoundingClientRect(),media=card.querySelector('.wc-display-media'),image=media.querySelector('figure:last-child img'),caption=viewport.querySelector('.wc-display-image-captions p:last-child'),ir=image.getBoundingClientRect(),mr=media.getBoundingClientRect(),cr=caption.getBoundingClientRect();return {lastCaption:caption.textContent,lastImageVisible:ir.left>=mr.left&&ir.right<=mr.right+1&&ir.top>=mr.top&&ir.bottom<=mr.bottom+1,lastCaptionVisible:cr.top>=bounds.top&&cr.bottom<=bounds.bottom+1,imageScrolls:viewport.contains(image),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
+  assert(tail.lastCaption.endsWith("月下微风"));
+  assert.equal(tail.imageScrolls, false, "images remain outside the text scroll viewport");
+  assert.equal(tail.lastImageVisible, true, "the complete final image stays visible in the stationary lower panel");
   assert.equal(tail.lastCaptionVisible, true, "the complete final caption is reachable");
   assert(Math.abs(tail.scrollTop - tail.maxScroll) < 1, "preview reaches the actual end without a clipped tail");
   appearanceStressCases.push({ name: "fontSize96-maxWidth280", ...tall, ...tail });
   await captureAppearance("appearance-tall-content-bottom", 760, 1050);
-  checks.push("1920px maximum width expands the real preview canvas; 96px type in a 280px card stays inside a fixed 640px output and automatically scrolls through the final text, image and caption, without a second outer scroll area or horizontal overflow");
+  checks.push("1920px maximum width expands the real preview canvas; 96px type in a 280px card stays inside a fixed 640px output and scrolls through the final text and caption while images remain fully visible below, without a second outer scroll area or horizontal overflow");
 }
 async function verifyAppearanceEditor() {
   await until(() => evaluate("!!document.querySelector('.wc-appearance-editor')&&!document.querySelector('.wc-appearance-apply').disabled"), "new appearance controls loaded");
   const appearanceWrites = () => requests.filter(request => request.action === "appearance").length;
   const before = appearanceWrites();
-  await chooseAppearance("图文双栏");
+  await chooseAppearance("文字双栏");
   await chooseAppearance("Mia · 星祷");
   await assertAppearancePreview("mia", "split");
   assert.equal(appearanceWrites(), before, "theme and layout changes stay private before applying");

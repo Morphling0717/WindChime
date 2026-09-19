@@ -1,12 +1,15 @@
 import type { WindChimeLiveAppearance } from '../core/live.js';
 
 export type WindChimeLiveTheme = NonNullable<WindChimeLiveAppearance['theme']>;
-export type WindChimeLiveLayout = 'stack' | 'split' | 'banner';
+export type WindChimeLiveLayout = 'stack' | 'split' | 'banner' | 'sidebar' | 'portrait' | 'focus';
 
 export const LIVE_LAYOUTS = [
-  { id: 'stack', name: '纵向信笺', description: '称呼、正文与图片从上到下，适合慢慢读信。' },
-  { id: 'split', name: '图文双栏', description: '文字与图片并排；纯文字来信分为两栏。' },
-  { id: 'banner', name: '横向条幅', description: '称呼在左，正文向右展开，适合放在画面下方。' },
+  { id: 'stack', name: '经典信笺', description: '正文自然展开，适合放在直播画面的中央。', recommendedWidth: 1000, recommendedHeight: 640 },
+  { id: 'split', name: '文字双栏', description: '正文分成两列，图片留在下方，适合宽幅读信。', recommendedWidth: 1200, recommendedHeight: 640 },
+  { id: 'banner', name: '横向条幅', description: '称呼在左，正文向右展开，适合放在画面下方。', recommendedWidth: 1280, recommendedHeight: 360 },
+  { id: 'sidebar', name: '弹幕侧栏', description: '紧凑的竖向阅读栏，像弹幕姬一样放在画面两侧。', recommendedWidth: 360, recommendedHeight: 800 },
+  { id: 'portrait', name: '竖向信笺', description: '修长的单列信纸，留出呼吸感，适合竖向空间。', recommendedWidth: 480, recommendedHeight: 860 },
+  { id: 'focus', name: '居中短笺', description: '居中排列称呼与正文，适合一句心意或短笺。', recommendedWidth: 600, recommendedHeight: 900 },
 ] as const;
 
 export const LIVE_THEMES = [
@@ -23,7 +26,7 @@ export const LIVE_THEME_FONTS = {
 
 /** Legacy layout values remain readable without adding theme choices to layout. */
 export function resolveLiveLayout(layout: WindChimeLiveAppearance['layout']): WindChimeLiveLayout {
-  return layout === 'split' || layout === 'banner' ? layout : 'stack';
+  return layout === 'split' || layout === 'banner' || layout === 'sidebar' || layout === 'portrait' || layout === 'focus' ? layout : 'stack';
 }
 
 /** A skin preserves explicit sizing, composition, media order and animation settings. */

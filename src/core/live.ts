@@ -7,21 +7,21 @@ export type WindChimeLiveDraft = {
 };
 export type WindChimeLiveAppearance = {
   fontFamily: string; fontSize: number; textColor: string; backgroundColor: string;
-  transparent: boolean; layout: "card" | "letter" | "minimal" | "stack" | "split" | "banner";
+  transparent: boolean; layout: "card" | "letter" | "minimal" | "stack" | "split" | "banner" | "sidebar" | "portrait" | "focus";
   imageLayout: "row" | "column" | "grid";
   animation: "none" | "fade" | "slide"; borderRadius: number; padding: number;
   theme?: "pure" | "uliuli" | "mia"; accentColor?: string; borderWidth?: number;
   lineHeight?: number; letterSpacing?: number; maxWidth?: number;
   viewportHeight?: number; autoScroll?: boolean; scrollSpeed?: number;
-  scrollStartPauseMs?: number; scrollEndPauseMs?: number;
+  scrollStartPauseMs?: number; scrollEndPauseMs?: number; imageHeightPercent?: number;
 };
 export const DEFAULT_WINDCHIME_LIVE_APPEARANCE: WindChimeLiveAppearance = {
   fontFamily: "system-ui", fontSize: 32, textColor: "#ffffff", backgroundColor: "#18202eee",
   transparent: true, layout: "card", imageLayout: "column", animation: "fade", borderRadius: 24, padding: 32,
   theme: "pure", accentColor: "#2de2e6", borderWidth: 0, lineHeight: 1.65, letterSpacing: 0, maxWidth: 1200,
-  viewportHeight: 640, autoScroll: true, scrollSpeed: 24, scrollStartPauseMs: 2000, scrollEndPauseMs: 2500,
+  viewportHeight: 640, autoScroll: true, scrollSpeed: 24, scrollStartPauseMs: 2000, scrollEndPauseMs: 2500, imageHeightPercent: 45,
 };
-export type WindChimeLiveSnapshot = WindChimeLiveDraft & {
+export type WindChimeLiveSnapshot = Omit<WindChimeLiveDraft, 'assets'> & {
   id: string; messageId: string; assets: WindChimeLiveAsset[];
 };
 export type WindChimeLiveMessage = {

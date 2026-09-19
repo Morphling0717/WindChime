@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { applyLiveTheme, resolveLiveLayout, LIVE_THEMES } from '../dist/broadcast/appearance.js';
+import { act, create } from 'react-test-renderer';
+import { applyLiveTheme, resolveLiveLayout, LIVE_LAYOUTS, LIVE_THEMES } from '../dist/broadcast/appearance.js';
 import { WindChimeLiveCard } from '../dist/broadcast/Display.js';
 import { DEFAULT_WINDCHIME_LIVE_APPEARANCE } from '../dist/core/live.js';
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const snapshot = Object.freeze({
   id: 'snapshot-approved', messageId: 'message-reviewed',
@@ -18,8 +21,8 @@ const snapshot = Object.freeze({
   ]),
 });
 const assetUrls = Object.freeze(Object.fromEntries(snapshot.assets.map(asset => [asset.id, `blob:https://display.test/${asset.id}`])));
-const layouts = ['stack', 'split', 'banner'];
-const unchangedKeys = ['layout', 'imageLayout', 'fontSize', 'padding', 'lineHeight', 'letterSpacing', 'maxWidth', 'animation', 'viewportHeight', 'autoScroll', 'scrollSpeed', 'scrollStartPauseMs', 'scrollEndPauseMs'];
+const layouts = ['stack', 'split', 'banner', 'sidebar', 'portrait', 'focus'];
+const unchangedKeys = ['layout', 'imageLayout', 'fontSize', 'padding', 'lineHeight', 'letterSpacing', 'maxWidth', 'animation', 'viewportHeight', 'autoScroll', 'scrollSpeed', 'scrollStartPauseMs', 'scrollEndPauseMs', 'imageHeightPercent'];
 const escapeHtml = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[char]);
 const renderCard = appearance => renderToStaticMarkup(React.createElement(WindChimeLiveCard, { snapshot, appearance, assetUrls }));
 function assertInertMarkup(markup) {
@@ -52,9 +55,14 @@ test('theme selection preserves composition and text metrics without mutating th
   }
 });
 
-test('layout resolution retains the three new compositions and maps every historical layout to stack', () => {
+test('layout resolution retains all six compositions and maps every historical layout to stack', () => {
+  assert.deepEqual(LIVE_LAYOUTS.map(layout => layout.id), layouts);
   for (const layout of layouts) assert.equal(resolveLiveLayout(layout), layout);
   for (const layout of ['card', 'letter', 'minimal']) assert.equal(resolveLiveLayout(layout), 'stack');
+  for (const id of ['sidebar', 'portrait', 'focus']) {
+    const layout = LIVE_LAYOUTS.find(layout => layout.id === id);
+    assert(layout.recommendedHeight > layout.recommendedWidth, `${id} recommends a vertical output`);
+  }
 });
 
 for (const { id: theme } of LIVE_THEMES) for (const layout of layouts) {
@@ -79,7 +87,7 @@ for (const { id: theme } of LIVE_THEMES) for (const layout of layouts) {
     for (const [index, asset] of snapshot.assets.entries()) {
       assert.ok(figures[index].includes(`src="${assetUrls[asset.id]}"`), 'rendered images preserve snapshot order');
       assert.ok(figures[index].includes(`alt="${escapeHtml(asset.caption)}"`));
-      assert.ok(figures[index].includes(`<figcaption>${escapeHtml(asset.caption)}</figcaption>`));
+      assert.ok(markup.includes(`<span class="wc-display-caption-label">图片 ${index + 1} · </span>${escapeHtml(asset.caption)}</p>`));
     }
     const hasBrandOrOrnament = /class="[^"]*\bwc-display-(?:brand|ornament)\b/.test(markup);
     assert.equal(hasBrandOrOrnament, theme !== 'pure', 'pure theme omits decoration elements from the DOM');
@@ -105,5 +113,25 @@ test('historical appearance objects without theme or new metrics still render as
     assert.doesNotMatch(markup, /class="[^"]*\bwc-display-(?:brand|ornament)\b/);
     assert.ok(markup.includes(escapeHtml(snapshot.text)));assert.ok(markup.includes(escapeHtml(snapshot.nickname)));
     assert.equal(legacy.theme, undefined);
+  }
+});
+
+test('every layout keeps image files outside the scrolling viewport while retaining all caption text in order', async () => {
+  for (const layout of layouts) {
+    let renderer;
+    try {
+      await act(async () => { renderer = create(React.createElement(WindChimeLiveCard, {
+        snapshot, assetUrls, appearance: { ...DEFAULT_WINDCHIME_LIVE_APPEARANCE, layout },
+      })); });
+      const body = renderer.root.findByProps({ className: 'wc-display-body' });
+      const viewport = renderer.root.findByProps({ className: 'wc-display-viewport' });
+      const media = renderer.root.findByProps({ className: 'wc-display-media' });
+      assert.equal(viewport.parent, body); assert.equal(media.parent, body, 'images and scrolling text have separate layout regions');
+      assert.equal(viewport.findAllByType('img').length, 0, 'the scroll region never owns image files');
+      assert.deepEqual(media.findAllByType('img').map(image => image.props.src), snapshot.assets.map(asset => assetUrls[asset.id]));
+      const captions = viewport.findByProps({ className: 'wc-display-image-captions' }).findAllByType('p');
+      assert.deepEqual(captions.map(caption => caption.children.at(-1)), snapshot.assets.map(asset => asset.caption));
+      assert.equal(media.findAllByType('figcaption').length, 0, 'long captions cannot displace the fixed image area');
+    } finally { if (renderer) await act(async () => renderer.unmount()); }
   }
 });
