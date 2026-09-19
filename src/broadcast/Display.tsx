@@ -3,7 +3,7 @@ import { Component, useEffect, useRef, useState, type CSSProperties, type ReactN
 import type { WindChimeDisplayClient } from '../client/live.js';
 import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/live.js';
 import { WindChimeDisplayReceiver, type WindChimeDisplayValue } from './receiver.js';
-import { resolveLiveLayout } from './appearance.js';
+import { resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
 import { windChimeDisplayCss } from './display-styles.js';
 import { startDisplayScroll } from './scroll-loop.js';
 
@@ -45,6 +45,7 @@ function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRende
 }
 export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChimeLiveRenderProps) {
   const theme = appearance.theme ?? 'pure';
+  const size = resolveLiveViewportSize(appearance);
   const style: CSSProperties = {
     ...{
       '--wc-display-ink': appearance.textColor,
@@ -59,8 +60,8 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChime
       '--wc-display-tracking': `${metric(appearance.letterSpacing, 0, -1, 6)}px`,
       '--wc-display-media-height': `${metric(appearance.imageHeightPercent, 45, 20, 70)}%`,
     } as CSSProperties,
-    width: metric(appearance.maxWidth, 1200, 280, 1920),
-    height: metric(appearance.viewportHeight, 640, 180, 1080),
+    width: size.width,
+    height: size.height,
     animation: appearance.animation === 'none' ? undefined : `wc-display-${appearance.animation} .3s ease-out both`,
   };
   return <article className="wc-display" style={style} data-windchime-snapshot={snapshot.id} data-theme={theme} data-layout={resolveLiveLayout(appearance.layout)} data-filled={!appearance.transparent} data-has-media={snapshot.assets.length > 0} data-has-author={!!snapshot.nickname}>

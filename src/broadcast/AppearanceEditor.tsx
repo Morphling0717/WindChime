@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/live.js';
 import type { useWindChimeLiveControl } from '../react/live.js';
-import { LIVE_LAYOUTS, LIVE_THEMES, LIVE_THEME_FONTS, applyLiveTheme, resolveLiveLayout } from './appearance.js';
+import { LIVE_LAYOUTS, LIVE_THEMES, LIVE_THEME_FONTS, applyLiveTheme, resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
 import { WindChimeLiveCard } from './Display.js';
 import { windChimeAppearanceEditorCss } from './appearance-editor-styles.js';
 
@@ -29,8 +29,13 @@ const FONT_OPTIONS = [
 function NumberField({ label, value, min, max, step = 1, unit = 'px', onChange }: {
   label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (value: number) => void;
 }) {
+  // An empty intermediate input lets people replace a number with Backspace.
+  // Keep the last numeric preview until a replacement is entered or focus leaves.
+  const [empty, setEmpty] = useState(false);
+  useEffect(() => { setEmpty(false); }, [value]);
   return <label className="wc-appearance-field">{label}<span className="wc-appearance-number">
-    <input type="number" aria-label={label} min={min} max={max} step={step} required value={value} onChange={event => {
+    <input type="number" aria-label={label} min={min} max={max} step={step} required value={empty ? '' : value} onBlur={() => setEmpty(false)} onChange={event => {
+      setEmpty(!event.target.value.trim());
       const next = Number(event.target.value);
       if (event.target.value.trim() && Number.isFinite(next)) onChange(next);
     }} />{unit ? <span className="wc-appearance-unit" aria-hidden="true">{unit}</span> : null}
@@ -51,8 +56,9 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
   const [longLetter, setLongLetter] = useState(false);
   const [lightCanvas, setLightCanvas] = useState(false);
   const verticalLayout = ['sidebar', 'portrait', 'focus'].includes(resolveLiveLayout(appearance.layout));
-  const canvasWidth = Math.max(verticalLayout ? 440 : 1280, (appearance.maxWidth ?? 1200) + 80);
-  const canvasHeight = Math.max(canvasWidth * 9 / 16, (appearance.viewportHeight ?? 640) + 80);
+  const size = resolveLiveViewportSize(appearance);
+  const canvasWidth = Math.max(verticalLayout ? 440 : 1280, size.width + 80);
+  const canvasHeight = Math.max(canvasWidth * 9 / 16, size.height + 80);
   const scale = previewWidth / canvasWidth;
   const viewportHeight = canvasHeight * scale;
   useEffect(() => {
@@ -180,8 +186,11 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
     <fieldset className="wc-appearance-section">
       <legend>展示视窗与长信</legend>
       <p className="wc-appearance-section-note">长信只有文字滚动到底，停留后回到顶部。图片保持原比例，固定显示在下方；仅循环当前来信，不切换下一封。</p>
-      <div className="wc-appearance-fields">
+      <div className="wc-appearance-fields wc-appearance-dimensions" role="group" aria-label="展示尺寸">
+        <NumberField label="展示宽度" value={appearance.maxWidth ?? 1200} min={280} max={1920} onChange={value => change('maxWidth', value)} />
         <NumberField label="展示高度" value={appearance.viewportHeight ?? 640} min={180} max={1080} onChange={value => change('viewportHeight', value)} />
+      </div>
+      <div className="wc-appearance-fields">
         <NumberField label="图片区域占比" value={appearance.imageHeightPercent ?? 45} min={20} max={70} unit="%" onChange={value => change('imageHeightPercent', value)} />
         <NumberField label="滚动速度" value={appearance.scrollSpeed ?? 24} min={5} max={120} unit="px/秒" onChange={value => change('scrollSpeed', value)} />
         <NumberField label="顶部停留" value={appearance.scrollStartPauseMs ?? 2000} min={0} max={15000} step={100} unit="ms" onChange={value => change('scrollStartPauseMs', value)} />
@@ -200,7 +209,6 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
             <NumberField label="行高" value={appearance.lineHeight ?? 1.65} min={1.1} max={2.4} step={0.05} unit="倍" onChange={value => change('lineHeight', value)} />
             <NumberField label="字距" value={appearance.letterSpacing ?? 0} min={-1} max={6} step={0.1} onChange={value => change('letterSpacing', value)} />
             <NumberField label="内边距" value={appearance.padding} min={0} max={100} onChange={value => change('padding', value)} />
-            <NumberField label="最大宽度" value={appearance.maxWidth ?? 1200} min={280} max={1920} onChange={value => change('maxWidth', value)} />
           </div>
         </fieldset>
         <fieldset className="wc-appearance-section">

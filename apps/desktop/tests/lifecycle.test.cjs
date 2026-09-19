@@ -36,7 +36,7 @@ async function harness(options={}) {
   };
   const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('workspace.v1.json.tmp'))return;await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
-  const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
+  const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,execPath:options.execPath??process.execPath,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
   wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
@@ -212,7 +212,13 @@ test('shortcut, suspend and resume blank only the independent output; applicatio
   const beforeShortcut=output.hideCount;h.shortcuts[0].callback();assert(output.hideCount>beforeShortcut);await flush();
   assert(h.requests.some(request=>request.body?.action==='hide'));
   const before=h.requests.length;h.app.emit('second-instance',{},['WindChime.exe','--squirrel-uninstall']);
-  assert.equal(h.quitCount,1,'uninstall still forwards quit to the existing instance');assert.equal(h.requests.length,before);
+  assert.equal(h.quitCount,0,'old Squirrel uninstall cannot quit the guided installation');assert.equal(h.requests.length,before);
+});
+
+test('legacy Squirrel layout still handles its own uninstall message',async()=>{
+  const h=await harness({execPath:path.join(path.parse(process.execPath).root,'legacy-fixture','WindChime','app-0.8.0','WindChime.exe')});
+  h.app.emit('second-instance',{},['WindChime.exe','--squirrel-uninstall']);
+  assert.equal(h.quitCount,1);
 });
 
 test('a late display response from an old mailbox cannot reach a new output',async()=>{

@@ -203,10 +203,27 @@ test("receiver open/reload/reconnect and server epoch restart never restore curr
   const newReceiver=await restarted.broadcast.open(d.grant);assert.equal((await restarted.broadcast.frame(d.grant,newReceiver.receiverId)).snapshot,null);
 });
 
+test("a new display handshake invalidates delayed show commands without hiding a healthy existing receiver",async(t)=>{
+  const f=await fixture(t),id=await f.submit("delayed-show"),d=await f.display();
+  await f.act("approve",id);await f.act("show",id);
+  const before=await f.service.broadcast.state("default");
+  const delayed=f.request("control/action","POST",{topicId:"default",action:"show",messageId:id,expectedRevision:before.revision,operationId:randomUUID()});
+  const joined=await f.service.broadcast.open(d.grant);
+  assert.equal((await f.service.broadcast.frame(d.grant,joined.receiverId)).snapshot,null);
+  assert.equal((await f.service.broadcast.frame(d.grant,d.receiverId)).snapshot.messageId,id,"joining must not interrupt an existing healthy output");
+  const response=await f.handler.POST(delayed);
+  assert.equal(response.status,409,"a command prepared before the new connection must be rejected");
+  assert.equal((await response.json()).code,"REVISION_CONFLICT");
+  assert.equal((await f.service.broadcast.frame(d.grant,joined.receiverId)).snapshot,null);
+  assert.equal((await f.service.broadcast.frame(d.grant,d.receiverId)).snapshot.messageId,id);
+  await f.act("show",id);
+  assert.equal((await f.service.broadcast.frame(d.grant,joined.receiverId)).snapshot.messageId,id,"only a fresh manual command may activate the new receiver");
+});
+
 test("real Node process exit/restart preserves review/order but starts a blank output epoch",async(t)=>{
   const f=await fixture(t),db=join(f.directory,"mail.db");
   const prefix=`import {createWindChimeSqlite} from './dist/sqlite/index.js';import {createWindChimeService} from './dist/server/index.js';import {randomUUID} from 'node:crypto';const storage=createWindChimeSqlite({filename:process.argv[1]});const s=createWindChimeService({storage,hashSalt:'keep'});await s.ready();`;
-  const writer=prefix+`await s.submitMessage({text:'process-persistent'},new Request('http://localhost'));let state=await s.broadcast.state('default');const id=state.messages[0].id;const grant=await s.broadcast.createGrant('default','display');const auth=await s.broadcast.authenticate(grant.token,'display');const receiver=await s.broadcast.open(auth);state=await s.broadcast.action({topicId:'default',action:'approve',messageId:id,expectedRevision:state.revision,expectedDraftRevision:state.messages[0].draftRevision,operationId:randomUUID()});await s.broadcast.action({topicId:'default',action:'show',messageId:id,expectedRevision:state.revision,operationId:randomUUID()});console.log(JSON.stringify({id,epoch:s.broadcast.epoch,token:grant.token,receiverId:receiver.receiverId}));await storage.close();`;
+  const writer=prefix+`await s.submitMessage({text:'process-persistent'},new Request('http://localhost'));let state=await s.broadcast.state('default');const id=state.messages[0].id;const grant=await s.broadcast.createGrant('default','display');const auth=await s.broadcast.authenticate(grant.token,'display');const receiver=await s.broadcast.open(auth);state=await s.broadcast.state('default');state=await s.broadcast.action({topicId:'default',action:'approve',messageId:id,expectedRevision:state.revision,expectedDraftRevision:state.messages[0].draftRevision,operationId:randomUUID()});await s.broadcast.action({topicId:'default',action:'show',messageId:id,expectedRevision:state.revision,operationId:randomUUID()});console.log(JSON.stringify({id,epoch:s.broadcast.epoch,token:grant.token,receiverId:receiver.receiverId}));await storage.close();`;
   const run=promisify(execFile),opts={cwd:fileURLToPath(new URL('../',import.meta.url)),windowsHide:true,timeout:15000};
   const written=JSON.parse((await run(process.execPath,['--input-type=module','-e',writer,db],opts)).stdout.trim());
   const reader=prefix+`const state=await s.broadcast.state('default');const grant=await s.broadcast.authenticate(process.argv[2],'display');const receiver=await s.broadcast.open(grant);const frame=await s.broadcast.frame(grant,receiver.receiverId);console.log(JSON.stringify({state,frame}));await storage.close();`;

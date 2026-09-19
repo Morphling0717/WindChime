@@ -4,19 +4,21 @@ const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const {spawn,execFileSync} = require('node:child_process');
+const {resolveSevenZip,verifyExternalRuntimeLicenses}=require('./verify-package.cjs');
 const desktop = path.resolve(__dirname,'..');
 const {version} = require('../package.json');
-const out = path.join(desktop,'out/installers');
+const out = path.join(desktop,'out/releases',version);
 const pause = ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let child, socket;
 async function run(){
  const temporary = await fs.mkdtemp(path.join(os.tmpdir(),`windchime-portable-${version}-`));
  const appDir=path.join(temporary,'portable'),profile=path.join(temporary,'profile');
  await fs.mkdir(appDir);await fs.mkdir(profile);
- const sevenZip=path.join(path.dirname(require.resolve('electron-winstaller/package.json',{paths:[desktop]})),'vendor/7z-x64.exe');
+ const sevenZip=await resolveSevenZip();
  const archive=path.join(out,`WindChime-win32-x64-${version}.zip`);
  execFileSync(sevenZip,['x','-y','-bd','-bb0',archive,'-o'+appDir],{windowsHide:true,stdio:'pipe',timeout:60000});
  const exe=path.join(appDir,'WindChime.exe');await fs.stat(exe);
+ const runtimeLicenses=await verifyExternalRuntimeLicenses(appDir);
  const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
  child=spawn(exe,['--user-data-dir='+profile,'--inspect=127.0.0.1:0'],{cwd:appDir,windowsHide:true,env,stdio:['ignore','pipe','pipe']});
  let stderr='',stdout='';child.stderr.on('data',data=>stderr+=data);child.stdout.on('data',data=>stdout+=data);
@@ -42,7 +44,7 @@ async function run(){
  await evaluate(`${req}.BrowserWindow.getAllWindows()[0].show();true`);await pause(200);
  assert.equal(await evaluate(`${req}.BrowserWindow.getAllWindows()[0].isVisible()`),true,'Private window can reopen from tray lifecycle');
  const profileFiles=await fs.readdir(profile);assert(!profileFiles.includes('devices.v1.enc'),'Startup does not import or manufacture a management vault');
- const report={passed:true,testedAt:new Date().toISOString(),hostNode:process.version,os:{platform:os.platform(),release:os.release(),arch:os.arch()},archive,temporary,profile,processId:child.pid,...meta,screenshotPath,checks:['New portable ZIP extracted into a unique temporary directory; no installer or uninstall executed',`Packaged version ${version} launches its own isolated userData, not an installed application profile`,'Exactly one private control window; no automatic display output opened','Approved brand asset and connection-key interface render from packaged ASAR','Private renderer sandbox/context isolation enabled; Node integration disabled','Closing private window retains independent tray process; reopening works','Fresh profile has no prior connection inputs or encrypted device vault'],limitations:['Does not verify installer execution or uninstall','Does not verify real OBS or LiveHime window capture']};
+ const report={passed:true,testedAt:new Date().toISOString(),hostNode:process.version,os:{platform:os.platform(),release:os.release(),arch:os.arch()},archive,temporary,profile,processId:child.pid,...meta,screenshotPath,runtimeLicenses,checks:['New portable ZIP extracted into a unique temporary directory; no installer or uninstall executed',`Packaged version ${version} launches its own isolated userData, not an installed application profile`,'Electron LICENSE and LICENSES.chromium.html match the original runtime distribution','Exactly one private control window; no automatic display output opened','Approved brand asset and connection-key interface render from packaged ASAR','Private renderer sandbox/context isolation enabled; Node integration disabled','Closing private window retains independent tray process; reopening works','Fresh profile has no prior connection inputs or encrypted device vault'],limitations:['Does not verify installer execution or uninstall','Does not verify real OBS or LiveHime window capture']};
  // app.quit uses the packaged graceful shutdown path; closing our debugger lets it finish.
  await evaluate(`${req}.app.quit();true`);socket.close();socket=null;
  for(let i=0;i<100&&child.exitCode===null;i++)await pause(100);assert.equal(child.exitCode,0,'Portable process exits gracefully');

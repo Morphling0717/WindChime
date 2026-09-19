@@ -24,6 +24,7 @@ const recoveringWindows = new WeakSet();
 const rendererTerminations = new WeakMap();
 const blankDocument = 'data:text/html;charset=utf-8,' + encodeURIComponent('<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>WindChime Display</title><style>html,body{margin:0;width:100%;height:100%;background:transparent;overflow:hidden}</style></head><body></body></html>');
 const squirrelEvent = process.argv.find(arg => /^--squirrel-(install|updated|uninstall|obsolete)$/.test(arg));
+const legacyInstall = /^app-\d+\./i.test(path.basename(path.dirname(process.execPath)));
 if (squirrelEvent) {
   if (squirrelEvent !== '--squirrel-obsolete') {
     // Notify a running tray instance before Squirrel tries deleting its files.
@@ -36,10 +37,15 @@ if (squirrelEvent) {
   } else app.quit();
   return;
 }
+// Match the guided installer's shortcuts without changing the existing userData
+// name or Windows-encrypted credential format. Legacy lifecycle handling stays above.
+if (process.platform === 'win32') app.setAppUserModelId?.('org.windchime.desktop');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', (_, argv) => {
-    if (argv.includes('--squirrel-uninstall')) { app.quit(); return; }
+    // An old Squirrel uninstaller may signal the shared userData single-instance
+    // lock. It must not shut down a newer guided installation during a live show.
+    if (argv.includes('--squirrel-uninstall')) { if (legacyInstall) app.quit(); return; }
     controlWindow?.show(); controlWindow?.focus();
   });
   app.whenReady().then(start).catch(error => { console.error('WindChime startup failed:', error.message); app.quit(); });

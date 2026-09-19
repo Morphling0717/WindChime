@@ -1,0 +1,494 @@
+
+> windchime-desktop@0.8.1 test
+> npm run build && node --test tests/*.test.cjs
+
+
+> windchime-desktop@0.8.1 build
+> node scripts/build.mjs
+
+TAP version 13
+# Subtest: Windows installer destination and confirmation protocol
+    # Subtest: absolute choices keep their drive, Unicode and an exactly-once application folder
+    ok 1 - absolute choices keep their drive, Unicode and an exactly-once application folder
+      ---
+      duration_ms: 372.6412
+      type: 'test'
+      ...
+    # Subtest: ambiguous drive-relative, remote, device and injected directory inputs are refused
+    ok 2 - ambiguous drive-relative, remote, device and injected directory inputs are refused
+      ---
+      duration_ms: 242.1772
+      type: 'test'
+      ...
+    # Subtest: containment respects directory boundaries, case and normalized parent traversal
+    ok 3 - containment respects directory boundaries, case and normalized parent traversal
+      ---
+      duration_ms: 450.6145
+      type: 'test'
+      ...
+    # Subtest: runtime verification paths cannot escape, alias a stream or name an absolute file
+    ok 4 - runtime verification paths cannot escape, alias a stream or name an absolute file
+      ---
+      duration_ms: 461.2508
+      type: 'test'
+      ...
+    # Subtest: destination validation is read-only and refuses unrelated files or a forged standalone marker
+    ok 5 - destination validation is read-only and refuses unrelated files or a forged standalone marker
+      ---
+      duration_ms: 222.9108
+      type: 'test'
+      ...
+    # Subtest: known credential, legacy and Windows directories are protected without touching them
+    ok 6 - known credential, legacy and Windows directories are protected without touching them
+      ---
+      duration_ms: 217.1104
+      type: 'test'
+      ...
+    # Subtest: junction ancestors cannot redirect a new installation to a different directory
+    ok 7 - junction ancestors cannot redirect a new installation to a different directory
+      ---
+      duration_ms: 229.8106
+      type: 'test'
+      ...
+    # Subtest: the upgrade marker identifies this application and does not follow a resources junction
+    ok 8 - the upgrade marker identifies this application and does not follow a resources junction
+      ---
+      duration_ms: 222.0483
+      type: 'test'
+      ...
+    # Subtest: WPF and the installed engine agree on the application identity and registry namespace
+    ok 9 - WPF and the installed engine agree on the application identity and registry namespace
+      ---
+      duration_ms: 215.4751
+      type: 'test'
+      ...
+    # Subtest: confirmed request survives the real Windows INI parser with exact choices and Unicode
+    ok 10 - confirmed request survives the real Windows INI parser with exact choices and Unicode
+      ---
+      duration_ms: 1079.8623
+      type: 'test'
+      ...
+    1..10
+ok 1 - Windows installer destination and confirmation protocol
+  ---
+  duration_ms: 3926.0329
+  type: 'suite'
+  ...
+# Subtest: the actual NSIS tree preflight accepts normal and empty folders and refuses junctions
+ok 2 - the actual NSIS tree preflight accepts normal and empty folders and refuses junctions
+  ---
+  duration_ms: 892.9345
+  type: 'test'
+  ...
+# {"passed":true,"compiler":"C:\\\\Users\\\\ASUS\\\\AppData\\\\Local\\\\electron-builder\\\\Cache\\\\nsis-3.0.4.1\\\\nsis-3.0.4.1-1mx3n\\\\Bin\\\\makensis.exe","temporary":"C:\\\\Users\\\\ASUS\\\\AppData\\\\Local\\\\Temp\\\\windchime-readonly-tree-TixhHr","fixtureOnly":true,"executedInstaller":false,"registeredApplication":false,"results":[{"directory":"正常 程序","exit":0,"error":""},{"directory":"empty","exit":0,"error":""},{"directory":"linked","exit":87,"error":"安装目录中存在目录或文件链接，已停止卸载。"},{"directory":"linked-root","exit":87,"error":"安装目录中存在目录或文件链接，已停止卸载。"},{"directory":"missing","exit":87,"error":"无法读取安装目录，已停止卸载。"}]}
+# Subtest: runtime collection excludes build-only and fully tree-shaken dependencies
+ok 3 - runtime collection excludes build-only and fully tree-shaken dependencies
+  ---
+  duration_ms: 1.5491
+  type: 'test'
+  ...
+# Subtest: distribution preserves project and dependency bytes, extra attribution and runtime originals
+ok 4 - distribution preserves project and dependency bytes, extra attribution and runtime originals
+  ---
+  duration_ms: 55.8207
+  type: 'test'
+  ...
+# Subtest: a bundled dependency without a license file stops packaging rather than claiming MIT
+ok 5 - a bundled dependency without a license file stops packaging rather than claiming MIT
+  ---
+  duration_ms: 15.7815
+  type: 'test'
+  ...
+# Subtest: installer source downloads require exact upstream checksums and reuse only a matching cache
+ok 6 - installer source downloads require exact upstream checksums and reuse only a matching cache
+  ---
+  duration_ms: 36.6191
+  type: 'test'
+  ...
+# Subtest: the production bundle retains all actual JavaScript authors and excludes development dependencies
+ok 7 - the production bundle retains all actual JavaScript authors and excludes development dependencies
+  ---
+  duration_ms: 125.1604
+  type: 'test'
+  ...
+# Subtest: private tiles have distinct isolated windows, selected-only sites and no credential or display authority
+ok 8 - private tiles have distinct isolated windows, selected-only sites and no credential or display authority
+  ---
+  duration_ms: 40.1644
+  type: 'test'
+  ...
+# Subtest: dirty tile close and mailbox switches cancel without hiding output or replacing credentials
+ok 9 - dirty tile close and mailbox switches cancel without hiding output or replacing credentials
+  ---
+  duration_ms: 6.3965
+  type: 'test'
+  ...
+# Subtest: selected review identity synchronizes across private windows and protects main and tile drafts
+ok 10 - selected review identity synchronizes across private windows and protects main and tile drafts
+  ---
+  duration_ms: 4.7794
+  type: 'test'
+  ...
+# Subtest: closing a tile rejects its delayed reads and cancels queued writes without disturbing another tile
+ok 11 - closing a tile rejects its delayed reads and cancels queued writes without disturbing another tile
+  ---
+  duration_ms: 4.9914
+  type: 'test'
+  ...
+# Subtest: closing a tile during message membership or display grant reads cancels side effects
+ok 12 - closing a tile during message membership or display grant reads cancels side effects
+  ---
+  duration_ms: 4.6259
+  type: 'test'
+  ...
+# Subtest: edits created while a selected-message read is pending still require discard confirmation
+ok 13 - edits created while a selected-message read is pending still require discard confirmation
+  ---
+  duration_ms: 3.6008
+  type: 'test'
+  ...
+# Subtest: dirty tile native close and key import ask before closing or committing new credentials
+ok 14 - dirty tile native close and key import ask before closing or committing new credentials
+  ---
+  duration_ms: 6.2745
+  type: 'test'
+  ...
+# Subtest: hotkey recording temporarily releases only next, suppresses pending callbacks and restores on blur
+ok 15 - hotkey recording temporarily releases only next, suppresses pending callbacks and restores on blur
+  ---
+  duration_ms: 5.4224
+  type: 'test'
+  ...
+# Subtest: next shortcut registration is opt-in, conflict-safe and persists independently of the encrypted vault
+ok 16 - next shortcut registration is opt-in, conflict-safe and persists independently of the encrypted vault
+  ---
+  duration_ms: 3.6689
+  type: 'test'
+  ...
+# Subtest: next hotkey reads fresh revision, debounces and does not replay after hide or reconnect
+ok 17 - next hotkey reads fresh revision, debounces and does not replay after hide or reconnect
+  ---
+  duration_ms: 4.457
+  type: 'test'
+  ...
+# Subtest: completing a new pairing clears the old output; its delayed close cannot hide the new mailbox
+ok 18 - completing a new pairing clears the old output; its delayed close cannot hide the new mailbox
+  ---
+  duration_ms: 4.2236
+  type: 'test'
+  ...
+# Subtest: an old control authorization failure cannot clear a new connection output
+ok 19 - an old control authorization failure cannot clear a new connection output
+  ---
+  duration_ms: 3.3878
+  type: 'test'
+  ...
+# Subtest: a delayed output grant never opens a window after changing the selected mailbox
+ok 20 - a delayed output grant never opens a window after changing the selected mailbox
+  ---
+  duration_ms: 5.0943
+  type: 'test'
+  ...
+# Subtest: switching blanks immediately and orders the old mailbox hide after its in-flight show
+ok 21 - switching blanks immediately and orders the old mailbox hide after its in-flight show
+  ---
+  duration_ms: 3.2644
+  type: 'test'
+  ...
+# Subtest: old vault gateway fields and code arguments never initiate a platform request
+ok 22 - old vault gateway fields and code arguments never initiate a platform request
+  ---
+  duration_ms: 2.178
+  type: 'test'
+  ...
+# Subtest: status reports both unreadable credentials and failed shortcut registration
+ok 23 - status reports both unreadable credentials and failed shortcut registration
+  ---
+  duration_ms: 2.5522
+  type: 'test'
+  ...
+# Subtest: shortcut, suspend and resume blank only the independent output; application icons use packaged files
+ok 24 - shortcut, suspend and resume blank only the independent output; application icons use packaged files
+  ---
+  duration_ms: 3.5741
+  type: 'test'
+  ...
+# Subtest: legacy Squirrel layout still handles its own uninstall message
+ok 25 - legacy Squirrel layout still handles its own uninstall message
+  ---
+  duration_ms: 1.543
+  type: 'test'
+  ...
+# Subtest: a late display response from an old mailbox cannot reach a new output
+ok 26 - a late display response from an old mailbox cannot reach a new output
+  ---
+  duration_ms: 3.4136
+  type: 'test'
+  ...
+# Subtest: display remains unthrottled; main-process lease expiry replaces a silent renderer before three seconds
+ok 27 - display remains unthrottled; main-process lease expiry replaces a silent renderer before three seconds
+  ---
+  duration_ms: 3.4584
+  type: 'test'
+  ...
+# Subtest: watchdog invalidates late display results and an unresponsive renderer recovers without exposing controls
+ok 28 - watchdog invalidates late display results and an unresponsive renderer recovers without exposing controls
+  ---
+  duration_ms: 2.7907
+  type: 'test'
+  ...
+# Subtest: delayed responses and oversized leases cannot extend the last confirmed display
+ok 29 - delayed responses and oversized leases cannot extend the last confirmed display
+  ---
+  duration_ms: 4.37
+  type: 'test'
+  ...
+# Subtest: emergency hide paints an offline transparent surface while its website request is pending
+ok 30 - emergency hide paints an offline transparent surface while its website request is pending
+  ---
+  duration_ms: 4.1245
+  type: 'test'
+  ...
+# Subtest: suspend invalidates in-flight frames without waiting for elapsed clock time; resume opens a blank document
+ok 31 - suspend invalidates in-flight frames without waiting for elapsed clock time; resume opens a blank document
+  ---
+  duration_ms: 2.4777
+  type: 'test'
+  ...
+# Subtest: a confirmed withdrawal clears the native renderer even if it keeps requesting frames
+ok 32 - a confirmed withdrawal clears the native renderer even if it keeps requesting frames
+  ---
+  duration_ms: 2.6575
+  type: 'test'
+  ...
+# Subtest: a same-window receiver replacement rejects the previous receiver late frame
+ok 33 - a same-window receiver replacement rejects the previous receiver late frame
+  ---
+  duration_ms: 2.4072
+  type: 'test'
+  ...
+# Subtest: display authorization failure immediately discards the native surface and grant
+ok 34 - display authorization failure immediately discards the native surface and grant
+  ---
+  duration_ms: 2.4488
+  type: 'test'
+  ...
+# Subtest: recovery waits for confirmed renderer termination instead of reloading the dying process
+ok 35 - recovery waits for confirmed renderer termination instead of reloading the dying process
+  ---
+  duration_ms: 2.0947
+  type: 'test'
+  ...
+# Subtest: a failed website hide leaves a painted offline blank and never creates another receiver
+ok 36 - a failed website hide leaves a painted offline blank and never creates another receiver
+  ---
+  duration_ms: 3.4516
+  type: 'test'
+  ...
+# Subtest: late blank document completion cannot show the old window after selecting another mailbox
+ok 37 - late blank document completion cannot show the old window after selecting another mailbox
+  ---
+  duration_ms: 3.5438
+  type: 'test'
+  ...
+# Subtest: failed blank compositor creation closes the output instead of revealing a cached frame
+ok 38 - failed blank compositor creation closes the output instead of revealing a cached frame
+  ---
+  duration_ms: 2.3787
+  type: 'test'
+  ...
+# Subtest: WebContents destruction before native window close withdraws output without touching the destroyed renderer
+ok 39 - WebContents destruction before native window close withdraws output without touching the destroyed renderer
+  ---
+  duration_ms: 2.2566
+  type: 'test'
+  ...
+# Subtest: destroying contents settles an in-flight termination; its late close cannot affect a replacement output
+ok 40 - destroying contents settles an in-flight termination; its late close cannot affect a replacement output
+  ---
+  duration_ms: 3.1824
+  type: 'test'
+  ...
+# Subtest: late blank failure from a destroyed old output cannot close or hide a new mailbox window
+ok 41 - late blank failure from a destroyed old output cannot close or hide a new mailbox window
+  ---
+  duration_ms: 5.0901
+  type: 'test'
+  ...
+# Subtest: quit during revoked-output painting closes the native output without starting a second paint or receiver
+ok 42 - quit during revoked-output painting closes the native output without starting a second paint or receiver
+  ---
+  duration_ms: 2.9242
+  type: 'test'
+  ...
+# Subtest: connection key validates identity before selection, saves v1 encrypted credentials and returns no token
+ok 43 - connection key validates identity before selection, saves v1 encrypted credentials and returns no token
+  ---
+  duration_ms: 2.3265
+  type: 'test'
+  ...
+# Subtest: malformed key and a different site instance never receive an authenticated request
+ok 44 - malformed key and a different site instance never receive an authenticated request
+  ---
+  duration_ms: 2.1629
+  type: 'test'
+  ...
+# Subtest: unsupported sites and an HTML 404 have actionable private errors
+ok 45 - unsupported sites and an HTML 404 have actionable private errors
+  ---
+  duration_ms: 10.4055
+  type: 'test'
+  ...
+# Subtest: revoked or expired keys and connection failures preserve the selected mailbox and hide remote response secrets
+ok 46 - revoked or expired keys and connection failures preserve the selected mailbox and hide remote response secrets
+  ---
+  duration_ms: 12.8512
+  type: 'test'
+  ...
+# Subtest: successful key import uses the existing switch guard; stale identity cannot select an old site
+ok 47 - successful key import uses the existing switch guard; stale identity cannot select an old site
+  ---
+  duration_ms: 5.3685
+  type: 'test'
+  ...
+# Subtest: display cannot import a control key; encryption failure never sends the key to a website
+ok 48 - display cannot import a control key; encryption failure never sends the key to a website
+  ---
+  duration_ms: 3.654
+  type: 'test'
+  ...
+# Subtest: encryption, write and rename failures leave the old connection, vault and live output intact
+ok 49 - encryption, write and rename failures leave the old connection, vault and live output intact
+  ---
+  duration_ms: 8.0001
+  type: 'test'
+  ...
+# Subtest: failed reimport cannot replace current connection metadata or close its output
+ok 50 - failed reimport cannot replace current connection metadata or close its output
+  ---
+  duration_ms: 3.68
+  type: 'test'
+  ...
+# Subtest: a newer selection during candidate disk write cancels import before it can overwrite the vault
+ok 51 - a newer selection during candidate disk write cancels import before it can overwrite the vault
+  ---
+  duration_ms: 3.0366
+  type: 'test'
+  ...
+# Subtest: forgetting an unselected mailbox during import cannot be undone by its pending vault candidate
+ok 52 - forgetting an unselected mailbox during import cannot be undone by its pending vault candidate
+  ---
+  duration_ms: 3.2356
+  type: 'test'
+  ...
+# Subtest: selection arriving during atomic rename runs after import publication and owns the final vault
+ok 53 - selection arriving during atomic rename runs after import publication and owns the final vault
+  ---
+  duration_ms: 3.2909
+  type: 'test'
+  ...
+# Subtest: untrusted remote error codes cannot echo a connection key or prototype properties into IPC
+ok 54 - untrusted remote error codes cannot echo a connection key or prototype properties into IPC
+  ---
+  duration_ms: 2.537
+  type: 'test'
+  ...
+# Subtest: site keys import without a topic and only a verified topic can open the independent display
+ok 55 - site keys import without a topic and only a verified topic can open the independent display
+  ---
+  duration_ms: 2.7687
+  type: 'test'
+  ...
+# Subtest: management commands from an old site and old topic cannot write after switching
+ok 56 - management commands from an old site and old topic cannot write after switching
+  ---
+  duration_ms: 3.2946
+  type: 'test'
+  ...
+# Subtest: display window cannot access any new management, save, confirmation or external-link IPC
+ok 57 - display window cannot access any new management, save, confirmation or external-link IPC
+  ---
+  duration_ms: 3.3891
+  type: 'test'
+  ...
+# Subtest: topic selection waits for an importing vault commit and rejects the old site callback
+ok 58 - topic selection waits for an importing vault commit and rejects the old site callback
+  ---
+  duration_ms: 3.0952
+  type: 'test'
+  ...
+# Subtest: topic membership arriving inside a new import rename cannot publish or persist its old selection
+ok 59 - topic membership arriving inside a new import rename cannot publish or persist its old selection
+  ---
+  duration_ms: 4.1678
+  type: 'test'
+  ...
+# Subtest: site connections only accept explicit HTTPS origin or loopback development origin
+ok 60 - site connections only accept explicit HTTPS origin or loopback development origin
+  ---
+  duration_ms: 1.6643
+  type: 'test'
+  ...
+# Subtest: display IPC cannot call admin, pairing, grant, filesystem or other hosts
+ok 61 - display IPC cannot call admin, pairing, grant, filesystem or other hosts
+  ---
+  duration_ms: 0.5758
+  type: 'test'
+  ...
+# Subtest: control IPC enforces selected topic and excludes token-producing endpoints
+ok 62 - control IPC enforces selected topic and excludes token-producing endpoints
+  ---
+  duration_ms: 0.6155
+  type: 'test'
+  ...
+# Subtest: pairing verifier is unpredictable and public metadata omits credentials and obsolete integration fields
+ok 63 - pairing verifier is unpredictable and public metadata omits credentials and obsolete integration fields
+  ---
+  duration_ms: 0.7517
+  type: 'test'
+  ...
+# Subtest: v1 device connections retain necessary credentials and ignore obsolete gateway metadata
+ok 64 - v1 device connections retain necessary credentials and ignore obsolete gateway metadata
+  ---
+  duration_ms: 1.2528
+  type: 'test'
+  ...
+# Subtest: site-scoped management keeps a separate selected topic and never permits credential creation
+ok 65 - site-scoped management keeps a separate selected topic and never permits credential creation
+  ---
+  duration_ms: 1.0528
+  type: 'test'
+  ...
+# Subtest: old topic grants can manage their messages but cannot gain whole-site features
+ok 66 - old topic grants can manage their messages but cannot gain whole-site features
+  ---
+  duration_ms: 0.5175
+  type: 'test'
+  ...
+# Subtest: next accelerator requires modifiers, normalizes aliases and protects the fixed hide shortcut
+ok 67 - next accelerator requires modifiers, normalizes aliases and protects the fixed hide shortcut
+  ---
+  duration_ms: 1.3198
+  type: 'test'
+  ...
+# Subtest: workspace restores only bounded presentation preferences, never private data or active windows
+ok 68 - workspace restores only bounded presentation preferences, never private data or active windows
+  ---
+  duration_ms: 0.7721
+  type: 'test'
+  ...
+# Subtest: saved tile bounds stay reachable after a monitor is removed and preserve valid multi-monitor positions
+ok 69 - saved tile bounds stay reachable after a monitor is removed and preserve valid multi-monitor positions
+  ---
+  duration_ms: 0.2384
+  type: 'test'
+  ...
+1..69
+# tests 78
+# suites 1
+# pass 78
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3985.6412

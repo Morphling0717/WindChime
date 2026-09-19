@@ -7,13 +7,9 @@ module.exports = {
     appBundleId: 'org.windchime.desktop',
     // Ship only the bundled local UI and hand-written runtime. This excludes
     // .env, platform keys, signing files, logs, fixtures and development tools.
-    ignore: file => !!file && !/^\/(?:build(?:\/|$)|main\.cjs$|security\.cjs$|workspace\.cjs$|preload-control\.cjs$|preload-display\.cjs$|package\.json$)/.test(file),
+    ignore: file => !!file && (!/^\/(?:build(?:\/|$)|main\.cjs$|security\.cjs$|workspace\.cjs$|preload-control\.cjs$|preload-display\.cjs$|package\.json$)/.test(file) || /^\/build\/(?:installer(?:\/|$)|license-audit(?:\/|$)|installer-(?:loading\.gif|preview\.png)$)/.test(file)),
   },
   makers: [
-    { name: '@electron-forge/maker-squirrel', config: { name: 'WindChime', setupExe: 'WindChime-Setup.exe', authors: 'WindChime contributors', description: '风铃直播信箱控制台', setupIcon: path.join(__dirname, 'build/icon.ico'),
-      loadingGif: path.join(__dirname, 'build/installer-loading.gif'),
-      ...(process.env.WINDCHIME_CERTIFICATE_FILE ? { certificateFile: process.env.WINDCHIME_CERTIFICATE_FILE, certificatePassword: process.env.WINDCHIME_CERTIFICATE_PASSWORD } : {}),
-    } },
     { name: '@electron-forge/maker-zip', platforms: ['win32'] },
   ],
 };

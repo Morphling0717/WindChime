@@ -1,0 +1,682 @@
+{
+  "passed": true,
+  "version": "0.8.1",
+  "electron": "44.3.0",
+  "checks": [
+    "site key imports through real form; default topic selected; historical flagged mail visible with keyword filter disabled",
+    "inbox original/read/favorite and CSV saved through restricted main-process dialog",
+    "original remains readable after opening the last unread message removes its unread-list row",
+    "new website activity appears within polling; topic switch isolates messages",
+    "inbox and studio website/topic pickers are unique, visible, inside the viewport and unobstructed at 1200x620, 1366x768, 960x700, 961x700 and 760x900; both topic selections isolate their own messages",
+    "topic creation uses shared management route",
+    "shared QR/poster renderer, local normalized avatar and actual PNG saves; safe server-provided submission link",
+    "poster title/signature/avatar preferences survive share view remount without persisting credentials or mail",
+    "1920px maximum width expands the real preview canvas; 96px type in a 280px card stays inside a fixed 640px output and scrolls through the final text and caption while images remain fully visible below, without a second outer scroll area or horizontal overflow",
+    "real appearance editor previews Mia and split privately, saves once through the appearance action, restores persisted choices after remount, preserves split while selecting UliUli, and canceling a topic change retains unsaved local appearance; both themes and their shared renderer preview are visible at wide and narrow sizes",
+    "site-wide keyword toggle and terms editor use main-process authenticated routes",
+    "external settings/blocklist/grants synchronize while visible; hidden pauses reads; focus refreshes immediately; dirty terms preserved",
+    "canceling topic or page changes preserves the studio topic and dirty draft; confirming a topic change selects the new topic and removes the previous unsaved draft",
+    "emergency hide remains available; management navigation never opens output or approves mail"
+  ],
+  "screenshots": [
+    "inbox-wide",
+    "inbox-narrow",
+    "inbox-1200x620",
+    "inbox-961x700",
+    "studio-1200x620",
+    "studio-961x700",
+    "topics-wide",
+    "share-wide",
+    "appearance-mia-wide",
+    "appearance-mia-narrow",
+    "appearance-uliuli-wide",
+    "appearance-uliuli-narrow",
+    "appearance-maxwidth-1920",
+    "appearance-tall-content-top",
+    "appearance-tall-content-bottom",
+    "settings-wide"
+  ],
+  "topicPickerLayouts": [
+    {
+      "view": "inbox",
+      "requestedSize": [
+        1200,
+        620
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 240.6666717529297,
+        "y": 122.16667175292969,
+        "width": 352.53125,
+        "height": 40,
+        "right": 593.1979217529297,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1200,
+        "viewportHeight": 622,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 613.1979370117188,
+        "y": 122.16667175292969,
+        "width": 528.7916870117188,
+        "height": 40,
+        "right": 1141.9896240234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1200,
+        "viewportHeight": 622,
+        "hit": true
+      }
+    },
+    {
+      "view": "inbox",
+      "requestedSize": [
+        1366,
+        768
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 268.66668701171875,
+        "y": 122.16667175292969,
+        "width": 404.53125,
+        "height": 40,
+        "right": 673.1979370117188,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1366,
+        "viewportHeight": 768,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 693.1979370117188,
+        "y": 122.16667175292969,
+        "width": 606.7916870117188,
+        "height": 40,
+        "right": 1299.9896240234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1366,
+        "viewportHeight": 768,
+        "hit": true
+      }
+    },
+    {
+      "view": "inbox",
+      "requestedSize": [
+        960,
+        700
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 126.66667175292969,
+        "y": 114.16667175292969,
+        "width": 307.72918701171875,
+        "height": 40,
+        "right": 434.39585876464844,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 960,
+        "viewportHeight": 700,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 446.3958435058594,
+        "y": 114.16667175292969,
+        "width": 461.60418701171875,
+        "height": 40,
+        "right": 908.0000305175781,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 960,
+        "viewportHeight": 700,
+        "hit": true
+      }
+    },
+    {
+      "view": "inbox",
+      "requestedSize": [
+        961,
+        700
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 240.6666717529297,
+        "y": 122.16667175292969,
+        "width": 257.0625,
+        "height": 40,
+        "right": 497.7291717529297,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 961,
+        "viewportHeight": 700,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 517.7291870117188,
+        "y": 122.16667175292969,
+        "width": 385.60418701171875,
+        "height": 40,
+        "right": 903.3333740234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 961,
+        "viewportHeight": 700,
+        "hit": true
+      }
+    },
+    {
+      "view": "inbox",
+      "requestedSize": [
+        760,
+        900
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 118.66667175292969,
+        "y": 114.16667175292969,
+        "width": 233.33334350585938,
+        "height": 40,
+        "right": 352.00001525878906,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 760,
+        "viewportHeight": 900,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 364,
+        "y": 114.16667175292969,
+        "width": 350,
+        "height": 40,
+        "right": 714,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 760,
+        "viewportHeight": 900,
+        "hit": true
+      }
+    },
+    {
+      "view": "studio",
+      "requestedSize": [
+        1200,
+        620
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 240.6666717529297,
+        "y": 122.16667175292969,
+        "width": 352.53125,
+        "height": 40,
+        "right": 593.1979217529297,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1200,
+        "viewportHeight": 622,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 613.1979370117188,
+        "y": 122.16667175292969,
+        "width": 528.7916870117188,
+        "height": 40,
+        "right": 1141.9896240234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1200,
+        "viewportHeight": 622,
+        "hit": true
+      }
+    },
+    {
+      "view": "studio",
+      "requestedSize": [
+        1366,
+        768
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 268.66668701171875,
+        "y": 122.16667175292969,
+        "width": 404.53125,
+        "height": 40,
+        "right": 673.1979370117188,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1366,
+        "viewportHeight": 768,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 693.1979370117188,
+        "y": 122.16667175292969,
+        "width": 606.7916870117188,
+        "height": 40,
+        "right": 1299.9896240234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 1366,
+        "viewportHeight": 768,
+        "hit": true
+      }
+    },
+    {
+      "view": "studio",
+      "requestedSize": [
+        960,
+        700
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 126.66667175292969,
+        "y": 114.16667175292969,
+        "width": 307.72918701171875,
+        "height": 40,
+        "right": 434.39585876464844,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 960,
+        "viewportHeight": 700,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 446.3958435058594,
+        "y": 114.16667175292969,
+        "width": 461.60418701171875,
+        "height": 40,
+        "right": 908.0000305175781,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 960,
+        "viewportHeight": 700,
+        "hit": true
+      }
+    },
+    {
+      "view": "studio",
+      "requestedSize": [
+        961,
+        700
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 240.6666717529297,
+        "y": 122.16667175292969,
+        "width": 257.0625,
+        "height": 40,
+        "right": 497.7291717529297,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 961,
+        "viewportHeight": 700,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 517.7291870117188,
+        "y": 122.16667175292969,
+        "width": 385.60418701171875,
+        "height": 40,
+        "right": 903.3333740234375,
+        "bottom": 162.1666717529297,
+        "viewportWidth": 961,
+        "viewportHeight": 700,
+        "hit": true
+      }
+    },
+    {
+      "view": "studio",
+      "requestedSize": [
+        760,
+        900
+      ],
+      "website": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 118.66667175292969,
+        "y": 114.16667175292969,
+        "width": 233.33334350585938,
+        "height": 40,
+        "right": 352.00001525878906,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 760,
+        "viewportHeight": 900,
+        "hit": true
+      },
+      "topic": {
+        "count": 1,
+        "display": "block",
+        "visibility": "visible",
+        "disabled": false,
+        "x": 364,
+        "y": 114.16667175292969,
+        "width": 350,
+        "height": 40,
+        "right": 714,
+        "bottom": 154.1666717529297,
+        "viewportWidth": 760,
+        "viewportHeight": 900,
+        "hit": true
+      }
+    }
+  ],
+  "appearanceLayouts": [
+    {
+      "name": "appearance-mia-wide",
+      "requestedSize": [
+        1440,
+        1200
+      ],
+      "preview": {
+        "x": 269.3333435058594,
+        "y": 105.59375,
+        "right": 1373.3333435058594,
+        "bottom": 726.59375,
+        "width": 1104,
+        "height": 621
+      },
+      "themes": {
+        "x": 268.66668701171875,
+        "y": 896.96875,
+        "right": 1374.0000610351562,
+        "bottom": 1041.8020935058594,
+        "width": 1105.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1200
+      },
+      "imageCount": 2,
+      "theme": "mia",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-mia-narrow",
+      "requestedSize": [
+        760,
+        1050
+      ],
+      "preview": {
+        "x": 121.33333587646484,
+        "y": 105.90625,
+        "right": 711.3333358764648,
+        "bottom": 437.78125,
+        "width": 590,
+        "height": 331.875
+      },
+      "themes": {
+        "x": 120.66667175292969,
+        "y": 608.15625,
+        "right": 712.0000457763672,
+        "bottom": 752.9895935058594,
+        "width": 591.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 760,
+        "height": 1050
+      },
+      "imageCount": 2,
+      "theme": "mia",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-uliuli-wide",
+      "requestedSize": [
+        1440,
+        1200
+      ],
+      "preview": {
+        "x": 269.3333435058594,
+        "y": 105.59375,
+        "right": 1373.3333435058594,
+        "bottom": 726.59375,
+        "width": 1104,
+        "height": 621
+      },
+      "themes": {
+        "x": 268.66668701171875,
+        "y": 896.96875,
+        "right": 1374.0000610351562,
+        "bottom": 1041.8020935058594,
+        "width": 1105.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1200
+      },
+      "imageCount": 2,
+      "theme": "uliuli",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-uliuli-narrow",
+      "requestedSize": [
+        760,
+        1050
+      ],
+      "preview": {
+        "x": 121.33333587646484,
+        "y": 105.90625,
+        "right": 711.3333358764648,
+        "bottom": 437.78125,
+        "width": 590,
+        "height": 331.875
+      },
+      "themes": {
+        "x": 120.66667175292969,
+        "y": 608.15625,
+        "right": 712.0000457763672,
+        "bottom": 752.9895935058594,
+        "width": 591.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 760,
+        "height": 1050
+      },
+      "imageCount": 2,
+      "theme": "uliuli",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-maxwidth-1920",
+      "requestedSize": [
+        1440,
+        1200
+      ],
+      "preview": {
+        "x": 269.3333435058594,
+        "y": 105.59375,
+        "right": 1373.3333435058594,
+        "bottom": 726.59375,
+        "width": 1104,
+        "height": 621
+      },
+      "themes": {
+        "x": 268.66668701171875,
+        "y": 896.96875,
+        "right": 1374.0000610351562,
+        "bottom": 1041.8020935058594,
+        "width": 1105.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1200
+      },
+      "imageCount": 2,
+      "theme": "uliuli",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-tall-content-top",
+      "requestedSize": [
+        760,
+        1050
+      ],
+      "preview": {
+        "x": 121.33333587646484,
+        "y": 105.90625,
+        "right": 711.3333358764648,
+        "bottom": 437.78125,
+        "width": 590,
+        "height": 331.875
+      },
+      "themes": {
+        "x": 120.66667175292969,
+        "y": 608.15625,
+        "right": 712.0000457763672,
+        "bottom": 752.9895935058594,
+        "width": 591.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 760,
+        "height": 1050
+      },
+      "imageCount": 2,
+      "theme": "uliuli",
+      "layout": "split"
+    },
+    {
+      "name": "appearance-tall-content-bottom",
+      "requestedSize": [
+        760,
+        1050
+      ],
+      "preview": {
+        "x": 121.33333587646484,
+        "y": 105.90625,
+        "right": 711.3333358764648,
+        "bottom": 437.78125,
+        "width": 590,
+        "height": 331.875
+      },
+      "themes": {
+        "x": 120.66667175292969,
+        "y": 608.15625,
+        "right": 712.0000457763672,
+        "bottom": 752.9895935058594,
+        "width": 591.3333740234375,
+        "height": 144.83334350585938
+      },
+      "viewport": {
+        "width": 760,
+        "height": 1050
+      },
+      "imageCount": 2,
+      "theme": "uliuli",
+      "layout": "split"
+    }
+  ],
+  "appearanceStressCases": [
+    {
+      "name": "maxWidth1920",
+      "cardWidth": 1920,
+      "canvasWidth": 2000,
+      "scaledWidth": 566.4000244140625,
+      "scale": 0.295,
+      "contentWidth": 590,
+      "withinPreview": true,
+      "horizontalOverflow": false
+    },
+    {
+      "name": "displayHeightBounds",
+      "heights": [
+        1080,
+        180,
+        640
+      ],
+      "passed": true
+    },
+    {
+      "name": "fontSize96-maxWidth280",
+      "cardWidth": 280,
+      "cardHeight": 640,
+      "contentHeight": 640,
+      "canvasHeight": 720,
+      "scrollHeight": 3681,
+      "visibleHeight": 304,
+      "outerScrollHeight": 621,
+      "outerHeight": 621,
+      "overflowY": "hidden",
+      "previewHorizontalOverflow": false,
+      "horizontalOverflow": false,
+      "lastCaption": "图片 2 · 月下微风",
+      "lastImageVisible": true,
+      "lastCaptionVisible": true,
+      "imageScrolls": false,
+      "scrollTop": 3376.666748046875,
+      "maxScroll": 3377
+    }
+  ],
+  "savedFiles": [
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-8t87fZ\\风铃来信.csv",
+      "bytes": 301
+    },
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-8t87fZ\\风铃投稿二维码.png",
+      "bytes": 5176
+    },
+    {
+      "path": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-8t87fZ\\风铃投稿海报.png",
+      "bytes": 410092
+    }
+  ],
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-management-8t87fZ",
+  "requests": 321,
+  "consoleErrors": [],
+  "at": "2026-09-19T19:38:46.595Z"
+}

@@ -219,11 +219,18 @@ export function createWindChimeBroadcast(options: WindChimeBroadcastOptions) {
   }
   async function open(grant: LiveGrantRow) {
     if (grant.kind !== "display" || grant.scope !== "topic" || !grant.topic_id) fail("UNAUTHORIZED", "需要话题展示授权", 401);
-    await ready(); pruneReceivers();
-    const c = await storage.transaction((db) => channel(db, grant.topic_id!));
+    await ready();
     const id = liveSecret();
-    // Bound resource use; new readers cannot invalidate another healthy receiver.
-    if (receivers.size >= 1000 || [...receivers.values()].filter((r) => r.grantId === grant.id).length >= 10) fail("RECEIVER_LIMIT", "展示连接过多", 429);
+    const c = await storage.transaction(async db => {
+      pruneReceivers();
+      if (receivers.size >= 1000 || [...receivers.values()].filter((r) => r.grantId === grant.id).length >= 10) fail("RECEIVER_LIMIT", "展示连接过多", 429);
+      const current = await channel(db, grant.topic_id!);
+      // A reload/reconnect must reject show/next requests prepared before this
+      // handshake. Only the control revision changes: existing healthy viewers
+      // keep their current snapshot and the new viewer still joins blank.
+      await db.run("UPDATE mail_live_channels SET revision=revision+1 WHERE topic_id=?", [grant.topic_id]);
+      return current;
+    });
     receivers.set(id, { id, grantId: grant.id, topicId: grant.topic_id!, joinedActivation: c.activation, lastSeen: now(), epoch });
     return { receiverId: id, epoch, leaseMs: LEASE_MS, pollIntervalMs: 1000 };
   }

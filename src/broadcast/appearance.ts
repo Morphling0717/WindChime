@@ -29,6 +29,14 @@ export function resolveLiveLayout(layout: WindChimeLiveAppearance['layout']): Wi
   return layout === 'split' || layout === 'banner' || layout === 'sidebar' || layout === 'portrait' || layout === 'focus' ? layout : 'stack';
 }
 
+/** Keep the private preview and audience viewport on the same finite bounds. */
+export function resolveLiveViewportSize(appearance: Pick<WindChimeLiveAppearance, 'maxWidth' | 'viewportHeight'>) {
+  return {
+    width: Number.isFinite(appearance.maxWidth) ? Math.min(1920, Math.max(280, appearance.maxWidth!)) : 1200,
+    height: Number.isFinite(appearance.viewportHeight) ? Math.min(1080, Math.max(180, appearance.viewportHeight!)) : 640,
+  };
+}
+
 /** A skin preserves explicit sizing, composition, media order and animation settings. */
 export function applyLiveTheme(appearance: WindChimeLiveAppearance, theme: WindChimeLiveTheme): WindChimeLiveAppearance {
   const skin = {

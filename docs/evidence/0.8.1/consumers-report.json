@@ -1,0 +1,66 @@
+[
+  {
+    "site": "Next_UliUli",
+    "node": "v20.20.2",
+    "startedAt": "2026-09-19T19:31:20.055Z",
+    "directory": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-081-Next_UliUli-8sGkNg",
+    "buildDirectory": ".windchime-v081-validation",
+    "steps": [
+      {
+        "name": "migrations",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0
+      },
+      {
+        "name": "mail",
+        "exitCode": 0
+      }
+    ],
+    "passed": true,
+    "finishedAt": "2026-09-19T19:31:54.926Z",
+    "package": {
+      "version": "0.8.1",
+      "sha256": "325b46dc9613d77fd081a37bfaa97822284d489f8168a540c610f097ece1b212",
+      "integrity": "sha512-fsm4Dx6jsDUqpD7iFPIKI8kc/I+kuQtcx501FkePE933XPxCE4Ipd1w29nQbQLMEixs1WZ1PPR3KV1ZKRY2Q9A=="
+    },
+    "npm": "10.8.2",
+    "tsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+    "unrelatedDependenciesUnchanged": true,
+    "scope": "Isolated local production build and HTTP regression only; no production deployment or live capture."
+  },
+  {
+    "site": "Next_Mia",
+    "node": "v20.20.2",
+    "startedAt": "2026-09-19T19:31:20.355Z",
+    "directory": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-081-Next_Mia-AoYeFj",
+    "buildDirectory": ".windchime-v081-validation",
+    "steps": [
+      {
+        "name": "migrations",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0
+      },
+      {
+        "name": "mail",
+        "exitCode": 0
+      }
+    ],
+    "passed": true,
+    "finishedAt": "2026-09-19T19:32:07.880Z",
+    "package": {
+      "version": "0.8.1",
+      "sha256": "325b46dc9613d77fd081a37bfaa97822284d489f8168a540c610f097ece1b212",
+      "integrity": "sha512-fsm4Dx6jsDUqpD7iFPIKI8kc/I+kuQtcx501FkePE933XPxCE4Ipd1w29nQbQLMEixs1WZ1PPR3KV1ZKRY2Q9A=="
+    },
+    "npm": "10.8.2",
+    "tsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+    "unrelatedDependenciesUnchanged": true,
+    "scope": "Isolated local production build and HTTP regression only; no production deployment or live capture."
+  }
+]

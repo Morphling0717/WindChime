@@ -1,0 +1,17 @@
+
+> windchime-desktop@0.8.1 make
+> npm run build && node scripts/make.cjs
+
+
+> windchime-desktop@0.8.1 build
+> node scripts/build.mjs
+
+(node:40724) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  • electron-builder  version=26.15.3 os=10.0.26200
+  • building        target=nsis file=C:\Users\ASUS\AppData\Local\Temp\windchime-make-z1ZoTq\nsis\WindChime-Engine-0.8.1.exe archs=x64 oneClick=false perMachine=false
+  • signing with signtool.exe  path=C:\Users\ASUS\AppData\Local\Temp\windchime-make-z1ZoTq\nsis\WindChime-Engine-0.8.1.__uninstaller.exe
+  • signing with signtool.exe  path=C:\Users\ASUS\AppData\Local\Temp\windchime-make-z1ZoTq\nsis\WindChime-Engine-0.8.1.exe
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\releases\0.8.1\WindChime-win32-x64-0.8.1.zip
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\releases\0.8.1\WindChime-Setup-0.8.1.exe
+Build staging retained at C:\Users\ASUS\AppData\Local\Temp\windchime-make-z1ZoTq

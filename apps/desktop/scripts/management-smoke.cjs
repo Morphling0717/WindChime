@@ -458,7 +458,7 @@ async function captureAppearance(name, width, height) {
 }
 async function verifyAppearanceDimensions() {
   await evaluate("document.querySelector('.wc-appearance-advanced').open=true");
-  await input('input[aria-label="最大宽度"]', "1920");
+  await input('input[aria-label="展示宽度"]', "1920");
   await until(() => evaluate("document.querySelector('.wc-appearance-preview .wc-display')?.offsetWidth===1920&&parseFloat(document.querySelector('.wc-appearance-canvas').style.width)===2000"), "full 1920px card fits an expanded preview canvas");
   const wide = await evaluate(`(()=>{const viewport=document.querySelector('.wc-appearance-viewport'),canvas=document.querySelector('.wc-appearance-canvas'),card=canvas.querySelector('.wc-display'),bounds=viewport.getBoundingClientRect(),rect=card.getBoundingClientRect();return {cardWidth:card.offsetWidth,canvasWidth:canvas.offsetWidth,scaledWidth:rect.width,scale:new DOMMatrixReadOnly(getComputedStyle(canvas).transform).a,contentWidth:viewport.clientWidth,withinPreview:rect.left>=bounds.left&&rect.right<=bounds.left+viewport.clientWidth+1,horizontalOverflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
   assert.equal(wide.cardWidth, 1920);
@@ -469,7 +469,12 @@ async function verifyAppearanceDimensions() {
   appearanceStressCases.push({ name: "maxWidth1920", ...wide });
   await captureAppearance("appearance-maxwidth-1920", 1440, 1200);
 
-  await input('input[aria-label="最大宽度"]', "280");
+  for (const height of [1080, 180, 640]) {
+    await input('input[aria-label="展示高度"]', String(height));
+    await until(() => evaluate(`document.querySelector('.wc-appearance-preview .wc-display')?.offsetHeight===${height}`), `explicit ${height}px display height reaches the real renderer`);
+  }
+  appearanceStressCases.push({ name: "displayHeightBounds", heights: [1080, 180, 640], passed: true });
+  await input('input[aria-label="展示宽度"]', "280");
   await input('input[aria-label="字号"]', "96");
   await input('input[aria-label="滚动速度"]', "120");
   await input('input[aria-label="顶部停留"]', "0");

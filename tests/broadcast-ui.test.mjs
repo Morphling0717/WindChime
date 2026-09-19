@@ -389,7 +389,7 @@ test('appearance preview scales its widest card while long content stays inside 
     assert.equal(canvas().props.style.height, 1125, 'the initial canvas is at least 16:9');
     assert.equal(observers.at(-1).nodes.length, 1, 'only the preview width is observed; moving content cannot enlarge its canvas');
     const input = label => renderer.root.findAllByType('label').find(node => node.children[0] === label).findByType('input');
-    await act(async () => { input('字号').props.onChange({ target: { value: '96' } }); input('最大宽度').props.onChange({ target: { value: '280' } }); });
+    await act(async () => { input('字号').props.onChange({ target: { value: '96' } }); input('展示宽度').props.onChange({ target: { value: '280' } }); });
     assert.equal(canvas().props.style.width, 1280, 'narrow cards retain the original canvas size');
     assert.equal(canvas().props.style.height, 720, 'font size and narrow text do not change the fixed 640px output height');
     assert.equal(renderer.root.findByProps({ className: 'wc-appearance-scroll-space' }).props.style.height, 450);
@@ -402,5 +402,56 @@ test('appearance preview scales its widest card while long content stays inside 
   } finally {
     if (renderer) await act(async () => renderer.unmount());
     globalThis.ResizeObserver = oldObserver;
+  }
+});
+
+test('display width and height can be replaced from empty inputs without changing the saved viewport', async t => {
+  const initial = { ...appearance, maxWidth: 960, viewportHeight: 560 };
+  const commands = [];
+  const studio = { state: { appearance: structuredClone(initial) }, connected: true, pending: false,
+    actWithResult: async command => { commands.push(command); return null; } };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} })); });
+  t.after(async () => act(async () => renderer.unmount()));
+  const input = label => renderer.root.findAllByType('input').find(node => node.props['aria-label'] === label);
+  const preview = () => renderer.root.findByType(WindChimeLiveCard).props.appearance;
+  const dimensions = renderer.root.findByProps({ role: 'group', 'aria-label': '展示尺寸' });
+  assert.deepEqual(dimensions.findAllByType('input').map(node => node.props['aria-label']), ['展示宽度', '展示高度']);
+  assert.equal(renderer.root.findByType('details').findAllByProps({ 'aria-label': '展示宽度' }).length, 0);
+  for (const [label, key, replacement] of [['展示宽度', 'maxWidth', 1280], ['展示高度', 'viewportHeight', 720]]) {
+    const previous = preview()[key];
+    await act(async () => input(label).props.onChange({ target: { value: '' } }));
+    assert.equal(input(label).props.value, '', 'Backspace may leave an empty intermediate value');
+    assert.equal(preview()[key], previous, 'incomplete input keeps the last finite preview');
+    await act(async () => input(label).props.onChange({ target: { value: String(replacement) } }));
+    assert.equal(input(label).props.value, replacement);
+    assert.equal(preview()[key], replacement);
+  }
+  await act(async () => input('展示宽度').props.onChange({ target: { value: '' } }));
+  await act(async () => input('展示宽度').props.onBlur());
+  assert.equal(input('展示宽度').props.value, 1280, 'leaving a blank field restores its last value');
+  assert.deepEqual(studio.state.appearance, initial, 'typing dimensions does not update the server');
+  assert.equal(commands.length, 0);
+});
+
+test('incomplete out-of-range viewport edits cannot make preview geometry diverge from the audience card', async t => {
+  const studio = { state: { appearance: { ...appearance, layout: 'sidebar' } }, connected: true, pending: false,
+    actWithResult: async () => null };
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(AppearanceEditor, { studio, onDirtyChange() {} })); });
+  t.after(async () => act(async () => renderer.unmount()));
+  const input = label => renderer.root.findAllByType('input').find(node => node.props['aria-label'] === label);
+  for (const [value, expectedWidth, expectedHeight] of [[String(Number.MAX_VALUE), 1920, 1080], ['-1000', 280, 180]]) {
+    await act(async () => {
+      input('展示宽度').props.onChange({ target: { value } });
+      input('展示高度').props.onChange({ target: { value } });
+    });
+    const card = renderer.root.findByType('article').props.style;
+    const canvas = renderer.root.findByProps({ className: 'wc-appearance-canvas' }).props.style;
+    assert.equal(card.width, expectedWidth); assert.equal(card.height, expectedHeight);
+    assert.equal(canvas.width, Math.max(440, card.width + 80));
+    assert.equal(canvas.height, Math.max(canvas.width * 9 / 16, card.height + 80));
+    assert(Number.isFinite(canvas.width) && canvas.width <= 2000);
+    assert(Number.isFinite(canvas.height) && canvas.height <= 1160);
   }
 });
