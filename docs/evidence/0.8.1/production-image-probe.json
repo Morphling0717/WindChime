@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "targetHead": "e1dba96ea040a17b7b53bda0cb1c9b24e66eaa38",
+  "imageId": "sha256:c724c75195eb9fd4e944954cb73bb1fea3e03183b88eeaa9447cb13b15133a60",
+  "version": "0.8.1",
+  "serverEntrySha256": "2df9920c48397f09d4c7948a76eff9ab894321861704e17e1e1e5bd29f5c5828",
+  "nextBuildPresent": true,
+  "nativeSqliteWorks": true,
+  "networkDisabled": true,
+  "rootReadOnly": true,
+  "productionUnchanged": true,
+  "elapsedSeconds": 14.5,
+  "freeBytesAfter": 1761783808
+}

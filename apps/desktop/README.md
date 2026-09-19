@@ -1,6 +1,6 @@
-# 风铃桌面控制台 0.8.1（Windows x64，发行验收中）
+# 风铃桌面控制台 0.8.1（Windows x64，已发布）
 
-0.8.1 增加带安装步骤的玻璃风格向导及完整开源声明，并修复展示重连后的迟到请求和预览尺寸边界。已有功能和连接配置继续兼容。本版安装／卸载、最终发行与实际直播采集尚待独立验收，进度见 [0.8.1 记录](../../docs/RELEASE-081.md)。
+0.8.1 已[正式发布](https://github.com/Morphling0717/WindChime/releases/tag/v0.8.1)，增加带安装步骤的玻璃风格向导及完整开源声明，并修复展示重连后的迟到请求和预览尺寸边界。已有功能和连接配置继续兼容。发行包校验及便携版启动已通过；真实安装、升级、卸载和本版 OBS／直播姬窗口捕获尚未验收，详情见 [0.8.1 记录](../../docs/RELEASE-081.md)。
 
 0.8.0 提供[六种展示排版与固定图片](../../docs/DISPLAY-DESIGNS.md)、[置顶磁贴和下一封热键](../../docs/FLOATING-TILES.md)。可先打开[交互样板](../../examples/display-designs/README.md)比较横向和竖向排版。新的展示设置需网站服务也升级至风铃 0.8.0；桌面仍能连接旧站，但旧站不会开放不支持的外观保存操作。安装桌面不会自动部署网站。
 
@@ -43,7 +43,7 @@
 
 ## 安装和运行
 
-构建产物位于 `out/releases/0.8.1/`：`WindChime-Setup-0.8.1.exe` 是安装向导，`WindChime-win32-x64-0.8.1.zip` 是便携版，解压后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt`；此前版本保留在各自版本目录。当前没有默认 Windows 代码签名或自动更新；文件已生成、包校验、便携启动和安装／卸载分别记录，不能互相代替。
+构建产物位于 `out/releases/0.8.1/`：[WindChime-Setup-0.8.1.exe](https://github.com/Morphling0717/WindChime/releases/download/v0.8.1/WindChime-Setup-0.8.1.exe) 是安装向导，[WindChime-win32-x64-0.8.1.zip](https://github.com/Morphling0717/WindChime/releases/download/v0.8.1/WindChime-win32-x64-0.8.1.zip) 是便携版，解压后运行 `WindChime.exe`。文件摘要见同目录 `SHA256SUMS.txt` 或[发行校验和](https://github.com/Morphling0717/WindChime/releases/download/v0.8.1/SHA256SUMS.txt)；此前版本保留在各自版本目录。当前没有默认 Windows 代码签名或自动更新。包校验与便携启动已通过，安装向导页面及运行中保护已验证；实际安装写入、旧版升级和卸载尚未验收。
 
 安装前先保存未完成的稿件，并通过旧版托盘“退出并结束展示”退出风铃。新版安装位置与旧版分开，沿用 Windows 加密的连接配置，不自动清理旧安装。新版快捷方式名为“风铃 WindChime”；确认新版正常后，再从 Windows 已安装应用区分版本卸载旧版。不要删除信箱数据库、个人配置或旧版目录来解决安装提示。
 
@@ -57,7 +57,7 @@ npm run dev
 
 `npm run build` 构建界面、图标及运行时许可清单；`npm run make` 生成 Windows x64 安装包、ZIP、校验和及构建信息。运行包继续由 Electron Forge 白名单打包，安装器使用 WPF 玻璃向导和 NSIS 安装引擎。首次 make 需要下载并核对固定摘要的安装器组件与对应源码；这不会把平台密钥加入桌面。中间输出放在独立英文临时目录；若临时目录含非 ASCII 字符，可设置 `WINDCHIME_BUILD_ROOT=C:/WindChimeBuild`。Windows 构建机还需要 .NET Framework 4.x 的 WPF 编译器与引用程序集；脚本使用系统 Framework64 目录，主播无需额外安装 Node.js。
 
-图标源为 `assets/branding/windchime_logo` 内的用户确认资产。大尺寸使用玻璃应用图，16–32 像素图标和托盘使用同源简化图形；导航 SVG 原样复制，安装动画保留完整琉璃中英组合。具体映射见 [品牌说明](../../assets/branding/README.md)，品牌历史验收见 [BRAND-VALIDATION.md](../../docs/BRAND-VALIDATION.md)，0.7.0 验收见 [V070-VALIDATION.md](../../docs/V070-VALIDATION.md)。
+图标源为 `assets/branding/windchime_logo` 内的用户确认资产。大尺寸使用玻璃应用图，16–32 像素图标和托盘使用同源简化图形；导航 SVG 原样复制，安装向导保留完整琉璃中英组合。具体映射见 [品牌说明](../../assets/branding/README.md)，品牌历史验收见 [BRAND-VALIDATION.md](../../docs/BRAND-VALIDATION.md)，0.7.0 验收见 [V070-VALIDATION.md](../../docs/V070-VALIDATION.md)。
 
 0.7.1 话题选择修复与本次验证见 [DESKTOP-071-VALIDATION.md](../../docs/DESKTOP-071-VALIDATION.md)。
 
@@ -103,7 +103,7 @@ npm run dev
 3. 点击“上屏”或“下一封”才展示。最后一封后再次点下一封会清空，不循环。
 4. “一键隐藏”、托盘菜单或 **Ctrl+Shift+H** 撤下画面。关闭私人窗口会留在托盘，托盘“退出并结束展示”才结束程序。
 
-0.6.0 的既有 OBS 32.0.1 窗口捕获验收使用 Windows Graphics Capture、必须匹配窗口标题、开启“强制 SDR”、关闭捕获光标与音频，并将来源完整适配到场景画布。对应 `method=2`、`priority=1`、`force_sdr=true`。当时本机不强制 SDR 会出现颜色偏暗，按 exe 回退匹配则可能在展示窗口关闭后捕获私人控制台。该历史结果不代表 0.8.0 已经完成实机采集复验；私人磁贴窗口也不能用作观众输出。
+0.6.0 的既有 OBS 32.0.1 窗口捕获验收使用 Windows Graphics Capture、必须匹配窗口标题、开启“强制 SDR”、关闭捕获光标与音频，并将来源完整适配到场景画布。对应 `method=2`、`priority=1`、`force_sdr=true`。当时本机不强制 SDR 会出现颜色偏暗，按 exe 回退匹配则可能在展示窗口关闭后捕获私人控制台。该历史结果不代表 0.8.1 已经完成实机采集复验；私人磁贴窗口也不能用作观众输出。
 
 请在正式使用前检查直播软件的本地预览。直播姬须单独验证，不能把 OBS 或 Electron 截图透明当作其他采集方式已通过的证明。完整截图、命令与限制见验收记录。
 
@@ -122,7 +122,7 @@ npm run dev
 - 运行包采用文件白名单，不含 `.env`、平台密钥、测试数据或签名证书。
 - 私人渲染器持久存储只用于显式海报偏好，不保存密码、控制密钥或收件箱。展示窗口仍使用独立临时会话，不读取私人偏好存储。
 
-卸载可使用 Windows 的已安装应用入口。设备授权存储与程序文件分离；可在网站设备管理中撤销授权。本轮安装/托盘卸载是否完成，以实际验证报告为准，不把构建成功视为卸载已通过。
+卸载可使用 Windows 的已安装应用入口。设备授权存储与程序文件分离；可在网站设备管理中撤销授权。本轮真实安装、升级及托盘运行时卸载尚未验收，不能以包校验或便携启动通过代替。
 
 ## 验证
 
