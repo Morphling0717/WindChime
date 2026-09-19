@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "at": "2026-09-19T18:16:18.300651+00:00",
+  "checks": [
+    "Six new layouts plus legacy/empty JSON project to old fields; only appearance/current_snapshot/revision/activation change; original JSON export is exact",
+    "Original messages, read/favorite flags, site/topic grants including hash/expiry/revocation, topics, approved queue and order remain byte-for-value identical",
+    "Invalid layout and malformed JSON reject transaction with all database rows unchanged",
+    "An injected channel trigger changing another table is detected before commit and the entire transaction rolls back; original export remains",
+    "Actual 0.7.0 tarball parser rejects all six unprojected new layouts/fields and accepts all eight projected JSON values with preserved supported settings"
+  ],
+  "oldParser": {
+    "passed": true,
+    "oldPackageVersion": "0.7.0",
+    "unprojectedRejected": 6,
+    "projectedAccepted": 8
+  },
+  "oldPackageSha256": "7d374c53f0f991b538b340553a5ee758aaf8f7be8026ba8368ff123ad5ddf4b7",
+  "helperSha256": "0882210132753e1a1eebbc0f8c073da3ef225173949e4057236fdfbd780b40bb",
+  "syntheticOnly": true,
+  "productionDatabaseTouched": false,
+  "networkOrDeploymentCalls": false
+}
