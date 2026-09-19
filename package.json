@@ -1,6 +1,6 @@
 {
   "name": "@windchime/embed",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Headless anonymous inbox for Next.js: React hooks, SQLite, route handlers and optional UI",
   "license": "MIT",
   "type": "module",

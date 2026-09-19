@@ -1,0 +1,39 @@
+{
+  "version": "0.8.0",
+  "verifiedAt": "2026-09-19T18:01:32.211Z",
+  "localDate": "2026-09-20",
+  "passed": true,
+  "environment": { "platform": "win32", "arch": "x64", "osRelease": "10.0.26200", "hostNode": "22.22.3", "electron": "44.3.0", "packagedNode": "24.20.0" },
+  "commands": [
+    "npm test",
+    "npm run make",
+    "node scripts/verify-package.cjs C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-make-p92PC6",
+    "node scripts/verify-portable.cjs"
+  ],
+  "desktopTests": { "passed": 61, "failed": 0 },
+  "buildStage": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-make-p92PC6",
+  "releaseDirectory": "apps/desktop/out/releases/0.8.0",
+  "previousReleaseCopiedTo": "apps/desktop/out/releases/0.7.1",
+  "packageVerification": "desktop-package-verification.json",
+  "portableVerification": "desktop-portable-startup-verification.json",
+  "checksums": "desktop-SHA256SUMS.txt",
+  "portableStartup": {
+    "isolatedProfile": true,
+    "packagedVersion": "0.8.0",
+    "privateWindowCount": 1,
+    "displayWindowCount": 0,
+    "approvedLogoRendered": true,
+    "connectionInputsEmpty": true,
+    "sandboxAndContextIsolation": true,
+    "nodeIntegration": false,
+    "trayCloseAndReopen": true,
+    "gracefulExit": true,
+    "unhandledRuntimeErrors": false
+  },
+  "limitations": [
+    "Installer and uninstaller were not executed; the previous policy-rejected cleanup was not retried or bypassed",
+    "No real OBS or LiveHime capture verification in this package check",
+    "No Windows code signing or automatic update service",
+    "No production website connection, credentials or database modified by package verification"
+  ]
+}

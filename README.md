@@ -2,9 +2,9 @@
 
 风铃是面向 Next.js 的独立匿名信箱库。投稿、信件管理、审核、话题、归档和屏蔽规则由库维护；网站拥有页面 HTML、布局、样式、文案、图标、动画、数据库路径和管理员登录。
 
-**当前版本 0.7.0。** 使用本仓库构建的 `.tgz` 安装。网页 `/mail` 生成 30 天可重复使用的全站连接密钥；桌面拥有完整信箱管理和直播控制台，自动发现现有及未来话题。违禁词默认关闭，唯一开关在桌面网站设置。独立播出批准、图片审阅、待播排序和只读展示窗口继续保留；通用库及默认 UI 仍可独立使用。
+**当前版本 0.8.0。** 使用本仓库构建的 `.tgz` 安装。新增六种独立排版与三种视觉主题、可调字号、文字循环滚动和固定图片区域，以及五类置顶私人磁贴、自定义“下一封”全局热键。网页 `/mail` 生成 30 天可重复使用的全站连接密钥；桌面拥有完整信箱管理和直播控制台，自动发现现有及未来话题。独立播出批准、图片审阅、待播排序和只读展示窗口继续保留；通用库及默认 UI 仍可独立使用。
 
-[连接与 0.7.0 升级](docs/CONNECTION-KEYS.md) · [桌面运行与打包](apps/desktop/README.md) · [0.7.0 实际验收](docs/V070-VALIDATION.md) · [可选 B 站模块](docs/BILIBILI-LIVE.md) · [迁移说明](docs/MIGRATION.md)
+[0.8.0 发行与升级](docs/RELEASE-080.md) · [连接密钥](docs/CONNECTION-KEYS.md) · [桌面运行与打包](apps/desktop/README.md) · [排版与主题](docs/DISPLAY-DESIGNS.md) · [私人磁贴与热键](docs/FLOATING-TILES.md) · [迁移说明](docs/MIGRATION.md)
 
 ## Windows 桌面与直播采集
 
@@ -12,9 +12,9 @@
 
 新站点密钥自生成起有效 30 天，可重复导入及供多台电脑共用。撤销后这些连接及派生展示授权一起失效。旧密钥和浏览器配对仍仅授权原话题；需要管理所有活动时，在网页生成新站点密钥，升级不会悄悄扩大旧权限。
 
-网站必须实际部署 0.7.0 才能支持全站密钥；只更新安装包或仓库依赖不会升级线上服务。本轮 UliUli 的部署和验证单独记录，Mia 仅更新代码与本地验证。
+网站至少需要部署 0.7.0 才能支持全站密钥，需要部署 0.8.0 才能保存新排版和外观配置；只更新安装包或仓库依赖不会升级线上服务。UliUli 的部署和验证单独记录，Mia 仅更新代码与本地验证。
 
-在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 安装程序和 ZIP。具体产物及操作见[桌面 README](apps/desktop/README.md)，实际通过项和限制见 [0.7.0 验收](docs/V070-VALIDATION.md)。
+在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 安装程序和 ZIP。具体产物及操作见[桌面 README](apps/desktop/README.md)，实际通过项和限制见 [0.8.0 发行记录](docs/RELEASE-080.md)。
 
 这个流程不依赖 B 站官方启动、平台密钥、项目 ID、H5 或上架审核。`apps/live-gateway` 的普通浏览器展示、H5 和平台生命周期适配继续保留为可选模块；已有平台项目与私有配置无需更改。旧平台联调报告记录当时的工作范围，不构成本地桌面交付的前置条件。
 
@@ -42,14 +42,14 @@ npm run dev
 未公开发布时，在风铃目录执行 `npm pack`，在网站目录安装生成的包：
 
 ```bash
-npm install /你的路径/WindChime/windchime-embed-0.6.1.tgz sqlite3@6.0.1
+npm install /你的路径/WindChime/windchime-embed-0.8.0.tgz sqlite3@6.0.1
 # 需要粉丝图片和主播替换图片时
 npm install sharp@0.35.4
 # 需要二维码和海报时
 npm install qrcode
 ```
 
-正式发布后可替换为 `npm install --save-exact @windchime/embed@0.6.1`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
+本次使用发行压缩包，不代表已发布到 npm registry。提交网站的 package.json、版本固定的 vendor 压缩包与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
 
 ```ts
 // next.config.ts

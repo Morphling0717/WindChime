@@ -1,0 +1,15 @@
+
+> windchime-desktop@0.8.0 make
+> npm run build && node scripts/make.cjs
+
+
+> windchime-desktop@0.8.0 build
+> node scripts/build.mjs
+
+(node:31724) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\installers\WindChime-win32-x64-0.8.0.zip
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\installers\RELEASES
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\installers\WindChime-Setup.exe
+C:\Users\ASUS\Documents\ChatGPT\风铃\WindChime\apps\desktop\out\installers\WindChime-0.8.0-full.nupkg
+Build staging retained at C:\Users\ASUS\AppData\Local\Temp\windchime-make-p92PC6

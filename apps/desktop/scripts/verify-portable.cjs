@@ -51,4 +51,8 @@ async function run(){
  await fs.writeFile(path.join(out,'portable-startup-verification.json'),JSON.stringify(report,null,2));
  console.log(JSON.stringify(report,null,2));
 }
-run().catch(error=>{console.error(error.stack);process.exitCode=1;}).finally(()=>{socket?.close();if(child&&child.exitCode===null)child.kill();});
+run().catch(async error=>{
+ console.error(error.stack);process.exitCode=1;
+ // Do not leave a previous version's successful report looking current.
+ await fs.writeFile(path.join(out,'portable-startup-verification.json'),JSON.stringify({passed:false,testedAt:new Date().toISOString(),version,error:error.message,executedInstaller:false},null,2)).catch(()=>{});
+}).finally(()=>{socket?.close();if(child&&child.exitCode===null)child.kill();});

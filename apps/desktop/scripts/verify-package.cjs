@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
 const artifacts = path.join(root, 'out/installers');
 const reportPath = path.join(artifacts, 'package-verification.json');
 const runtimeFiles = [
-  'main.cjs', 'security.cjs', 'preload-control.cjs', 'preload-display.cjs',
+  'main.cjs', 'security.cjs', 'workspace.cjs', 'preload-control.cjs', 'preload-display.cjs',
   'build/control.js', 'build/control.css', 'build/control.html',
   'build/display.js', 'build/display.html', 'build/connection-key.cjs',
   'build/icon.ico', 'build/icon.png', 'build/tray.png',
