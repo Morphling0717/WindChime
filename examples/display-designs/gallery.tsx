@@ -17,14 +17,14 @@ const media = { id: 'example-photo', caption: '把此刻的风景，寄给你。
 
 type PreviewProps = {
   theme: WindChimeLiveTheme; layout: WindChimeLiveLayout; imageCount: number; long: boolean;
-  width: number; height: number; speed: number; imageHeightPercent: number; portrait: boolean; reset: number;
+  width: number; height: number; speed: number; fontSize: number; imageHeightPercent: number; portrait: boolean; reset: number;
   imageLayout: 'row' | 'column' | 'grid';
   compact?: boolean;
 };
-function Preview({ theme, layout, imageCount, long, width, height, speed, imageHeightPercent, imageLayout, portrait, reset, compact = false }: PreviewProps) {
+function Preview({ theme, layout, imageCount, long, width, height, speed, fontSize, imageHeightPercent, imageLayout, portrait, reset, compact = false }: PreviewProps) {
   const container = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ scale: .5, height: height * .5 });
-  const appearance = { ...applyLiveTheme(DEFAULT_WINDCHIME_LIVE_APPEARANCE, theme), layout, maxWidth: width, viewportHeight: height, scrollSpeed: speed, imageHeightPercent, fontSize: 30, animation: 'none' as const, imageLayout };
+  const appearance = { ...applyLiveTheme(DEFAULT_WINDCHIME_LIVE_APPEARANCE, theme), layout, maxWidth: width, viewportHeight: height, scrollSpeed: speed, imageHeightPercent, fontSize, animation: 'none' as const, imageLayout };
   const assets = imageCount ? [
     { ...media, height: portrait ? 900 : media.height },
     { ...media, id: 'example-photo-2', height: portrait ? 260 : 900, caption: '第二张：不同方向的风景，也完整留在画面下方。' },
@@ -57,13 +57,31 @@ function App() {
   const [height, setHeight] = useState(800), [speed, setSpeed] = useState(24), [portrait, setPortrait] = useState(false), [reset, setReset] = useState(0);
   const [imageHeightPercent, setImageHeightPercent] = useState(45), [blank, setBlank] = useState(false);
   const [imageLayout, setImageLayout] = useState<'row' | 'column' | 'grid'>('row');
+  const [fontSize, setFontSize] = useState(30), [fontSizeInput, setFontSizeInput] = useState('30');
+  const updateFontSize = (value: number) => {
+    const next = Math.min(96, Math.max(12, Math.round(value)));
+    setFontSize(next); setFontSizeInput(String(next));
+  };
   const composition = LIVE_LAYOUTS.find(item => item.id === layout)!;
-  const shared = { imageCount, long, speed, portrait, imageHeightPercent, imageLayout, reset };
+  const shared = { imageCount, long, speed, fontSize, portrait, imageHeightPercent, imageLayout, reset };
   return <main className="design-page" data-mode={mode}>
     <header className="design-header"><div><span className="design-eyebrow">WINDCHIME · DISPLAY STUDIES</span><h1>文字慢慢读，风景一直在。</h1><p>六种排版，三种主题。窄侧栏、竖向信笺与横向舞台，可以自由搭配。</p></div><button onClick={() => setMode(mode === 'single' ? 'matrix' : 'single')}>{mode === 'single' ? '查看十八种组合' : '返回自由搭配'}</button></header>
     <section className="design-controls" aria-label="样式选择">
       <label>视觉主题<select aria-label="视觉主题" value={theme} onChange={e => setTheme(e.target.value as WindChimeLiveTheme)}>{LIVE_THEMES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>内容排版<select aria-label="内容排版" value={layout} onChange={e => setLayout(e.target.value as WindChimeLiveLayout)}>{LIVE_LAYOUTS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <div className="design-font-size" role="group" aria-label="字体大小">
+        <label htmlFor="design-font-size-number">字号 <span>12–96 px</span></label>
+        <div><input type="range" aria-label="字号滑块" min={12} max={96} step={1} value={fontSize} onChange={event => updateFontSize(Number(event.currentTarget.value))} />
+          <input id="design-font-size-number" type="number" aria-label="字号" min={12} max={96} step={1} value={fontSizeInput} onChange={event => {
+            const raw = event.currentTarget.value, value = Number(raw);
+            setFontSizeInput(raw);
+            if (raw.trim() && Number.isFinite(value) && value >= 12 && value <= 96) setFontSize(Math.round(value));
+          }} onBlur={() => {
+            const value = Number(fontSizeInput);
+            updateFontSize(fontSizeInput.trim() && Number.isFinite(value) ? value : fontSize);
+          }} />
+        </div>
+      </div>
       <label>展示宽度<select aria-label="展示宽度" value={width} onChange={e => setWidth(Number(e.target.value))}>{[360, 480, 600, 640, 960, 1000, 1200, 1280].map(value => <option key={value} value={value}>{value} px</option>)}</select></label>
       <label>展示高度<select aria-label="展示高度" value={height} onChange={e => setHeight(Number(e.target.value))}>{[300, 360, 420, 640, 800, 860, 900].map(value => <option key={value} value={value}>{value} px</option>)}</select></label>
       <button className="design-size" onClick={() => { setWidth(composition.recommendedWidth); setHeight(composition.recommendedHeight); }}>使用推荐尺寸</button>
