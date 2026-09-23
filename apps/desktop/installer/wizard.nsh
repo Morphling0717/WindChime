@@ -486,31 +486,48 @@ Function un.WCVerifyTarget
   StrCpy $WCUnValidationError ""
   ReadRegStr $0 HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
   ${If} $0 == ""
+    StrCpy $WCUnValidationError "未找到当前用户的风铃安装记录。"
     Goto wc_un_invalid
   ${EndIf}
-  GetFullPathName $0 "$0"
-  GetFullPathName $1 "$INSTDIR"
+  ; Compare canonical paths, including existing DOS aliases and separator
+  ; variations. Never replace the uninstaller location with registry data
+  ; without first proving that both names identify the same installation.
+  GetFullPathName $0 "$0\."
+  System::Call 'kernel32::GetLongPathNameW(w r0, w .r3, i ${NSIS_MAX_STRLEN})i.r2'
+  ${If} $2 == 0
+  ${OrIf} $2 >= ${NSIS_MAX_STRLEN}
+    StrCpy $WCUnValidationError "无法读取安装记录中的完整路径。"
+    Goto wc_un_invalid
+  ${EndIf}
+  StrCpy $0 $3
+  GetFullPathName $1 "$INSTDIR\."
+  System::Call 'kernel32::GetLongPathNameW(w r1, w .r3, i ${NSIS_MAX_STRLEN})i.r2'
+  ${If} $2 == 0
+  ${OrIf} $2 >= ${NSIS_MAX_STRLEN}
+    StrCpy $WCUnValidationError "无法读取卸载程序所在目录的完整路径。"
+    Goto wc_un_invalid
+  ${EndIf}
+  StrCpy $1 $3
   ${If} $0 != $1
+    StrCpy $WCUnValidationError "卸载程序所在目录与安装记录不一致。"
     Goto wc_un_invalid
   ${EndIf}
   ${GetFileName} "$1" $2
   ${If} $2 != "WindChime"
+    StrCpy $WCUnValidationError "安装目录名称不是 WindChime。"
     Goto wc_un_invalid
   ${EndIf}
   StrCpy $WCUnCanonical $1
-  System::Call 'kernel32::GetLongPathNameW(w r1, w .r0, i ${NSIS_MAX_STRLEN})i.r2'
-  ${If} $2 == 0
-    Goto wc_un_invalid
-  ${EndIf}
-  StrCpy $WCUnCanonical $0
   ; Reject replacement of the install root or any ancestor with a reparse point.
   ${Do}
     System::Call 'kernel32::GetFileAttributesW(w r1)i.r2'
     ${If} $2 == -1
+      StrCpy $WCUnValidationError "安装路径中的目录不存在或无法读取。"
       Goto wc_un_invalid
     ${EndIf}
     IntOp $3 $2 & 0x400
     ${If} $3 != 0
+      StrCpy $WCUnValidationError "安装路径包含目录链接。"
       Goto wc_un_invalid
     ${EndIf}
     ${GetParent} "$1" $0
@@ -547,8 +564,10 @@ Function un.WCVerifyTarget
   ; Only read the marker after the complete tree has passed its link checks.
   ReadINIStr $0 "$INSTDIR\resources\windchime-install.ini" "WindChime" "AppId"
   ${If} $0 != "${APP_ID}"
+    StrCpy $WCUnValidationError "安装标记缺失或与风铃程序身份不一致。"
     Goto wc_un_invalid
   ${EndIf}
+  StrCpy $INSTDIR $WCUnCanonical
   Pop $3
   Pop $2
   Pop $1
@@ -556,7 +575,7 @@ Function un.WCVerifyTarget
   Return
   wc_un_invalid:
   ${IfNot} ${Silent}
-    MessageBox MB_OK|MB_ICONEXCLAMATION "无法安全确认这份风铃的安装目录。已停止卸载，个人设置未被删除。$\r$\n请检查安装位置是否被移动或包含目录、文件链接。"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "无法安全确认这份风铃的安装目录，已停止卸载。$\r$\n$WCUnValidationError$\r$\n个人设置未被删除。"
   ${EndIf}
   SetErrorLevel 87
   Quit
