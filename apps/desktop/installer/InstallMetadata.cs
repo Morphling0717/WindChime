@@ -8,6 +8,31 @@ using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
 namespace WindChime.Setup {
+  [ComImport,Guid("00021401-0000-0000-C000-000000000046"),ClassInterface(ClassInterfaceType.None)]
+  sealed class ShellLinkObject {}
+  // Use the Unicode shell interface explicitly. WScript.Shell's late-bound
+  // shortcut implementation can use ANSI paths on non-Chinese Windows systems.
+  [ComImport,Guid("000214F9-0000-0000-C000-000000000046"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IShellLinkUnicode {
+    void GetPath([Out,MarshalAs(UnmanagedType.LPWStr)] StringBuilder value,int capacity,IntPtr findData,uint flags);
+    void GetIDList(out IntPtr value);
+    void SetIDList(IntPtr value);
+    void GetDescription([Out,MarshalAs(UnmanagedType.LPWStr)] StringBuilder value,int capacity);
+    void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string value);
+    void GetWorkingDirectory([Out,MarshalAs(UnmanagedType.LPWStr)] StringBuilder value,int capacity);
+    void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string value);
+    void GetArguments([Out,MarshalAs(UnmanagedType.LPWStr)] StringBuilder value,int capacity);
+    void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string value);
+    void GetHotkey(out short value);
+    void SetHotkey(short value);
+    void GetShowCmd(out int value);
+    void SetShowCmd(int value);
+    void GetIconLocation([Out,MarshalAs(UnmanagedType.LPWStr)] StringBuilder value,int capacity,out int index);
+    void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string value,int index);
+    void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string value,uint reserved);
+    void Resolve(IntPtr window,uint flags);
+    void SetPath([MarshalAs(UnmanagedType.LPWStr)] string value);
+  }
   public sealed class RegistrySnapshotValue {public string name {get;set;} public int kind {get;set;} public string text {get;set;} public string[] strings {get;set;} public long number {get;set;}}
   public sealed class RegistrySnapshot {public bool exists {get;set;} public List<RegistrySnapshotValue> values {get;set;}}
   public sealed class MetadataSnapshot {public RegistrySnapshot application {get;set;} public RegistrySnapshot uninstall {get;set;} public string desktop {get;set;} public string menu {get;set;}}
@@ -90,22 +115,34 @@ namespace WindChime.Setup {
       if(enabled){if(!File.Exists(path)||!InstallPolicy.SamePath(ReadLink(path),Path.Combine(target,"WindChime.exe")))throw new IOException("安装快捷方式核对失败。");}
       else if(File.Exists(path))throw new IOException("快捷方式选项未正确保存。");
     }
-    // Late-bound Windows Shell COM, limited to these two fixed shortcut paths.
+    static IOException ShortcutFailure(string operation,Exception cause) {
+      while(cause is System.Reflection.TargetInvocationException&&cause.InnerException!=null)cause=cause.InnerException;
+      return new IOException("无法"+operation+"风铃快捷方式。请检查桌面或开始菜单目录的写入权限。原因："+cause.Message,cause);
+    }
+    // No shortcut is executed or resolved through a shell. The installer calls
+    // these helpers only for its two fixed, ownership-checked shortcut paths.
     static string ReadLink(string file) {
-      object shell=Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")),link=null;
-      try {link=shell.GetType().InvokeMember("CreateShortcut",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[]{file});return (string)link.GetType().InvokeMember("TargetPath",System.Reflection.BindingFlags.GetProperty,null,link,null);}
-      finally {if(link!=null)Marshal.FinalReleaseComObject(link);Marshal.FinalReleaseComObject(shell);}
+      object link=null;
+      try {
+        link=new ShellLinkObject();
+        ((System.Runtime.InteropServices.ComTypes.IPersistFile)link).Load(file,0);
+        var target=new StringBuilder(32768);
+        ((IShellLinkUnicode)link).GetPath(target,target.Capacity,IntPtr.Zero,4);
+        return target.ToString();
+      }catch(Exception ex){throw ShortcutFailure("读取",ex);}
+      finally {if(link!=null)Marshal.FinalReleaseComObject(link);}
     }
     static void WriteLink(string file,string target,bool enabled) {
       InstallTransaction.RequireOrdinaryPath(file);
       if(!enabled){if(File.Exists(file))File.Delete(file);return;}
-      object shell=Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")),link=null;
+      object link=null;
       try {
-        link=shell.GetType().InvokeMember("CreateShortcut",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[]{file});
-        foreach(var item in new[]{new[]{"TargetPath",Path.Combine(target,"WindChime.exe")},new[]{"WorkingDirectory",target},new[]{"Description","风铃 · 私人审阅与手动上屏"}})
-          link.GetType().InvokeMember(item[0],System.Reflection.BindingFlags.SetProperty,null,link,new object[]{item[1]});
-        link.GetType().InvokeMember("Save",System.Reflection.BindingFlags.InvokeMethod,null,link,null);
-      }finally{if(link!=null)Marshal.FinalReleaseComObject(link);Marshal.FinalReleaseComObject(shell);}
+        link=new ShellLinkObject();var shortcut=(IShellLinkUnicode)link;
+        shortcut.SetPath(Path.Combine(target,"WindChime.exe"));shortcut.SetWorkingDirectory(target);
+        shortcut.SetDescription("风铃 · 私人审阅与手动上屏");
+        ((System.Runtime.InteropServices.ComTypes.IPersistFile)link).Save(file,true);
+      }catch(Exception ex){throw ShortcutFailure("保存",ex);}
+      finally{if(link!=null)Marshal.FinalReleaseComObject(link);}
     }
   }
 }

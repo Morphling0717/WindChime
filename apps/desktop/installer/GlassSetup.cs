@@ -107,6 +107,10 @@ namespace WindChime.Setup {
     Stream Resource(string name) { var stream=assembly.GetManifestResourceStream("WindChime.Install."+name);if(stream==null)throw new InvalidOperationException("安装文件不完整，请重新下载安装包。");return stream; }
     string ReadResource(string name) { using(var stream=Resource(name))using(var reader=new StreamReader(stream,Encoding.UTF8))return reader.ReadToEnd(); }
     void Error(string message) { UI<TextBlock>("ErrorText").Text=message??""; }
+    internal static string FailureMessage(Exception error) {
+      while(error.InnerException!=null&&(error is TargetInvocationException||(error is AggregateException&&((AggregateException)error).InnerExceptions.Count==1)))error=error.InnerException;
+      return error is OperationCanceledException?"已取消安装，原程序和个人设置保留。":error.Message;
+    }
     static string HashFile(string path) { using(var source=File.OpenRead(path))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(source)).Replace("-","").ToLowerInvariant(); }
     public void Run() {
       manifest=new JavaScriptSerializer().Deserialize<PayloadManifest>(ReadResource("Payload.json"));
@@ -174,7 +178,7 @@ namespace WindChime.Setup {
         await Install(desktop,menu);
         working=false;UI<TextBlock>("FinishPath").Text=installDirectory;Show(4);
         if(transaction!=null&&!String.IsNullOrEmpty(transaction.CleanupWarning))Error(transaction.CleanupWarning);
-      } catch(Exception ex) {working=false;Show(2);Error(ex is OperationCanceledException?"已取消安装，原程序和个人设置保留。":ex.Message);}
+      } catch(Exception ex) {working=false;Show(2);Error(FailureMessage(ex));}
     }
     void Cancel(){if(publishing||(transaction!=null&&transaction.Committing)){Error("正在安全切换程序文件，请等待完成。发生错误会恢复原版本。");return;}if(cancellation!=null){cancellation.Cancel();Error("正在取消并恢复，请稍候…");}}
     static void RequireStopped(){if(Process.GetProcessesByName("WindChime").Any())throw new InvalidOperationException("风铃仍在运行。请保存编辑内容，从托盘选择“退出并结束展示”，再点击安装。安装器不会强制关闭程序。");}
@@ -237,7 +241,7 @@ namespace WindChime.Setup {
       caption.Text="安装完成";progress.Value=100;
       } catch(Exception original) {
         try {transaction.Recover();File.Delete(PendingPath);}
-        catch(Exception recovery){throw new IOException("安装未完成，恢复记录已保留。重新运行本安装向导可继续恢复。原因："+recovery.Message,original);}
+        catch(Exception recovery){throw new IOException("安装未完成，恢复记录已保留。重新运行本安装向导可继续恢复。原因："+FailureMessage(recovery),original);}
         throw;
       } finally {publishing=false;cancellation.Dispose();cancellation=null;}
     }
@@ -248,7 +252,7 @@ namespace WindChime.Setup {
           if(!first){MessageBox.Show("安装向导已经打开，请继续使用现有窗口。","风铃安装",MessageBoxButton.OK,MessageBoxImage.Information);return 1;}
           try{new GlassSetup().Run();return 0;}finally{mutex.ReleaseMutex();}
         }
-      }catch(Exception ex){MessageBox.Show(ex.Message,"风铃安装",MessageBoxButton.OK,MessageBoxImage.Information);return 1;}
+      }catch(Exception ex){MessageBox.Show(FailureMessage(ex),"风铃安装",MessageBoxButton.OK,MessageBoxImage.Information);return 1;}
     }
   }
 }
