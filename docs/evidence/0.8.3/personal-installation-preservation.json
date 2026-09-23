@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "version": "0.8.3",
+  "stage": "before",
+  "originalFilesUnchanged": true,
+  "originalProfilesUnchanged": true,
+  "registryMatchesExpected": true,
+  "shortcutMatchesExpected": true,
+  "targetMatchesExpected": true
+}

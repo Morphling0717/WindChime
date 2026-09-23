@@ -1,0 +1,91 @@
+✖ failing tests:
+2026-09-23T14:51:30.8846781Z 
+2026-09-23T14:51:30.8847043Z test at tests\installer-policy.test.cjs:107:3
+2026-09-23T14:51:30.8847974Z ✖ registered locations and shortcuts treat existing DOS aliases as the same path (1307.0337ms)
+2026-09-23T14:51:30.8848817Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+2026-09-23T14:51:30.8849401Z   + actual - expected
+2026-09-23T14:51:30.8849722Z   
+2026-09-23T14:51:30.8851655Z   + '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\Long installed location fixture\\WindChime'
+2026-09-23T14:51:30.8853149Z   - '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\Long installed location fixture\\WindChime'
+2026-09-23T14:51:30.8854349Z   
+2026-09-23T14:51:30.8855080Z       at TestContext.<anonymous> (<ci-workspace>\apps\desktop\tests\installer-policy.test.cjs:111:84)
+2026-09-23T14:51:30.8856100Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-09-23T14:51:30.8856857Z       at async Test.run (node:internal/test_runner/test:1404:7)
+2026-09-23T14:51:30.8857604Z       at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+2026-09-23T14:51:30.8858207Z     generatedMessage: true,
+2026-09-23T14:51:30.8858578Z     code: 'ERR_ASSERTION',
+2026-09-23T14:51:30.8859623Z     actual: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\Long installed location fixture\\WindChime',
+2026-09-23T14:51:30.8861538Z     expected: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\Long installed location fixture\\WindChime',
+2026-09-23T14:51:30.8862549Z     operator: 'strictEqual',
+2026-09-23T14:51:30.8863120Z     diff: 'simple'
+2026-09-23T14:51:30.8864381Z   }
+2026-09-23T14:51:30.8864541Z 
+2026-09-23T14:51:30.8864825Z test at tests\installer-policy.test.cjs:115:3
+2026-09-23T14:51:30.8865926Z ✖ runtime verification paths cannot escape, alias a stream or name an absolute file (445.4081ms)
+2026-09-23T14:51:30.8867004Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+2026-09-23T14:51:30.8867730Z   + actual - expected
+2026-09-23T14:51:30.8868076Z   
+2026-09-23T14:51:30.8868355Z     [
+2026-09-23T14:51:30.8869359Z   +   '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\app.asar',
+2026-09-23T14:51:30.8870841Z   +   '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\windchime-install.ini'
+2026-09-23T14:51:30.8872769Z   -   '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\app.asar',
+2026-09-23T14:51:30.8874328Z   -   '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\windchime-install.ini'
+2026-09-23T14:51:30.8875295Z     ]
+2026-09-23T14:51:30.8875549Z   
+2026-09-23T14:51:30.8876280Z       at TestContext.<anonymous> (<ci-workspace>\apps\desktop\tests\installer-policy.test.cjs:118:12)
+2026-09-23T14:51:30.8877450Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-09-23T14:51:30.8878319Z       at async Test.run (node:internal/test_runner/test:1404:7)
+2026-09-23T14:51:30.8879005Z       at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+2026-09-23T14:51:30.8879621Z     generatedMessage: true,
+2026-09-23T14:51:30.8879979Z     code: 'ERR_ASSERTION',
+2026-09-23T14:51:30.8881660Z     actual: [ '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\app.asar', '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\windchime-install.ini' ],
+2026-09-23T14:51:30.8884706Z     expected: [ '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\app.asar', '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\payload\\WindChime\\resources\\windchime-install.ini' ],
+2026-09-23T14:51:30.8886388Z     operator: 'deepStrictEqual',
+2026-09-23T14:51:30.8886799Z     diff: 'simple'
+2026-09-23T14:51:30.8887095Z   }
+2026-09-23T14:51:30.8887231Z 
+2026-09-23T14:51:30.8887491Z test at tests\installer-policy.test.cjs:187:3
+2026-09-23T14:51:30.8888562Z ✖ private staging request survives the real Windows INI parser with exact scope and Unicode (878.3533ms)
+2026-09-23T14:51:30.8889847Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+2026-09-23T14:51:30.8890455Z   + actual - expected
+2026-09-23T14:51:30.8890747Z   
+2026-09-23T14:51:30.8890993Z     {
+2026-09-23T14:51:30.8891659Z       AppId: 'org.windchime.desktop',
+2026-09-23T14:51:30.8892105Z       Protocol: '2',
+2026-09-23T14:51:30.8893381Z   +   Stage: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\中文 空格=测试\\.WindChime-Setup-00000000000000000000000000000000\\new',
+2026-09-23T14:51:30.8895394Z   -   Stage: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\中文 空格=测试\\.WindChime-Setup-00000000000000000000000000000000\\new',
+2026-09-23T14:51:30.8896337Z       Token: '0123456789abcdef0123456789abcdef',
+2026-09-23T14:51:30.8896661Z       Transaction: '00000000000000000000000000000000'
+2026-09-23T14:51:30.8896934Z     }
+2026-09-23T14:51:30.8897109Z   
+2026-09-23T14:51:30.8897473Z       at <ci-workspace>\apps\desktop\tests\installer-policy.test.cjs:206:39
+2026-09-23T14:51:30.8898036Z       at Array.forEach (<anonymous>)
+2026-09-23T14:51:30.8898764Z       at TestContext.<anonymous> (<ci-workspace>\apps\desktop\tests\installer-policy.test.cjs:206:12)
+2026-09-23T14:51:30.8899847Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-09-23T14:51:30.8900712Z       at async Test.run (node:internal/test_runner/test:1404:7)
+2026-09-23T14:51:30.8901616Z       at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+2026-09-23T14:51:30.8902343Z     generatedMessage: true,
+2026-09-23T14:51:30.8902749Z     code: 'ERR_ASSERTION',
+2026-09-23T14:51:30.8904241Z     actual: { AppId: 'org.windchime.desktop', Protocol: '2', Transaction: '00000000000000000000000000000000', Token: '0123456789abcdef0123456789abcdef', Stage: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\中文 空格=测试\\.WindChime-Setup-00000000000000000000000000000000\\new' },
+2026-09-23T14:51:30.8906415Z     expected: { Protocol: '2', AppId: 'org.windchime.desktop', Token: '0123456789abcdef0123456789abcdef', Transaction: '00000000000000000000000000000000', Stage: '<ci-profile>\\AppData\\Local\\Temp\\windchime-installer-policy-hXMToG\\中文 空格=测试\\.WindChime-Setup-00000000000000000000000000000000\\new' },
+2026-09-23T14:51:30.8907497Z     operator: 'deepStrictEqual',
+2026-09-23T14:51:30.8907752Z     diff: 'simple'
+2026-09-23T14:51:30.8907951Z   }
+2026-09-23T14:51:30.9337328Z ##[error]Process completed with exit code 1.
+2026-09-23T14:51:30.9599279Z Post job cleanup.
+2026-09-23T14:51:31.1574273Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-09-23T14:51:31.1861903Z git version 2.55.0.windows.5
+2026-09-23T14:51:31.1942864Z Temporarily overriding HOME='D:\a\_temp\72004641-4f58-45b7-9795-85cee5c7b038' before making global git config changes
+2026-09-23T14:51:31.1944223Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-23T14:51:31.1955013Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory <ci-workspace>
+2026-09-23T14:51:31.2274794Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-09-23T14:51:31.2574075Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-09-23T14:51:31.7968012Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-23T14:51:31.8216390Z http.https://github.com/.extraheader
+2026-09-23T14:51:31.8266551Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-09-23T14:51:31.8569272Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-09-23T14:51:32.3642394Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-23T14:51:32.3937550Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-09-23T14:51:32.9588764Z Cleaning up orphan processes
+2026-09-23T14:51:32.9795726Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

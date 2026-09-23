@@ -1,0 +1,64 @@
+{
+  "startedAt": "2026-09-23T14:50:59.019Z",
+  "desktopReviewVersion": "0.8.3",
+  "sharedVersion": "0.8.2",
+  "node": "v20.20.2",
+  "npm": "10.9.8",
+  "platform": "win32",
+  "arch": "x64",
+  "passed": false,
+  "cases": [
+    {
+      "site": "Next_UliUli",
+      "commit": "7f51447dd0131927756ba0c0ae5d25f2d02b3369",
+      "reviewBaseMain": "1288e3d508407699a10605bef1ccfe6dea78d26a",
+      "sharedVersion": "0.8.2",
+      "packageSha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "isolatedGitWorktree": true,
+      "isolatedDependencies": true,
+      "isolatedDatabase": true,
+      "environmentFilesCopied": false,
+      "steps": [
+        {
+          "name": "migrations",
+          "exitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0
+        },
+        {
+          "name": "routes",
+          "exitCode": 0
+        },
+        {
+          "name": "mail",
+          "exitCode": 0
+        }
+      ],
+      "extraChecks": [
+        {
+          "label": "Original HTTP login issues an authenticated session cookie",
+          "passed": true
+        },
+        {
+          "label": "Legacy route redirects only allowed pairing/topic parameters",
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "isolatedServerStopped": true
+    }
+  ],
+  "crossSiteChecks": [],
+  "limitations": [
+    "Production servers and real databases were not accessed",
+    "HTTP login checks are not a graphical browser interaction test",
+    "Service-worker fetch guard tested in a VM; no browser offline-cache claim"
+  ],
+  "error": "Invalid URL",
+  "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+  "originalWorktreesUnmodified": true,
+  "finishedAt": "2026-09-23T14:52:05.934Z",
+  "classification": "Test-harness-only failure: mock self.location lacked href. Corrected runner; no product code changed. Passed same-commit Uli build/migration/HTTP results retained, extra checks rerun."
+}

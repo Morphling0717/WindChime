@@ -1,0 +1,290 @@
+{
+  "date": "2026-09-23T15:21:59.767Z",
+  "version": "0.8.3",
+  "passed": true,
+  "archive": "<build-stage>\\WindChime-win32-x64\\resources\\app.asar",
+  "entryCount": 60,
+  "runtimeAllowlist": true,
+  "noCredentialLiterals": true,
+  "matchedFiles": [
+    "package.json",
+    "main.cjs",
+    "security.cjs",
+    "workspace.cjs",
+    "preload-control.cjs",
+    "preload-display.cjs",
+    "build/control.js",
+    "build/control.css",
+    "build/control.html",
+    "build/display.js",
+    "build/display.html",
+    "build/connection-key.cjs",
+    "build/icon.ico",
+    "build/icon.png",
+    "build/tray.png",
+    "build/brand-header.svg",
+    "build/brand-symbol.svg",
+    "build/licenses/manifest.json",
+    "build/licenses/installer-manifest.json",
+    "build/licenses/WindChime-MIT.txt",
+    "build/licenses/THIRD-PARTY-NOTICES.txt",
+    "build/licenses/INSTALLER-NOTICES.txt",
+    "build/licenses/dijkstrajs@1.0.3/LICENSE.md",
+    "build/licenses/dijkstrajs@1.0.3/SOURCE-NOTICES.txt",
+    "build/licenses/qrcode@1.5.4/license",
+    "build/licenses/qrcode@1.5.4/SOURCE-NOTICES.txt",
+    "build/licenses/react-dom@19.2.4/LICENSE",
+    "build/licenses/react-dom@19.2.4/SOURCE-NOTICES.txt",
+    "build/licenses/react@19.2.4/LICENSE",
+    "build/licenses/react@19.2.4/SOURCE-NOTICES.txt",
+    "build/licenses/scheduler@0.27.0/LICENSE",
+    "build/licenses/scheduler@0.27.0/SOURCE-NOTICES.txt",
+    "build/licenses/installer/NSIS-COPYING.txt",
+    "build/licenses/installer/electron-builder-LICENSE.txt",
+    "build/licenses/installer/StdUtils-LGPL.txt",
+    "build/licenses/installer/StdUtils-LGPL_CLARIFICATION.txt",
+    "build/licenses/installer/StdUtils-ReadMe.txt",
+    "build/licenses/installer/UAC-License.txt",
+    "build/licenses/installer/UAC-History.txt",
+    "build/licenses/installer/WinShell-NOTICE.txt",
+    "build/licenses/installer/nsProcess-Readme.txt",
+    "build/licenses/installer/nsProcess-nsProcess.c",
+    "build/licenses/installer/nsis7z-License.txt",
+    "build/licenses/installer/nsis7z-nsis7z.txt",
+    "build/licenses/installer/sources/StdUtils.2018-10-27.zip",
+    "build/licenses/installer/sources/StdUtils.2018-10-27.sources.tbz2",
+    "build/licenses/installer/sources/Nsis7z_19.00.7z",
+    "build/licenses/installer/sources/lzma1900.7z",
+    "build/licenses/installer/sources/UAC.zip",
+    "build/licenses/installer/sources/NsProcess.zip",
+    "build/licenses/installer/sources/WinShell.zip"
+  ],
+  "licenses": {
+    "manifestScoped": true,
+    "projectMIT": true,
+    "documentHashes": [
+      {
+        "name": "WindChime-MIT.txt",
+        "sha256": "a18fcda20e9357d4484b393e3c057a455198e26009b0ecf09446f095b46ed042"
+      },
+      {
+        "name": "dijkstrajs@1.0.3/LICENSE.md",
+        "sha256": "c46324e45a005413535a6fb7a97e9eacd3cc6bf30335b7d5c10b8ee3af9e60c2"
+      },
+      {
+        "name": "dijkstrajs@1.0.3/SOURCE-NOTICES.txt",
+        "sha256": "02962dcf65ff3591b6514696c2181aaaebba7a8bf77cfa85f78c4a6348e7910e"
+      },
+      {
+        "name": "qrcode@1.5.4/license",
+        "sha256": "8df47c6ad9ac2c41eb9b2a72def9908959da0ede8dadd56c7b249c1bdb0c5ce6"
+      },
+      {
+        "name": "qrcode@1.5.4/SOURCE-NOTICES.txt",
+        "sha256": "fbc9c0b3fb6b0221fc43e3b1680eec30f38a705bd690c94dba3b16273bc0b6b8"
+      },
+      {
+        "name": "react-dom@19.2.4/LICENSE",
+        "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+      },
+      {
+        "name": "react-dom@19.2.4/SOURCE-NOTICES.txt",
+        "sha256": "2fa765642e61b01e1bc0f2cae2e6ae3f5565272dd7f2a5bf91868673f12f9464"
+      },
+      {
+        "name": "react@19.2.4/LICENSE",
+        "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+      },
+      {
+        "name": "react@19.2.4/SOURCE-NOTICES.txt",
+        "sha256": "4ef3293f9320871d40d1b93a31d21f5c977618e801578c2a305a0b9ce05eae02"
+      },
+      {
+        "name": "scheduler@0.27.0/LICENSE",
+        "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+      },
+      {
+        "name": "scheduler@0.27.0/SOURCE-NOTICES.txt",
+        "sha256": "9bfe981794ce6f5c2135c9f44f6bb95855e55d5e12cb13cb37ab20eb3f65da2f"
+      },
+      {
+        "name": "installer/NSIS-COPYING.txt",
+        "sha256": "3c8de989f6504d52f5f8dfafedb6668cd47201f5d01f1319570727c091425dd6"
+      },
+      {
+        "name": "installer/electron-builder-LICENSE.txt",
+        "sha256": "bed8d0ab3e6031817f775a641ff37313b0f5591bc8ba0ed79b978dafbd4231ce"
+      },
+      {
+        "name": "installer/StdUtils-LGPL.txt",
+        "sha256": "1e7e6bae5a5bde32f1ae5a7c37a082d1ab03cf89354f7f936ac40be9e39a6531"
+      },
+      {
+        "name": "installer/StdUtils-LGPL_CLARIFICATION.txt",
+        "sha256": "ae0ab3f49b4473152181c1fe5670435faaca079eda0b261ee31a51a6180bc9e7"
+      },
+      {
+        "name": "installer/StdUtils-ReadMe.txt",
+        "sha256": "31b67e463c6e5695e9ffaf62dd077d9bd62df34026593c2f29bc9ea87fdac72f"
+      },
+      {
+        "name": "installer/UAC-License.txt",
+        "sha256": "997fd014643f27a2f240faf9b9b54a98371775c63eb38134829154794f7326fa"
+      },
+      {
+        "name": "installer/UAC-History.txt",
+        "sha256": "e966e6918f2a8c4aa9a24be2bf802de762cc9773948f171056a0407abde01144"
+      },
+      {
+        "name": "installer/WinShell-NOTICE.txt",
+        "sha256": "91cd2b46029e5d53c3ec07a43ed88c6786fe87edd6d0c5156e062b794bf23f71"
+      },
+      {
+        "name": "installer/nsProcess-Readme.txt",
+        "sha256": "27a9855be0ebc9ba8d38d97e54356c18e98e5498b50db8fd66013a5d6a5c9fbb"
+      },
+      {
+        "name": "installer/nsProcess-nsProcess.c",
+        "sha256": "29e67acba9745cc582200ab239f93a77435003429c1c68a2f17954c73c1def73"
+      },
+      {
+        "name": "installer/nsis7z-License.txt",
+        "sha256": "63fcfe54826809b5a9f9df8a8ff53c04330122319ec67a2dd815085586adaf0e"
+      },
+      {
+        "name": "installer/nsis7z-nsis7z.txt",
+        "sha256": "881f8ba4da0a0c30e281d324408baa596f14211b03d1f3bf99fe18c4621916c3"
+      },
+      {
+        "name": "installer/sources/StdUtils.2018-10-27.zip",
+        "sha256": "3ffe893dc7477fdb1cac551a86ae017509e1f2d0ebdc7185fd0fbaf20870688c"
+      },
+      {
+        "name": "installer/sources/StdUtils.2018-10-27.sources.tbz2",
+        "sha256": "c5e3b1a66219bc9564c2ccc1702691327eecf044ad33404ac268d725d22dca49"
+      },
+      {
+        "name": "installer/sources/Nsis7z_19.00.7z",
+        "sha256": "6f2f3730049926f40442ee0c8b7d3e3dee7ace544d82467ff8059ea3f4201c58"
+      },
+      {
+        "name": "installer/sources/lzma1900.7z",
+        "sha256": "00f569e624b3d9ed89cf8d40136662c4c5207eaceb92a70b1044c77f84234bad"
+      },
+      {
+        "name": "installer/sources/UAC.zip",
+        "sha256": "20e3192af5598568887c16d88de59a52c2ce4a26e42c5fb8bee8105dcbbd1760"
+      },
+      {
+        "name": "installer/sources/NsProcess.zip",
+        "sha256": "fc19fc66a5219a233570fafd5daeb0c9b85387b379f6df5ac8898159a57c5944"
+      },
+      {
+        "name": "installer/sources/WinShell.zip",
+        "sha256": "34e111f8aacf64c540d848fd06b9d6f3e2c10cb825ec9329a01d1141973e749b"
+      },
+      {
+        "name": "manifest.json",
+        "sha256": "1f63b840fef5f4103b0a0ce7da977d316e42a7ca64e46b03011008829aee6203"
+      },
+      {
+        "name": "installer-manifest.json",
+        "sha256": "7d21c03cfd79c4b0e920536afd34c3601805e34a95154b5b61d0faee68114449"
+      },
+      {
+        "name": "THIRD-PARTY-NOTICES.txt",
+        "sha256": "14b2f8e9e5ff65beb0142347cb1e61eb058c674364984ff3fe571fbe0b02ae7b"
+      },
+      {
+        "name": "INSTALLER-NOTICES.txt",
+        "sha256": "c1f5a979acf8bf49f165f9d902ffd76c1aecdefb4e03aa68cb02eec650407ee1"
+      }
+    ],
+    "electronOriginals": [
+      {
+        "name": "LICENSE",
+        "bytes": 1096,
+        "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d"
+      },
+      {
+        "name": "LICENSES.chromium.html",
+        "bytes": 20472830,
+        "sha256": "7b328b8c7463ac9bfc7dc648c751533517c8441a0b5b21047d6c0b2620e60d70"
+      }
+    ],
+    "embeddedComponents": [
+      {
+        "name": "nsProcess",
+        "entry": "$PLUGINSDIR/nsProcess.dll",
+        "scope": "uninstaller",
+        "sha256": "30c6c3dd3cc7fcea6e6081ce821adc7b2888542dae30bf00e881c0a105eb4d11"
+      }
+    ]
+  },
+  "installer": {
+    "format": "WPF managed PE with staged transaction Nsis engine",
+    "managedPE": {
+      "managedPE": true,
+      "assemblyName": "WindChime-Setup-0.8.3",
+      "assemblyVersion": "0.8.3.0",
+      "resources": [
+        {
+          "name": "WindChime.Install.Engine.exe",
+          "bytes": 118591871,
+          "sha256": "1c6d90d74c005b312eda7ed44cc3d90be86d1cd615e5777ae8376bd98804b46d",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-00.bin"
+        },
+        {
+          "name": "WindChime.Install.View.xaml",
+          "bytes": 29535,
+          "sha256": "5bcf7f27d085d9794ccf4f181b73a45e4e4679315c2c067688ee4d8a8a2d624c",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-01.bin"
+        },
+        {
+          "name": "WindChime.Install.Logo.png",
+          "bytes": 357100,
+          "sha256": "9ea8b162b335e13f2308a649f685211442d16159042af4c46630dd4ce1749a1a",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-02.bin"
+        },
+        {
+          "name": "WindChime.Install.Icon.png",
+          "bytes": 33777,
+          "sha256": "acad191b76b79ddad907192a693c4269bde72e43277067dd4cae5d2bc2d97c34",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-03.bin"
+        },
+        {
+          "name": "WindChime.Install.LICENSE.txt",
+          "bytes": 1100,
+          "sha256": "a18fcda20e9357d4484b393e3c057a455198e26009b0ecf09446f095b46ed042",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-04.bin"
+        },
+        {
+          "name": "WindChime.Install.Payload.json",
+          "bytes": 11612,
+          "sha256": "597cbb3f849f9cc65af1416d1926b7a2038ee7db9719e0f2e42bdd092a18bd4a",
+          "path": "<package-verification-fixture>\\managed-resources\\resource-05.bin"
+        }
+      ]
+    },
+    "manifestFilesMatched": 75,
+    "runtimePayload": "$_39_",
+    "payloadFilesMatched": 75,
+    "temporary": "<package-verification-fixture>",
+    "sevenZip": "<workspace>\\.work\\tools\\7zip\\7z.exe"
+  },
+  "checksumManifest": "SHA256SUMS.txt",
+  "hashes": [
+    {
+      "name": "WindChime-Setup-0.8.3.exe",
+      "bytes": 119137280,
+      "sha256": "ddc60b16d000ec45c3ba9be0ada6351fd37165ab77f09f660079b529d6d4339a"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.3.zip",
+      "bytes": 160662213,
+      "sha256": "a1179f6e635f3c6c5cb8d838bb5e46e21e560fd918652d08c32dede6f47f91c0"
+    }
+  ],
+  "portableRuntimeMatches": true,
+  "executedInstaller": false
+}

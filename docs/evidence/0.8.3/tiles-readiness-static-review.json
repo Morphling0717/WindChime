@@ -1,0 +1,37 @@
+{
+  "reviewKind": "static source review only; no Electron or foreground operation",
+  "initialFailure": "Source-runtime 005312e first inbox tile returned isAlwaysOnTop() === false",
+  "originalFailureCauseConfirmed": false,
+  "confirmedHarnessGap": {
+    "click": "openModule evaluates node.click(); the event callback does not return the openTile IPC promise to the test",
+    "production": "main.cjs constructs show:false BrowserWindow and registers the tile before awaiting loadFile; only afterward does it validate scope, set title, show the window and return",
+    "oldWait": "The test waited only for tile URL discovery and preload plus body text, neither of which proves the production window has been shown",
+    "assertion": "isAlwaysOnTop() was read immediately after that incomplete readiness check",
+    "failureSnapshotLimit": "The failure dump shows a visible window later; it did not record native visibility/loading state at the failing assertion and cannot settle the ordering question",
+    "uiLabelLimit": "The UI pin label reflects saved tile metadata; it is not an independent native topmost observation"
+  },
+  "testOnlyChange": {
+    "file": "apps/desktop/scripts/tiles-smoke.cjs",
+    "waitsFor": [
+      "production-created native window is visible",
+      "main-frame loading has ended",
+      "renderer visibilityState is visible, preload is available and body has rendered"
+    ],
+    "observations": "Record native visibility, loading and topmost state at discovery, native-show readiness and renderer readiness in both success and failure reports",
+    "topmostAssertionUnchanged": true,
+    "callsShowFocusOrSetAlwaysOnTopToForcePass": false,
+    "productionCodeChangedByThisReview": false
+  },
+  "validation": {
+    "nodeCheckPassed": true,
+    "gitDiffCheckPassed": true,
+    "nativeRerunExecuted": false,
+    "acceptedAsPassing": false
+  },
+  "nextVerification": [
+    "After foreground testing is authorized again, run node scripts/run-tiles-smoke.cjs using final built sources and its isolated fixture profile",
+    "Keep the initial failure and compare new tileOpenObservations; do not reuse historical success reports",
+    "If topmost remains false after native visibility and renderer readiness, retain the failure and investigate the native production window behavior",
+    "A complete successful first run must precede the independent restart harness; final packaged native acceptance remains separate"
+  ]
+}

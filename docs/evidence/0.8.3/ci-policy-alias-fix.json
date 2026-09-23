@@ -1,0 +1,30 @@
+{
+  "run": 35877135343,
+  "job": 107235860418,
+  "commit": "005312e7270f391f6ac526ebe7e33ca4ac8af1fc",
+  "initial": {
+    "tests": 137,
+    "passed": 134,
+    "failed": 3,
+    "skipped": 0,
+    "node": "24.20.0",
+    "os": "Windows Server 2025"
+  },
+  "rootCause": "TEMP used RUNNER~1 DOS alias; installer correctly expanded it to runneradmin. Three fixture expectations incorrectly compared raw temporary spelling with canonical output.",
+  "fix": "Resolve the newly created temporary fixture through independent fs.realpath before constructing exact expectations; alias equality, traversal, INI scope, and every original assertion remain intact.",
+  "changedFile": "apps/desktop/tests/installer-policy.test.cjs",
+  "localVerification": {
+    "command": "node --test tests/installer-policy.test.cjs with child TEMP/TMP set to real GetShortPathName alias",
+    "realDOSAliasUsed": true,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "electronStarted": false,
+    "runtimeCodeChanged": false
+  },
+  "githubRerunAfterFix": {
+    "run": 35878571008,
+    "conclusion": "success",
+    "sourceCommit": "4315c684adaa7c3cd2e7d3fa5d177923b7e82703"
+  }
+}

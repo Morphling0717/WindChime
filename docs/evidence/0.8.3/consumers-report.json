@@ -1,0 +1,200 @@
+{
+  "startedAt": "2026-09-23T14:53:05.509Z",
+  "desktopReviewVersion": "0.8.3",
+  "sharedVersion": "0.8.2",
+  "node": "v20.20.2",
+  "npm": "10.9.8",
+  "platform": "win32",
+  "arch": "x64",
+  "passed": true,
+  "cases": [
+    {
+      "site": "Next_UliUli",
+      "commit": "7f51447dd0131927756ba0c0ae5d25f2d02b3369",
+      "reviewBaseMain": "1288e3d508407699a10605bef1ccfe6dea78d26a",
+      "sharedVersion": "0.8.2",
+      "packageSha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "isolatedGitWorktree": true,
+      "isolatedDependencies": true,
+      "isolatedDatabase": true,
+      "environmentFilesCopied": false,
+      "steps": [
+        {
+          "name": "migrations",
+          "exitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0
+        },
+        {
+          "name": "routes",
+          "exitCode": 0
+        },
+        {
+          "name": "mail",
+          "exitCode": 0
+        }
+      ],
+      "extraChecks": [
+        {
+          "label": "Original HTTP login issues an authenticated session cookie",
+          "passed": true
+        },
+        {
+          "label": "Legacy route redirects only allowed pairing/topic parameters",
+          "passed": true
+        },
+        {
+          "label": "Locally served service worker fetch handler bypasses private mail, live and API requests (VM)",
+          "passed": true
+        },
+        {
+          "label": "Site key identity comes from server; derived display opens blank",
+          "passed": true
+        },
+        {
+          "label": "Admin Cookie cannot expand a supplied display Bearer into management access",
+          "passed": true
+        },
+        {
+          "label": "Cross-origin Cookie cannot issue management credentials",
+          "passed": true
+        },
+        {
+          "label": "Desktop control key cannot issue new management credentials",
+          "passed": true
+        },
+        {
+          "label": "Live management response is no-store",
+          "passed": true
+        },
+        {
+          "label": "Revoking site key invalidates control and derived display credentials",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "isolatedServerStopped": true
+    },
+    {
+      "site": "Next_Mia",
+      "commit": "0137c97514390b5679cc68a01a4710b4a27b79c8",
+      "reviewBaseMain": "d457bf76e1816f7e3f5913a7e62ed5d6f0861783",
+      "sharedVersion": "0.8.2",
+      "packageSha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "isolatedGitWorktree": true,
+      "isolatedDependencies": true,
+      "isolatedDatabase": true,
+      "environmentFilesCopied": false,
+      "steps": [
+        {
+          "name": "migrations",
+          "exitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0
+        },
+        {
+          "name": "mail",
+          "exitCode": 0
+        }
+      ],
+      "extraChecks": [
+        {
+          "label": "Original HTTP login issues an authenticated session cookie",
+          "passed": true
+        },
+        {
+          "label": "Legacy route redirects only allowed pairing/topic parameters",
+          "passed": true
+        },
+        {
+          "label": "Locally served service worker fetch handler bypasses private mail, live and API requests (VM)",
+          "passed": true
+        },
+        {
+          "label": "Site key identity comes from server; derived display opens blank",
+          "passed": true
+        },
+        {
+          "label": "Admin Cookie cannot expand a supplied display Bearer into management access",
+          "passed": true
+        },
+        {
+          "label": "Cross-origin Cookie cannot issue management credentials",
+          "passed": true
+        },
+        {
+          "label": "Desktop control key cannot issue new management credentials",
+          "passed": true
+        },
+        {
+          "label": "Live management response is no-store",
+          "passed": true
+        },
+        {
+          "label": "Revoking site key invalidates control and derived display credentials",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "isolatedServerStopped": true
+    }
+  ],
+  "crossSiteChecks": [
+    {
+      "from": "Next_UliUli",
+      "to": "Next_Mia",
+      "managementBearerDenied": true,
+      "displayBearerDenied": true,
+      "otherSiteCookieDenied": true
+    },
+    {
+      "from": "Next_Mia",
+      "to": "Next_UliUli",
+      "managementBearerDenied": true,
+      "displayBearerDenied": true,
+      "otherSiteCookieDenied": true
+    }
+  ],
+  "limitations": [
+    "Production servers and real databases were not accessed",
+    "HTTP login checks are not a graphical browser interaction test",
+    "Service-worker fetch guard tested in a VM; no browser offline-cache claim"
+  ],
+  "priorHarnessAttempt": {
+    "error": "SW test VM omitted self.location.href; fixed test environment only",
+    "productionBuildAndHttpAlreadyPassed": true,
+    "report": "consumers-harness-attempt-1.json"
+  },
+  "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+  "originalWorktreesUnmodified": true,
+  "finishedAt": "2026-09-23T14:54:17.307Z",
+  "evidenceScope": "Desktop 0.8.3 compatibility QC; site/shared dependencies remain 0.8.2",
+  "commands": [
+    "In new detached worktrees at the recorded commits: Node 20.20.2 + npm 10.9.8 ci --no-audit --no-fund",
+    "node scripts/test-mail-migrations.cjs (fresh, legacy, current; each migration twice)",
+    "node node_modules/next/dist/bin/next build",
+    "node scripts/verify-build-routes.cjs (UliUli only)",
+    "node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3151|3152",
+    "node scripts/test-mail.mjs",
+    "Isolated HTTP/VM runner: .work/qc-consumers-083-20260923/run.cjs"
+  ],
+  "environmentPolicy": {
+    "database": "Per-site temporary SQLite and media directory, synthetic records only",
+    "authentication": "Distinct random temporary administrator passwords, session secrets and hash salts; not recorded",
+    "buildDirectory": ".windchime-qc083",
+    "gateway": "No gateway URL, signing key or Bilibili credentials configured",
+    "copiedProductionConfiguration": false,
+    "originalDependenciesUsed": false,
+    "portCheckAfterExit": "Neither 3151 nor 3152 remains listening"
+  },
+  "warnings": [
+    "Both successful Turbopack builds retain an NFT broad-tracing warning for next.config.ts -> lib/windchime-live.ts -> live API route",
+    "Both builds retain an Edge-runtime/static-generation warning",
+    "Next amended only the isolated worktree tsconfig during build; that worktree file was restored afterwards"
+  ],
+  "harnessSha256": "aa1452eb9a9192a330b74fcebcaaf7be27ba88962648b8548f28b8f437a3b5a1"
+}

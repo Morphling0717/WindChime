@@ -1,0 +1,14 @@
+2026-09-23T15:02:31.5824552Z node: v24.20.0
+2026-09-23T15:02:31.5824930Z npm: 11.19.0
+2026-09-23T15:03:13.6272973Z   ✔ registered locations and shortcuts treat existing DOS aliases as the same path (1324.7254ms)
+2026-09-23T15:03:17.5067860Z   ✔ Chinese filename, target, working directory and description survive en-MY STA (177.9208ms)
+2026-09-23T15:03:17.5069183Z   ✔ Chinese filename, target, working directory and description survive en-MY MTA (129.9577ms)
+2026-09-23T15:03:17.5070349Z   ✔ Chinese filename, target, working directory and description survive zh-CN STA (115.3015ms)
+2026-09-23T15:03:17.5071502Z   ✔ Chinese filename, target, working directory and description survive zh-CN MTA (131.4499ms)
+2026-09-23T15:03:23.1279934Z ℹ tests 137
+2026-09-23T15:03:23.1369106Z ℹ suites 4
+2026-09-23T15:03:23.1369818Z ℹ pass 137
+2026-09-23T15:03:23.1370189Z ℹ fail 0
+2026-09-23T15:03:23.1370519Z ℹ cancelled 0
+2026-09-23T15:03:23.1370852Z ℹ skipped 0
+2026-09-23T15:03:23.1371524Z ℹ duration_ms 19408.6001

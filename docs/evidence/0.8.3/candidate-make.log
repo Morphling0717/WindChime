@@ -1,0 +1,13 @@
+
+> windchime-desktop@0.8.3 make
+> npm run build && node scripts/make.cjs
+
+
+> windchime-desktop@0.8.3 build
+> node scripts/build.mjs
+
+(node:51192) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+<isolated-worktree>\apps\desktop\out\releases\0.8.3\WindChime-win32-x64-0.8.3.zip
+<isolated-worktree>\apps\desktop\out\releases\0.8.3\WindChime-Setup-0.8.3.exe
+Build staging retained at <build-stage>

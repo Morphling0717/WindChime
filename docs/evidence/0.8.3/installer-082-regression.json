@@ -1,0 +1,23 @@
+{
+  "testedAt": "2026-09-23T13:27:20.078Z",
+  "version": "0.8.2",
+  "installerSha256": "d63a238c328daeac6c91a4847eea44120efae0967f049d8dd340749c377441ed",
+  "method": "Real published WPF setup, interactive welcome/license/options/install in a new isolated directory; both shortcut options selected",
+  "installationPassed": false,
+  "failureStage": "After payload verification, while committing installation metadata",
+  "visibleError": "Exception has been thrown by the target of an invocation.",
+  "rollback": {
+    "verified": true,
+    "existingFilesUnchanged": 4,
+    "previouslyAbsentLegacyFileStillAbsent": true,
+    "newRegistryKeysAbsent": 2,
+    "newShortcutsAbsent": 2,
+    "installationTargetAbsent": true,
+    "testProfileAbsent": true,
+    "transactionDirectoriesAbsent": true,
+    "pendingJournalAbsent": true,
+    "windchimeProcessesAbsent": true
+  },
+  "existingInstallationCleanupAttempted": false,
+  "notes": "The old installation and private connection/settings files were compared by digest and timestamp only. Private paths, hashes and file contents are intentionally excluded from this published evidence."
+}

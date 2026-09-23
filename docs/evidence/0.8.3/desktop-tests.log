@@ -1,0 +1,869 @@
+
+> windchime-desktop@0.8.3 test
+> npm run build && node --test tests/*.test.cjs
+
+
+> windchime-desktop@0.8.3 build
+> node scripts/build.mjs
+
+TAP version 13
+# Subtest: NSIS stage-only engine with synthetic payload
+    # Subtest: opening the internal engine directly does not extract or install
+    ok 1 - opening the internal engine directly does not extract or install
+      ---
+      duration_ms: 186.2518
+      type: 'test'
+      ...
+    # Subtest: a wrong private token is rejected
+    ok 2 - a wrong private token is rejected
+      ---
+      duration_ms: 179.0346
+      type: 'test'
+      ...
+    # Subtest: a request cannot redirect extraction outside its fresh transaction
+    ok 3 - a request cannot redirect extraction outside its fresh transaction
+      ---
+      duration_ms: 192.4897
+      type: 'test'
+      ...
+    # Subtest: the real engine writes all declared files only into the private stage
+    ok 4 - the real engine writes all declared files only into the private stage
+      ---
+      duration_ms: 376.7742
+      type: 'test'
+      ...
+    # Subtest: nonempty staging directories are not overwritten
+    ok 5 - nonempty staging directories are not overwritten
+      ---
+      duration_ms: 254.3429
+      type: 'test'
+      ...
+    # Subtest: linked staging directories cannot redirect extraction
+    ok 6 - linked staging directories cannot redirect extraction
+      ---
+      duration_ms: 216.6412
+      type: 'test'
+      ...
+    1..6
+ok 1 - NSIS stage-only engine with synthetic payload
+  ---
+  duration_ms: 3491.7757
+  type: 'suite'
+  ...
+# Subtest: Windows installer destination and confirmation protocol
+    # Subtest: absolute choices keep their drive, Unicode and an exactly-once application folder
+    ok 1 - absolute choices keep their drive, Unicode and an exactly-once application folder
+      ---
+      duration_ms: 694.8712
+      type: 'test'
+      ...
+    # Subtest: ambiguous drive-relative, remote, device and injected directory inputs are refused
+    ok 2 - ambiguous drive-relative, remote, device and injected directory inputs are refused
+      ---
+      duration_ms: 477.6345
+      type: 'test'
+      ...
+    # Subtest: containment respects directory boundaries, case and normalized parent traversal
+    ok 3 - containment respects directory boundaries, case and normalized parent traversal
+      ---
+      duration_ms: 730.5253
+      type: 'test'
+      ...
+    # Subtest: registered locations and shortcuts treat existing DOS aliases as the same path
+    ok 4 - registered locations and shortcuts treat existing DOS aliases as the same path
+      ---
+      duration_ms: 955.9585
+      type: 'test'
+      ...
+    # Subtest: runtime verification paths cannot escape, alias a stream or name an absolute file
+    ok 5 - runtime verification paths cannot escape, alias a stream or name an absolute file
+      ---
+      duration_ms: 773.2485
+      type: 'test'
+      ...
+    # Subtest: destination validation is read-only and refuses unrelated files or a forged standalone marker
+    ok 6 - destination validation is read-only and refuses unrelated files or a forged standalone marker
+      ---
+      duration_ms: 426.8259
+      type: 'test'
+      ...
+    # Subtest: known credential, legacy and Windows directories are protected without touching them
+    ok 7 - known credential, legacy and Windows directories are protected without touching them
+      ---
+      duration_ms: 418.6876
+      type: 'test'
+      ...
+    # Subtest: junction ancestors cannot redirect a new installation to a different directory
+    ok 8 - junction ancestors cannot redirect a new installation to a different directory
+      ---
+      duration_ms: 411.728
+      type: 'test'
+      ...
+    # Subtest: the upgrade marker identifies this application and does not follow a resources junction
+    ok 9 - the upgrade marker identifies this application and does not follow a resources junction
+      ---
+      duration_ms: 399.6559
+      type: 'test'
+      ...
+    # Subtest: WPF and the installed engine agree on the application identity and registry namespace
+    ok 10 - WPF and the installed engine agree on the application identity and registry namespace
+      ---
+      duration_ms: 411.3141
+      type: 'test'
+      ...
+    # Subtest: private staging request survives the real Windows INI parser with exact scope and Unicode
+    ok 11 - private staging request survives the real Windows INI parser with exact scope and Unicode
+      ---
+      duration_ms: 1720.6205
+      type: 'test'
+      ...
+    1..11
+ok 2 - Windows installer destination and confirmation protocol
+  ---
+  duration_ms: 7883.0402
+  type: 'suite'
+  ...
+# Subtest: locked payload removal preserves the real NSIS ownership marker and uninstaller for retry
+ok 3 - locked payload removal preserves the real NSIS ownership marker and uninstaller for retry
+  ---
+  duration_ms: 9149.1114
+  type: 'test'
+  ...
+# Subtest: Windows installer Unicode shortcuts
+    # Subtest: Chinese filename, target, working directory and description survive en-MY STA
+    ok 1 - Chinese filename, target, working directory and description survive en-MY STA
+      ---
+      duration_ms: 457.8937
+      type: 'test'
+      ...
+    # Subtest: Chinese filename, target, working directory and description survive en-MY MTA
+    ok 2 - Chinese filename, target, working directory and description survive en-MY MTA
+      ---
+      duration_ms: 269.5098
+      type: 'test'
+      ...
+    # Subtest: Chinese filename, target, working directory and description survive zh-CN STA
+    ok 3 - Chinese filename, target, working directory and description survive zh-CN STA
+      ---
+      duration_ms: 324.3963
+      type: 'test'
+      ...
+    # Subtest: Chinese filename, target, working directory and description survive zh-CN MTA
+    ok 4 - Chinese filename, target, working directory and description survive zh-CN MTA
+      ---
+      duration_ms: 292.4115
+      type: 'test'
+      ...
+    # Subtest: disabling a shortcut removes only the isolated link and releases file handles
+    ok 5 - disabling a shortcut removes only the isolated link and releases file handles
+      ---
+      duration_ms: 199.8453
+      type: 'test'
+      ...
+    # Subtest: save failure retains the native cause and readable action context
+    ok 6 - save failure retains the native cause and readable action context
+      ---
+      duration_ms: 200.4761
+      type: 'test'
+      ...
+    # Subtest: invalid shortcut read retains the native cause and readable action context
+    ok 7 - invalid shortcut read retains the native cause and readable action context
+      ---
+      duration_ms: 116.6148
+      type: 'test'
+      ...
+    # Subtest: installer unwraps reflection and single-task errors without losing recovery context
+    ok 8 - installer unwraps reflection and single-task errors without losing recovery context
+      ---
+      duration_ms: 96.9643
+      type: 'test'
+      ...
+    1..8
+ok 4 - Windows installer Unicode shortcuts
+  ---
+  duration_ms: 2395.4595
+  type: 'suite'
+  ...
+# Subtest: real .NET installation transactions in new isolated fixtures
+    # Subtest: fresh process death at created restores exact prior files and metadata
+    ok 1 - fresh process death at created restores exact prior files and metadata
+      ---
+      duration_ms: 953.6428
+      type: 'test'
+      ...
+    # Subtest: fresh process death at prepared restores exact prior files and metadata
+    ok 2 - fresh process death at prepared restores exact prior files and metadata
+      ---
+      duration_ms: 751.4345
+      type: 'test'
+      ...
+    # Subtest: fresh process death at move-old restores exact prior files and metadata
+    ok 3 - fresh process death at move-old restores exact prior files and metadata
+      ---
+      duration_ms: 751.2846
+      type: 'test'
+      ...
+    # Subtest: fresh process death at old-moved restores exact prior files and metadata
+    ok 4 - fresh process death at old-moved restores exact prior files and metadata
+      ---
+      duration_ms: 823.3477
+      type: 'test'
+      ...
+    # Subtest: fresh process death at move-new restores exact prior files and metadata
+    ok 5 - fresh process death at move-new restores exact prior files and metadata
+      ---
+      duration_ms: 823.8214
+      type: 'test'
+      ...
+    # Subtest: fresh process death at new-moved restores exact prior files and metadata
+    ok 6 - fresh process death at new-moved restores exact prior files and metadata
+      ---
+      duration_ms: 854.454
+      type: 'test'
+      ...
+    # Subtest: fresh process death at metadata restores exact prior files and metadata
+    ok 7 - fresh process death at metadata restores exact prior files and metadata
+      ---
+      duration_ms: 850.3474
+      type: 'test'
+      ...
+    # Subtest: fresh process death at metadata-written restores exact prior files and metadata
+    ok 8 - fresh process death at metadata-written restores exact prior files and metadata
+      ---
+      duration_ms: 838.6302
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at created restores exact prior files and metadata
+    ok 9 - upgrade process death at created restores exact prior files and metadata
+      ---
+      duration_ms: 745.9922
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at prepared restores exact prior files and metadata
+    ok 10 - upgrade process death at prepared restores exact prior files and metadata
+      ---
+      duration_ms: 836.2339
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at move-old restores exact prior files and metadata
+    ok 11 - upgrade process death at move-old restores exact prior files and metadata
+      ---
+      duration_ms: 937.7264
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at old-moved restores exact prior files and metadata
+    ok 12 - upgrade process death at old-moved restores exact prior files and metadata
+      ---
+      duration_ms: 896.8089
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at move-new restores exact prior files and metadata
+    ok 13 - upgrade process death at move-new restores exact prior files and metadata
+      ---
+      duration_ms: 882.6835
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at new-moved restores exact prior files and metadata
+    ok 14 - upgrade process death at new-moved restores exact prior files and metadata
+      ---
+      duration_ms: 917.4891
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at metadata restores exact prior files and metadata
+    ok 15 - upgrade process death at metadata restores exact prior files and metadata
+      ---
+      duration_ms: 901.895
+      type: 'test'
+      ...
+    # Subtest: upgrade process death at metadata-written restores exact prior files and metadata
+    ok 16 - upgrade process death at metadata-written restores exact prior files and metadata
+      ---
+      duration_ms: 829.095
+      type: 'test'
+      ...
+    # Subtest: fresh durable commit survives process death without rolling back success
+    ok 17 - fresh durable commit survives process death without rolling back success
+      ---
+      duration_ms: 442.2644
+      type: 'test'
+      ...
+    # Subtest: upgrade durable commit survives process death without rolling back success
+    ok 18 - upgrade durable commit survives process death without rolling back success
+      ---
+      duration_ms: 497.9849
+      type: 'test'
+      ...
+    # Subtest: metadata-failure restores the old working installation before returning failure
+    ok 19 - metadata-failure restores the old working installation before returning failure
+      ---
+      duration_ms: 332.9193
+      type: 'test'
+      ...
+    # Subtest: corrupt restores the old working installation before returning failure
+    ok 20 - corrupt restores the old working installation before returning failure
+      ---
+      duration_ms: 270.7999
+      type: 'test'
+      ...
+    # Subtest: partial first extraction is recoverable and a second install works in the same directory
+    ok 21 - partial first extraction is recoverable and a second install works in the same directory
+      ---
+      duration_ms: 710.7613
+      type: 'test'
+      ...
+    # Subtest: recovery refuses an externally changed new directory and retains the old backup
+    ok 22 - recovery refuses an externally changed new directory and retains the old backup
+      ---
+      duration_ms: 488.6446
+      type: 'test'
+      ...
+    # Subtest: space budget combines destination engine and temp overhead only on the same drive
+    ok 23 - space budget combines destination engine and temp overhead only on the same drive
+      ---
+      duration_ms: 92.2765
+      type: 'test'
+      ...
+    # Subtest: recovery interrupted at files-restored can itself be resumed
+    ok 24 - recovery interrupted at files-restored can itself be resumed
+      ---
+      duration_ms: 690.3417
+      type: 'test'
+      ...
+    # Subtest: recovery interrupted at metadata-restored can itself be resumed
+    ok 25 - recovery interrupted at metadata-restored can itself be resumed
+      ---
+      duration_ms: 733.9863
+      type: 'test'
+      ...
+    # Subtest: cleanup interrupted after deleting an old file resumes without undoing a successful install
+    ok 26 - cleanup interrupted after deleting an old file resumes without undoing a successful install
+      ---
+      duration_ms: 508.4812
+      type: 'test'
+      ...
+    1..26
+ok 5 - real .NET installation transactions in new isolated fixtures
+  ---
+  duration_ms: 18783.7902
+  type: 'suite'
+  ...
+# Subtest: the actual NSIS tree preflight accepts normal and empty folders and refuses junctions
+ok 6 - the actual NSIS tree preflight accepts normal and empty folders and refuses junctions
+  ---
+  duration_ms: 4475.2735
+  type: 'test'
+  ...
+# {"passed":true,"compiler":"C:\\\\Users\\\\ASUS\\\\AppData\\\\Local\\\\electron-builder\\\\Cache\\\\nsis-3.0.4.1\\\\nsis-3.0.4.1-1mx3n\\\\Bin\\\\makensis.exe","temporary":"C:\\\\Users\\\\ASUS\\\\AppData\\\\Local\\\\Temp\\\\windchime-readonly-tree-T9YtFc","fixtureOnly":true,"executedInstaller":false,"registeredApplication":false,"results":[{"directory":"正常 程序","exit":0,"error":""},{"directory":"empty","exit":0,"error":""},{"directory":"linked","exit":87,"error":"安装目录中存在目录或文件链接，已停止卸载。"},{"directory":"linked-root","exit":87,"error":"安装目录中存在目录或文件链接，已停止卸载。"},{"directory":"missing","exit":87,"error":"无法读取安装目录，已停止卸载。"}]}
+# Subtest: runtime collection excludes build-only and fully tree-shaken dependencies
+ok 7 - runtime collection excludes build-only and fully tree-shaken dependencies
+  ---
+  duration_ms: 4.225
+  type: 'test'
+  ...
+# Subtest: distribution preserves project and dependency bytes, extra attribution and runtime originals
+ok 8 - distribution preserves project and dependency bytes, extra attribution and runtime originals
+  ---
+  duration_ms: 69.8232
+  type: 'test'
+  ...
+# Subtest: a bundled dependency without a license file stops packaging rather than claiming MIT
+ok 9 - a bundled dependency without a license file stops packaging rather than claiming MIT
+  ---
+  duration_ms: 19.5335
+  type: 'test'
+  ...
+# Subtest: installer source downloads require exact upstream checksums and reuse only a matching cache
+ok 10 - installer source downloads require exact upstream checksums and reuse only a matching cache
+  ---
+  duration_ms: 58.47
+  type: 'test'
+  ...
+# Subtest: the production bundle retains all actual JavaScript authors and excludes development dependencies
+ok 11 - the production bundle retains all actual JavaScript authors and excludes development dependencies
+  ---
+  duration_ms: 214.5897
+  type: 'test'
+  ...
+# Subtest: private tiles have distinct isolated windows, selected-only sites and no credential or display authority
+ok 12 - private tiles have distinct isolated windows, selected-only sites and no credential or display authority
+  ---
+  duration_ms: 82.6028
+  type: 'test'
+  ...
+# Subtest: dirty tile close and mailbox switches cancel without hiding output or replacing credentials
+ok 13 - dirty tile close and mailbox switches cancel without hiding output or replacing credentials
+  ---
+  duration_ms: 11.2423
+  type: 'test'
+  ...
+# Subtest: selected review identity synchronizes across private windows and protects main and tile drafts
+ok 14 - selected review identity synchronizes across private windows and protects main and tile drafts
+  ---
+  duration_ms: 6.2255
+  type: 'test'
+  ...
+# Subtest: closing a tile rejects its delayed reads and cancels queued writes without disturbing another tile
+ok 15 - closing a tile rejects its delayed reads and cancels queued writes without disturbing another tile
+  ---
+  duration_ms: 7.4343
+  type: 'test'
+  ...
+# Subtest: closing a tile during message membership or display grant reads cancels side effects
+ok 16 - closing a tile during message membership or display grant reads cancels side effects
+  ---
+  duration_ms: 9.4686
+  type: 'test'
+  ...
+# Subtest: edits created while a selected-message read is pending still require discard confirmation
+ok 17 - edits created while a selected-message read is pending still require discard confirmation
+  ---
+  duration_ms: 4.2227
+  type: 'test'
+  ...
+# Subtest: dirty tile native close and key import ask before closing or committing new credentials
+ok 18 - dirty tile native close and key import ask before closing or committing new credentials
+  ---
+  duration_ms: 9.103
+  type: 'test'
+  ...
+# Subtest: hotkey recording temporarily releases only next, suppresses pending callbacks and restores on blur
+ok 19 - hotkey recording temporarily releases only next, suppresses pending callbacks and restores on blur
+  ---
+  duration_ms: 10.1527
+  type: 'test'
+  ...
+# Subtest: next shortcut registration is opt-in, conflict-safe and persists independently of the encrypted vault
+ok 20 - next shortcut registration is opt-in, conflict-safe and persists independently of the encrypted vault
+  ---
+  duration_ms: 7.5653
+  type: 'test'
+  ...
+# Subtest: next hotkey reads fresh revision, debounces and does not replay after hide or reconnect
+ok 21 - next hotkey reads fresh revision, debounces and does not replay after hide or reconnect
+  ---
+  duration_ms: 5.9242
+  type: 'test'
+  ...
+# Subtest: completing a new pairing clears the old output; its delayed close cannot hide the new mailbox
+ok 22 - completing a new pairing clears the old output; its delayed close cannot hide the new mailbox
+  ---
+  duration_ms: 5.9584
+  type: 'test'
+  ...
+# Subtest: an old control authorization failure cannot clear a new connection output
+ok 23 - an old control authorization failure cannot clear a new connection output
+  ---
+  duration_ms: 6.0799
+  type: 'test'
+  ...
+# Subtest: a delayed output grant never opens a window after changing the selected mailbox
+ok 24 - a delayed output grant never opens a window after changing the selected mailbox
+  ---
+  duration_ms: 8.1701
+  type: 'test'
+  ...
+# Subtest: committed switching blanks before waiting for the old mailbox in-flight show
+ok 25 - committed switching blanks before waiting for the old mailbox in-flight show
+  ---
+  duration_ms: 7.2713
+  type: 'test'
+  ...
+# Subtest: old vault gateway fields and code arguments never initiate a platform request
+ok 26 - old vault gateway fields and code arguments never initiate a platform request
+  ---
+  duration_ms: 5.6908
+  type: 'test'
+  ...
+# Subtest: status reports both unreadable credentials and failed shortcut registration
+ok 27 - status reports both unreadable credentials and failed shortcut registration
+  ---
+  duration_ms: 5.7133
+  type: 'test'
+  ...
+# Subtest: shortcut, suspend and resume blank only the independent output; application icons use packaged files
+ok 28 - shortcut, suspend and resume blank only the independent output; application icons use packaged files
+  ---
+  duration_ms: 7.5609
+  type: 'test'
+  ...
+# Subtest: legacy Squirrel layout still handles its own uninstall message
+ok 29 - legacy Squirrel layout still handles its own uninstall message
+  ---
+  duration_ms: 2.9656
+  type: 'test'
+  ...
+# Subtest: a late display response from an old mailbox cannot reach a new output
+ok 30 - a late display response from an old mailbox cannot reach a new output
+  ---
+  duration_ms: 7.5534
+  type: 'test'
+  ...
+# Subtest: display remains unthrottled; main-process lease expiry replaces a silent renderer before three seconds
+ok 31 - display remains unthrottled; main-process lease expiry replaces a silent renderer before three seconds
+  ---
+  duration_ms: 4.8091
+  type: 'test'
+  ...
+# Subtest: watchdog invalidates late display results and an unresponsive renderer recovers without exposing controls
+ok 32 - watchdog invalidates late display results and an unresponsive renderer recovers without exposing controls
+  ---
+  duration_ms: 4.5262
+  type: 'test'
+  ...
+# Subtest: delayed responses and oversized leases cannot extend the last confirmed display
+ok 33 - delayed responses and oversized leases cannot extend the last confirmed display
+  ---
+  duration_ms: 5.0887
+  type: 'test'
+  ...
+# Subtest: emergency hide paints an offline transparent surface while its website request is pending
+ok 34 - emergency hide paints an offline transparent surface while its website request is pending
+  ---
+  duration_ms: 9.674
+  type: 'test'
+  ...
+# Subtest: suspend invalidates in-flight frames without waiting for elapsed clock time; resume opens a blank document
+ok 35 - suspend invalidates in-flight frames without waiting for elapsed clock time; resume opens a blank document
+  ---
+  duration_ms: 5.9014
+  type: 'test'
+  ...
+# Subtest: a confirmed withdrawal clears the native renderer even if it keeps requesting frames
+ok 36 - a confirmed withdrawal clears the native renderer even if it keeps requesting frames
+  ---
+  duration_ms: 6.6724
+  type: 'test'
+  ...
+# Subtest: a same-window receiver replacement rejects the previous receiver late frame
+ok 37 - a same-window receiver replacement rejects the previous receiver late frame
+  ---
+  duration_ms: 4.3231
+  type: 'test'
+  ...
+# Subtest: display authorization failure immediately discards the native surface and grant
+ok 38 - display authorization failure immediately discards the native surface and grant
+  ---
+  duration_ms: 3.7228
+  type: 'test'
+  ...
+# Subtest: recovery waits for confirmed renderer termination instead of reloading the dying process
+ok 39 - recovery waits for confirmed renderer termination instead of reloading the dying process
+  ---
+  duration_ms: 4.5122
+  type: 'test'
+  ...
+# Subtest: a failed website hide leaves a painted offline blank and never creates another receiver
+ok 40 - a failed website hide leaves a painted offline blank and never creates another receiver
+  ---
+  duration_ms: 6.4109
+  type: 'test'
+  ...
+# Subtest: late blank document completion cannot show the old window after selecting another mailbox
+ok 41 - late blank document completion cannot show the old window after selecting another mailbox
+  ---
+  duration_ms: 6.2665
+  type: 'test'
+  ...
+# Subtest: failed blank compositor creation closes the output instead of revealing a cached frame
+ok 42 - failed blank compositor creation closes the output instead of revealing a cached frame
+  ---
+  duration_ms: 5.4468
+  type: 'test'
+  ...
+# Subtest: WebContents destruction before native window close withdraws output without touching the destroyed renderer
+ok 43 - WebContents destruction before native window close withdraws output without touching the destroyed renderer
+  ---
+  duration_ms: 4.7298
+  type: 'test'
+  ...
+# Subtest: destroying contents settles an in-flight termination; its late close cannot affect a replacement output
+ok 44 - destroying contents settles an in-flight termination; its late close cannot affect a replacement output
+  ---
+  duration_ms: 5.9233
+  type: 'test'
+  ...
+# Subtest: late blank failure from a destroyed old output cannot close or hide a new mailbox window
+ok 45 - late blank failure from a destroyed old output cannot close or hide a new mailbox window
+  ---
+  duration_ms: 9.9647
+  type: 'test'
+  ...
+# Subtest: quit during revoked-output painting closes the native output without starting a second paint or receiver
+ok 46 - quit during revoked-output painting closes the native output without starting a second paint or receiver
+  ---
+  duration_ms: 5.5478
+  type: 'test'
+  ...
+# Subtest: automatic browser pairing protects main drafts and retries the already redeemed approval
+ok 47 - automatic browser pairing protects main drafts and retries the already redeemed approval
+  ---
+  duration_ms: 4.4332
+  type: 'test'
+  ...
+# Subtest: late pairing approval cannot override a newer manual site choice but can be explicitly retried
+ok 48 - late pairing approval cannot override a newer manual site choice but can be explicitly retried
+  ---
+  duration_ms: 9.4091
+  type: 'test'
+  ...
+# Subtest: pair cancellation waits for an atomic commit but cancels an uncommitted disk candidate
+ok 49 - pair cancellation waits for an atomic commit but cancels an uncommitted disk candidate
+  ---
+  duration_ms: 12.5086
+  type: 'test'
+  ...
+# Subtest: site selection and forgetting are atomic when encrypt, write or rename fails
+ok 50 - site selection and forgetting are atomic when encrypt, write or rename fails
+  ---
+  duration_ms: 47.7566
+  type: 'test'
+  ...
+# Subtest: topic persistence failures and drafts created during disk writes preserve the old context
+ok 51 - topic persistence failures and drafts created during disk writes preserve the old context
+  ---
+  duration_ms: 8.0532
+  type: 'test'
+  ...
+# Subtest: connection key validates identity before selection, saves v1 encrypted credentials and returns no token
+ok 52 - connection key validates identity before selection, saves v1 encrypted credentials and returns no token
+  ---
+  duration_ms: 3.4406
+  type: 'test'
+  ...
+# Subtest: malformed key and a different site instance never receive an authenticated request
+ok 53 - malformed key and a different site instance never receive an authenticated request
+  ---
+  duration_ms: 2.764
+  type: 'test'
+  ...
+# Subtest: unsupported sites and an HTML 404 have actionable private errors
+ok 54 - unsupported sites and an HTML 404 have actionable private errors
+  ---
+  duration_ms: 14.001
+  type: 'test'
+  ...
+# Subtest: revoked or expired keys and connection failures preserve the selected mailbox and hide remote response secrets
+ok 55 - revoked or expired keys and connection failures preserve the selected mailbox and hide remote response secrets
+  ---
+  duration_ms: 19.7511
+  type: 'test'
+  ...
+# Subtest: successful key import uses the existing switch guard; stale identity cannot select an old site
+ok 56 - successful key import uses the existing switch guard; stale identity cannot select an old site
+  ---
+  duration_ms: 7.2769
+  type: 'test'
+  ...
+# Subtest: display cannot import a control key; encryption failure never sends the key to a website
+ok 57 - display cannot import a control key; encryption failure never sends the key to a website
+  ---
+  duration_ms: 4.8682
+  type: 'test'
+  ...
+# Subtest: encryption, write and rename failures leave the old connection, vault and live output intact
+ok 58 - encryption, write and rename failures leave the old connection, vault and live output intact
+  ---
+  duration_ms: 11.5092
+  type: 'test'
+  ...
+# Subtest: failed reimport cannot replace current connection metadata or close its output
+ok 59 - failed reimport cannot replace current connection metadata or close its output
+  ---
+  duration_ms: 4.0085
+  type: 'test'
+  ...
+# Subtest: a newer selection during candidate disk write cancels import before it can overwrite the vault
+ok 60 - a newer selection during candidate disk write cancels import before it can overwrite the vault
+  ---
+  duration_ms: 6.4478
+  type: 'test'
+  ...
+# Subtest: forgetting an unselected mailbox during import cannot be undone by its pending vault candidate
+ok 61 - forgetting an unselected mailbox during import cannot be undone by its pending vault candidate
+  ---
+  duration_ms: 6.3083
+  type: 'test'
+  ...
+# Subtest: selection arriving during atomic rename runs after import publication and owns the final vault
+ok 62 - selection arriving during atomic rename runs after import publication and owns the final vault
+  ---
+  duration_ms: 5.8376
+  type: 'test'
+  ...
+# Subtest: untrusted remote error codes cannot echo a connection key or prototype properties into IPC
+ok 63 - untrusted remote error codes cannot echo a connection key or prototype properties into IPC
+  ---
+  duration_ms: 5.7609
+  type: 'test'
+  ...
+# Subtest: site keys import without a topic and only a verified topic can open the independent display
+ok 64 - site keys import without a topic and only a verified topic can open the independent display
+  ---
+  duration_ms: 3.5884
+  type: 'test'
+  ...
+# Subtest: management commands from an old site and old topic cannot write after switching
+ok 65 - management commands from an old site and old topic cannot write after switching
+  ---
+  duration_ms: 5.1278
+  type: 'test'
+  ...
+# Subtest: display window cannot access any new management, save, confirmation or external-link IPC
+ok 66 - display window cannot access any new management, save, confirmation or external-link IPC
+  ---
+  duration_ms: 5.0969
+  type: 'test'
+  ...
+# Subtest: topic selection waits for an importing vault commit and rejects the old site callback
+ok 67 - topic selection waits for an importing vault commit and rejects the old site callback
+  ---
+  duration_ms: 5.3272
+  type: 'test'
+  ...
+# Subtest: topic membership arriving inside a new import rename cannot publish or persist its old selection
+ok 68 - topic membership arriving inside a new import rename cannot publish or persist its old selection
+  ---
+  duration_ms: 5.5575
+  type: 'test'
+  ...
+# Subtest: late image conflict cannot withdraw a newer letter
+ok 69 - late image conflict cannot withdraw a newer letter
+  ---
+  duration_ms: 5.7829
+  type: 'test'
+  ...
+# Subtest: late image conflict cannot withdraw a newer activation of the same snapshot
+ok 70 - late image conflict cannot withdraw a newer activation of the same snapshot
+  ---
+  duration_ms: 4.5059
+  type: 'test'
+  ...
+# Subtest: late image timeout cannot withdraw a newer letter
+ok 71 - late image timeout cannot withdraw a newer letter
+  ---
+  duration_ms: 4.9654
+  type: 'test'
+  ...
+# Subtest: late image timeout cannot withdraw a newer activation of the same snapshot
+ok 72 - late image timeout cannot withdraw a newer activation of the same snapshot
+  ---
+  duration_ms: 7.6957
+  type: 'test'
+  ...
+# Subtest: late image success cannot withdraw a newer letter
+ok 73 - late image success cannot withdraw a newer letter
+  ---
+  duration_ms: 5.4447
+  type: 'test'
+  ...
+# Subtest: late image success cannot withdraw a newer activation of the same snapshot
+ok 74 - late image success cannot withdraw a newer activation of the same snapshot
+  ---
+  duration_ms: 4.92
+  type: 'test'
+  ...
+# Subtest: display grant 401 still blanks after a current image request
+ok 75 - display grant 401 still blanks after a current image request
+  ---
+  duration_ms: 3.7304
+  type: 'test'
+  ...
+# Subtest: display grant 401 still blanks after an activation switch
+ok 76 - display grant 401 still blanks after an activation switch
+  ---
+  duration_ms: 3.9314
+  type: 'test'
+  ...
+# Subtest: display grant 403 still blanks after a current image request
+ok 77 - display grant 403 still blanks after a current image request
+  ---
+  duration_ms: 5.3583
+  type: 'test'
+  ...
+# Subtest: display grant 403 still blanks after an activation switch
+ok 78 - display grant 403 still blanks after an activation switch
+  ---
+  duration_ms: 4.7788
+  type: 'test'
+  ...
+# Subtest: a current activation image conflict still clears output
+ok 79 - a current activation image conflict still clears output
+  ---
+  duration_ms: 6.4564
+  type: 'test'
+  ...
+# Subtest: a current activation image timeout still clears output
+ok 80 - a current activation image timeout still clears output
+  ---
+  duration_ms: 6.4187
+  type: 'test'
+  ...
+# Subtest: site connections only accept explicit HTTPS origin or loopback development origin
+ok 81 - site connections only accept explicit HTTPS origin or loopback development origin
+  ---
+  duration_ms: 2.4645
+  type: 'test'
+  ...
+# Subtest: display IPC cannot call admin, pairing, grant, filesystem or other hosts
+ok 82 - display IPC cannot call admin, pairing, grant, filesystem or other hosts
+  ---
+  duration_ms: 1.4028
+  type: 'test'
+  ...
+# Subtest: control IPC enforces selected topic and excludes token-producing endpoints
+ok 83 - control IPC enforces selected topic and excludes token-producing endpoints
+  ---
+  duration_ms: 1.5436
+  type: 'test'
+  ...
+# Subtest: pairing verifier is unpredictable and public metadata omits credentials and obsolete integration fields
+ok 84 - pairing verifier is unpredictable and public metadata omits credentials and obsolete integration fields
+  ---
+  duration_ms: 1.3963
+  type: 'test'
+  ...
+# Subtest: v1 device connections retain necessary credentials and ignore obsolete gateway metadata
+ok 85 - v1 device connections retain necessary credentials and ignore obsolete gateway metadata
+  ---
+  duration_ms: 1.5476
+  type: 'test'
+  ...
+# Subtest: site-scoped management keeps a separate selected topic and never permits credential creation
+ok 86 - site-scoped management keeps a separate selected topic and never permits credential creation
+  ---
+  duration_ms: 1.912
+  type: 'test'
+  ...
+# Subtest: old topic grants can manage their messages but cannot gain whole-site features
+ok 87 - old topic grants can manage their messages but cannot gain whole-site features
+  ---
+  duration_ms: 0.9214
+  type: 'test'
+  ...
+# Subtest: next accelerator requires modifiers, normalizes aliases and protects the fixed hide shortcut
+ok 88 - next accelerator requires modifiers, normalizes aliases and protects the fixed hide shortcut
+  ---
+  duration_ms: 2.5567
+  type: 'test'
+  ...
+# Subtest: workspace restores only bounded presentation preferences, never private data or active windows
+ok 89 - workspace restores only bounded presentation preferences, never private data or active windows
+  ---
+  duration_ms: 1.7836
+  type: 'test'
+  ...
+# Subtest: saved tile bounds stay reachable after a monitor is removed and preserve valid multi-monitor positions
+ok 90 - saved tile bounds stay reachable after a monitor is removed and preserve valid multi-monitor positions
+  ---
+  duration_ms: 0.5476
+  type: 'test'
+  ...
+1..90
+# tests 137
+# suites 4
+# pass 137
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 18969.1764

@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "version": "0.8.3",
+  "testedAt": "2026-09-23T15:20:24.526Z",
+  "stage": "<build-stage>",
+  "temporary": "<temporary-stage-fixture>",
+  "elapsedMs": 16517,
+  "payloadFilesMatched": 75,
+  "engineSha256": "1c6d90d74c005b312eda7ed44cc3d90be86d1cd615e5777ae8376bd98804b46d",
+  "existingSyntheticProgramUnchanged": true,
+  "executedStageOnlyEngine": true,
+  "executedPublicSetup": false,
+  "registeredApplication": false,
+  "executedUninstaller": false,
+  "limitations": [
+    "This verifies full extraction only; Windows registry/shortcut install and uninstall have not been performed."
+  ]
+}

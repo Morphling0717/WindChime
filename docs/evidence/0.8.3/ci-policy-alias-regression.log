@@ -1,0 +1,83 @@
+TAP version 13
+# Subtest: Windows installer destination and confirmation protocol
+    # Subtest: absolute choices keep their drive, Unicode and an exactly-once application folder
+    ok 1 - absolute choices keep their drive, Unicode and an exactly-once application folder
+      ---
+      duration_ms: 643.3666
+      type: 'test'
+      ...
+    # Subtest: ambiguous drive-relative, remote, device and injected directory inputs are refused
+    ok 2 - ambiguous drive-relative, remote, device and injected directory inputs are refused
+      ---
+      duration_ms: 343.1909
+      type: 'test'
+      ...
+    # Subtest: containment respects directory boundaries, case and normalized parent traversal
+    ok 3 - containment respects directory boundaries, case and normalized parent traversal
+      ---
+      duration_ms: 631.8386
+      type: 'test'
+      ...
+    # Subtest: registered locations and shortcuts treat existing DOS aliases as the same path
+    ok 4 - registered locations and shortcuts treat existing DOS aliases as the same path
+      ---
+      duration_ms: 784.7154
+      type: 'test'
+      ...
+    # Subtest: runtime verification paths cannot escape, alias a stream or name an absolute file
+    ok 5 - runtime verification paths cannot escape, alias a stream or name an absolute file
+      ---
+      duration_ms: 682.1151
+      type: 'test'
+      ...
+    # Subtest: destination validation is read-only and refuses unrelated files or a forged standalone marker
+    ok 6 - destination validation is read-only and refuses unrelated files or a forged standalone marker
+      ---
+      duration_ms: 369.7366
+      type: 'test'
+      ...
+    # Subtest: known credential, legacy and Windows directories are protected without touching them
+    ok 7 - known credential, legacy and Windows directories are protected without touching them
+      ---
+      duration_ms: 345.2186
+      type: 'test'
+      ...
+    # Subtest: junction ancestors cannot redirect a new installation to a different directory
+    ok 8 - junction ancestors cannot redirect a new installation to a different directory
+      ---
+      duration_ms: 331.6485
+      type: 'test'
+      ...
+    # Subtest: the upgrade marker identifies this application and does not follow a resources junction
+    ok 9 - the upgrade marker identifies this application and does not follow a resources junction
+      ---
+      duration_ms: 333.5728
+      type: 'test'
+      ...
+    # Subtest: WPF and the installed engine agree on the application identity and registry namespace
+    ok 10 - WPF and the installed engine agree on the application identity and registry namespace
+      ---
+      duration_ms: 328.8959
+      type: 'test'
+      ...
+    # Subtest: private staging request survives the real Windows INI parser with exact scope and Unicode
+    ok 11 - private staging request survives the real Windows INI parser with exact scope and Unicode
+      ---
+      duration_ms: 1505.3106
+      type: 'test'
+      ...
+    1..11
+ok 1 - Windows installer destination and confirmation protocol
+  ---
+  duration_ms: 6695.6796
+  type: 'suite'
+  ...
+1..1
+# tests 11
+# suites 1
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6785.5033
