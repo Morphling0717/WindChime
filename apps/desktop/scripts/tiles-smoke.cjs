@@ -12,7 +12,7 @@ const { randomUUID } = require('node:crypto');
 const assert = require('node:assert/strict');
 const results = path.resolve(__dirname, '../out/tiles-smoke');
 const moduleLabels = { inbox: '来信列表', review: '审阅与预览', queue: '待播顺序', transport: '快捷播控', appearance: '展示外观' };
-const checks = [], screenshots = [], consoleErrors = [], requests = [], dialogs = [], shortcuts = new Map(), tileGeometry = [];
+const checks = [], screenshots = [], consoleErrors = [], requests = [], dialogs = [], shortcuts = new Map(), tileGeometry = [], tileOpenObservations = [];
 let userData, control, fixture, confirmResponse = 1, blockedShortcut = '', fixtures = [];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(test, label, timeout = 15000) {
@@ -144,7 +144,17 @@ async function openModule(module) {
   await evaluate(control, `(()=>{const node=document.querySelector('[aria-label=${JSON.stringify('打开' + moduleLabels[module] + '磁贴')} ]');if(!node)throw Error('Missing tile launcher ${module}');node.click()})()`);
   await until(() => tile(module), module + ' native tile exists');
   const window = tile(module);
-  await until(() => evaluate(window, '!!window.windchimeDesktop&&document.body.innerText.length>10'), module + ' renderer loaded');
+  const observe = stage => tileOpenObservations.push({ module, stage, visible: window.isVisible(), loading: window.webContents.isLoadingMainFrame(), topmost: window.isAlwaysOnTop() });
+  observe('window-discovered');
+  // The UI click does not await openTile's IPC promise. The production window
+  // exists while loadFile is still pending and show:false is still in effect;
+  // renderer text alone is not evidence that the open operation has completed.
+  // Wait for production to show it, without calling show/focus/setAlwaysOnTop
+  // here: a real visibility or topmost failure must remain a test failure.
+  await until(() => window.isVisible() && !window.webContents.isLoadingMainFrame(), module + ' native window shown after load');
+  observe('native-window-shown');
+  await until(() => evaluate(window, 'document.visibilityState==="visible"&&!!window.windchimeDesktop&&document.body.innerText.length>10'), module + ' visible renderer loaded');
+  observe('visible-renderer-ready');
   return window;
 }
 async function selectedMessage(window, id) {
@@ -420,7 +430,7 @@ async function run() {
   assert(!JSON.stringify(settingsFile).includes('wc_ctl_'));
   assert(!JSON.stringify(settingsFile).includes('APPROVED_FROM_PRIVATE_TILE'));
   assert.deepEqual(consoleErrors, [], 'real renderers log no console errors');
-  const report = { passed: true, environment: { electron: process.versions.electron, chromium: process.versions.chrome, platform: process.platform, architecture: process.arch, backingService: 'real WindChime SQLite service and HTTP handlers', osShortcutRegistration: 'instrumented; callbacks exercised; no OS keystroke sent' }, checks, screenshots, tileGeometry, requests: requests.length, consoleErrors, profile: userData, at: new Date().toISOString() };
+  const report = { passed: true, environment: { electron: process.versions.electron, chromium: process.versions.chrome, platform: process.platform, architecture: process.arch, backingService: 'real WindChime SQLite service and HTTP handlers', osShortcutRegistration: 'instrumented; callbacks exercised; no OS keystroke sent' }, checks, screenshots, tileGeometry, tileOpenObservations, requests: requests.length, consoleErrors, profile: userData, at: new Date().toISOString() };
   await fs.writeFile(path.join(results, 'report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
   for (const item of fixtures) { item.http.closeAllConnections(); item.http.close(); await item.storage.close(); }
@@ -435,7 +445,7 @@ run().catch(async error => {
       await fs.writeFile(path.join(results, 'failure-' + window.id + '.png'), (await window.webContents.capturePage()).toPNG());
     } catch {}
   }
-  await fs.writeFile(path.join(results, 'failure.json'), JSON.stringify({ passed: false, error: error.stack, checks, requests, windows, consoleErrors, profile: userData }, null, 2));
+  await fs.writeFile(path.join(results, 'failure.json'), JSON.stringify({ passed: false, error: error.stack, checks, requests, windows, tileOpenObservations, consoleErrors, profile: userData }, null, 2));
   console.error(error.stack);
   for (const item of fixtures) { item.http.closeAllConnections(); item.http.close(); await item.storage.close().catch(() => {}); }
   app.exit(1);

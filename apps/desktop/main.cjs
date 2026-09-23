@@ -16,6 +16,7 @@ const tiles = new Map();
 let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
 let selectedMessageId = null, mainDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
 let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
+let shortcutConfigTail = Promise.resolve(), shortcutConfigPending = 0;
 let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
 const pendingRequests = new Set();
 let writeTail = Promise.resolve(), vaultTail = Promise.resolve();
@@ -59,9 +60,16 @@ async function readWorkspace() {
   try { workspace = restoreWorkspace(JSON.parse(await fs.readFile(workspacePath, 'utf8'))); }
   catch (error) { if (error.code !== 'ENOENT') connectionError('悬浮磁贴和快捷键设置无法读取，已使用默认设置'); }
 }
-function saveWorkspace() {
-  const contents = JSON.stringify(workspace);
-  const save = workspaceTail.then(async () => { const temporary = `${workspacePath}.tmp`; await fs.writeFile(temporary, contents); await fs.rename(temporary, workspacePath); });
+function saveWorkspace(candidateShortcut) {
+  const save = workspaceTail.then(async () => {
+    // Build from the latest committed shortcut and current tile preferences at
+    // execution time. A queued tile write cannot capture a tentative shortcut,
+    // or overwrite a newly committed shortcut with an earlier snapshot.
+    const value = candidateShortcut === undefined ? workspace : { ...workspace, nextShortcut: candidateShortcut };
+    const temporary = `${workspacePath}.tmp`;
+    await fs.writeFile(temporary, JSON.stringify(value)); await fs.rename(temporary, workspacePath);
+    if (candidateShortcut !== undefined) workspace.nextShortcut = candidateShortcut;
+  });
   workspaceTail = save.catch(() => {}); return save;
 }
 function tileFor(window) { return [...tiles.values()].find(tile => tile.window === window); }
@@ -128,20 +136,31 @@ async function chooseMessage(messageId, connectionId, contextVersion, parent = c
 }
 async function configureNextShortcut(value) {
   if (shortcutRecording) throw new Error('请先结束快捷键录制');
-  const normalized = normalizeNextShortcut(value);
-  if (normalized === nextShortcut && (!normalized || nextRegistered)) { shortcutError = ''; return nextShortcut; }
-  if (normalized) {
-    try { if (!globalShortcut.register(normalized, () => { void nextLetter(); })) throw new Error(); }
-    catch { shortcutError = '快捷键已被系统或其他应用占用，原快捷键保持不变'; throw new Error(shortcutError); }
-  }
-  const previous = nextShortcut, saved = workspace.nextShortcut;
-  workspace.nextShortcut = normalized;
-  try { await saveWorkspace(); } catch { workspace.nextShortcut = saved; if (normalized) globalShortcut.unregister(normalized); shortcutError = '快捷键设置无法保存，原快捷键保持不变'; throw new Error(shortcutError); }
-  if (previous && previous !== normalized) globalShortcut.unregister(previous);
-  nextVersion++; nextShortcut = normalized; nextRegistered = !!normalized; shortcutError = ''; return normalized;
+  // A remounted settings view may submit again while the previous disk write
+  // is pending. Serialize registration, persistence and rollback together so
+  // each request observes the last committed shortcut, not an obsolete one.
+  shortcutConfigPending++;
+  const operation = shortcutConfigTail.then(async () => {
+    if (shortcutRecording) throw new Error('请先结束快捷键录制');
+    const normalized = normalizeNextShortcut(value);
+    if (normalized === nextShortcut && (!normalized || nextRegistered)) { shortcutError = ''; return nextShortcut; }
+    if (normalized) {
+      // Reserve the OS binding first, but activate it only after persistence.
+      // The previously committed binding remains usable while this save waits.
+      try { if (!globalShortcut.register(normalized, () => { if (nextRegistered && nextShortcut === normalized) void nextLetter(); })) throw new Error(); }
+      catch { shortcutError = '快捷键已被系统或其他应用占用，原快捷键保持不变'; throw new Error(shortcutError); }
+    }
+    const previous = nextShortcut;
+    try { await saveWorkspace(normalized); } catch { if (normalized) globalShortcut.unregister(normalized); shortcutError = '快捷键设置无法保存，原快捷键保持不变'; throw new Error(shortcutError); }
+    if (previous && previous !== normalized) globalShortcut.unregister(previous);
+    nextVersion++; nextShortcut = normalized; nextRegistered = !!normalized; shortcutError = ''; return normalized;
+  });
+  shortcutConfigTail = operation.catch(() => {});
+  try { return await operation; } finally { shortcutConfigPending--; }
 }
 function recordNextShortcut(recording) {
   if (typeof recording !== 'boolean') throw new Error('无效录制状态');
+  if (recording && shortcutConfigPending) throw new Error('热键正在保存，请稍后开始录制');
   clearTimeout(shortcutRecordingTimer);
   if (recording) {
     nextVersion++; shortcutRecording = true;

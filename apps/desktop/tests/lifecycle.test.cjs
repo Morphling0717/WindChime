@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 async function harness(options={}) {
   const deferredCrash=options.deferredCrash;
-  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[],workspaceWrites=[],unregistered=[],confirmations=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault,confirmation=options.confirmation??0;
+  const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[],workspaceWrites=[],workspaceCommits=[],unregistered=[],confirmations=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault,temporaryWorkspace,confirmation=options.confirmation??0;
   const app=new EventEmitter();Object.assign(app,{requestSingleInstanceLock:()=>true,whenReady:async()=>{},getPath:()=>'/fixture',getName:()=> 'Fixture',quit:()=>{quitCount++;}});
   class Window extends EventEmitter {
     constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isDestroyed:()=>!!this.contentsDestroyed,isCrashed:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');return !!this.crashed;},reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
@@ -34,14 +34,14 @@ async function harness(options={}) {
     if(url.endsWith('/display/open'))value={receiverId:'r',epoch:'epoch',leaseMs:3000};
     return Response.json(value);
   };
-  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('workspace.v1.json.tmp'))return;await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
+  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,execPath:options.execPath??process.execPath,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
   wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
   async function pair(port){const pending=await invoke('sites:pair',[{origin:`http://localhost:${port}`,label:`Site ${port}`}]);assert(pending.ok);const result=await invoke('sites:pair-status',[pending.data.id]);assert(result.ok,result.error);return result.data.site;}
-  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,workspaceWrites,unregistered,confirmations,setConfirmation:value=>{confirmation=value;},powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
+  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,workspaceWrites,workspaceCommits,unregistered,confirmations,setConfirmation:value=>{confirmation=value;},powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
 }
 test('private tiles have distinct isolated windows, selected-only sites and no credential or display authority',async()=>{
   const h=await harness();await h.pair(3012);await h.pair(3011);
@@ -140,6 +140,97 @@ test('next hotkey reads fresh revision, debounces and does not replay after hide
   shortcut.callback();shortcut.callback();await flush();await flush();const next=h.requests.filter(r=>r.body?.action==='next');assert.equal(next.length,1);assert.equal(next[0].body.expectedRevision,37);assert.equal(typeof next[0].body.operationId,'string');
   h.advance(700);const pending=deferred();h.setRoute(r=>r.url.includes('/control/state')?pending.promise:null);shortcut.callback();await flush();const hide=h.invoke('control:hide');pending.resolve(Response.json({topicId:'3011',revision:38,receivers:1}));await hide;await flush();assert.equal(h.requests.filter(r=>r.body?.action==='next').length,1);
   h.advance(700);await h.invoke('display:open');await flush();assert.equal(h.requests.filter(r=>r.body?.action==='next').length,1,'reconnecting never replays the cancelled keystroke');
+});
+
+for(const fails of [true,false])test(`an uncommitted next shortcut cannot broadcast before its save ${fails?'fails':'succeeds'}`,async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+L'])).ok);
+  const previous=h.shortcuts.at(-1),gate=deferred();h.advance(700);
+  h.setRoute(r=>r.url.includes('/control/state')?Response.json({topicId:'3011',revision:37,receivers:1}):null);
+  h.setPersistence({workspace:async()=>{await gate.promise;if(fails)throw new Error('synthetic shortcut write failure');}});
+  const setting=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();const candidate=h.shortcuts.at(-1);
+  assert.equal(candidate.key,'CommandOrControl+Alt+N');assert.equal((await h.invoke('app:status')).data.nextShortcut,previous.key);
+  const nextCount=()=>h.requests.filter(r=>r.body?.action==='next').length;
+  candidate.callback();await flush();await flush();assert.equal(nextCount(),0,'reserving a new OS shortcut must not activate it before persistence');
+  previous.callback();await flush();await flush();assert.equal(nextCount(),1,'the committed shortcut remains usable while its replacement saves');
+  gate.resolve();assert.equal((await setting).ok,!fails);h.advance(700);
+  const active=fails?previous:candidate,stale=fails?candidate:previous;
+  stale.callback();await flush();await flush();assert.equal(nextCount(),1,'a rolled-back or superseded shortcut cannot broadcast');
+  active.callback();await flush();await flush();assert.equal(nextCount(),2,'only the currently committed shortcut can advance the letter');
+});
+
+test('overlapping shortcut saves unregister the superseded key after each complete commit',async()=>{
+  const h=await harness(),gate=deferred();let writes=0;
+  h.setPersistence({workspace:async()=>{if(++writes===1)await gate.promise;}});
+  const first=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();
+  const second=h.invoke('app:next-shortcut',['Ctrl+Alt+M']);await flush();
+  assert(!h.shortcuts.some(item=>item.key==='CommandOrControl+Alt+M'),'second registration waits for the first commit');
+  gate.resolve();assert((await first).ok);assert((await second).ok);
+  assert.equal((await h.invoke('app:status')).data.nextShortcut,'CommandOrControl+Alt+M');
+  assert.equal(h.workspaceWrites.at(-1).nextShortcut,'CommandOrControl+Alt+M');
+  assert.deepEqual(h.unregistered,['CommandOrControl+Alt+N']);
+  assert.deepEqual(h.shortcuts.map(item=>item.key).filter(key=>!h.unregistered.includes(key)),['CommandOrControl+Shift+H','CommandOrControl+Alt+M']);
+});
+
+test('a failed shortcut save rolls back before a later queued save can commit',async()=>{
+  const h=await harness();assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+L'])).ok);
+  const gate=deferred();let writes=0;
+  h.setPersistence({workspace:async()=>{if(++writes===1){await gate.promise;throw new Error('synthetic workspace disk failure');}}});
+  const first=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();
+  const second=h.invoke('app:next-shortcut',['Ctrl+Alt+M']);await flush();
+  gate.resolve();assert.equal((await first).ok,false);assert((await second).ok);
+  const status=(await h.invoke('app:status')).data;
+  assert.equal(status.nextShortcut,'CommandOrControl+Alt+M');assert.equal(status.shortcutError,'');
+  assert.equal(h.workspaceWrites.at(-1).nextShortcut,'CommandOrControl+Alt+M');
+  assert.deepEqual(h.unregistered,['CommandOrControl+Alt+N','CommandOrControl+Alt+L']);
+});
+
+test('a later failed shortcut save preserves the earlier queued successful key',async()=>{
+  const h=await harness(),gate=deferred();let writes=0;
+  h.setPersistence({workspace:async()=>{if(++writes===1)await gate.promise;else throw new Error('synthetic second save failure');}});
+  const first=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();
+  const second=h.invoke('app:next-shortcut',['Ctrl+Alt+M']);await flush();gate.resolve();
+  assert((await first).ok);assert.equal((await second).ok,false);
+  assert.equal((await h.invoke('app:status')).data.nextShortcut,'CommandOrControl+Alt+N');
+  assert.deepEqual(h.unregistered,['CommandOrControl+Alt+M']);
+  h.setPersistence({});assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+N'])).ok);
+  assert.equal(h.shortcuts.filter(item=>item.key==='CommandOrControl+Alt+N').length,1,'committed shortcut does not need to be registered again');
+});
+
+test('shortcut recording cannot overlap a save or its queued successor',async()=>{
+  const h=await harness(),firstGate=deferred(),secondGate=deferred();let writes=0;
+  h.setPersistence({workspace:async()=>{await (++writes===1?firstGate.promise:secondGate.promise);}});
+  const first=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();
+  const second=h.invoke('app:next-shortcut',['Ctrl+Alt+M']);await flush();
+  const recording=await h.invoke('app:shortcut-recording',[true]);assert.equal(recording.ok,false);assert.match(recording.error,/正在保存/);
+  assert.equal((await h.invoke('app:status')).data.shortcutRecording,false);
+  firstGate.resolve();assert((await first).ok);await flush();
+  assert.equal((await h.invoke('app:shortcut-recording',[true])).ok,false,'recording stays excluded while the successor saves');
+  secondGate.resolve();assert((await second).ok);
+  assert((await h.invoke('app:shortcut-recording',[true])).ok);
+  const writesBefore=h.workspaceWrites.length,registrationsBefore=h.shortcuts.length;
+  assert.equal((await h.invoke('app:next-shortcut',['Ctrl+Alt+P'])).ok,false,'active recording rejects a new save');
+  assert.equal(h.workspaceWrites.length,writesBefore);assert.equal(h.shortcuts.length,registrationsBefore);
+  assert((await h.invoke('app:shortcut-recording',[false])).ok);
+  assert.equal((await h.invoke('app:status')).data.nextShortcut,'CommandOrControl+Alt+M');
+  assert.equal(h.shortcuts.at(-1).key,'CommandOrControl+Alt+M');
+});
+
+for(const fails of [true,false])test(`tile saves preserve only the ${fails?'old committed':'newly committed'} shortcut when its concurrent update ${fails?'fails':'succeeds'}`,async()=>{
+  const h=await harness();await h.pair(3011);assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+L'])).ok);
+  assert((await h.invoke('tiles:open',['appearance'])).ok);const tile=h.windows.at(-1),gate=deferred();let writes=0;
+  h.setPersistence({workspace:async()=>{if(++writes===1){await gate.promise;if(fails)throw new Error('synthetic shortcut write failure');}}});
+  const setting=h.invoke('app:next-shortcut',['Ctrl+Alt+N']);await flush();
+  assert((await h.invoke('tiles:pin',['appearance',false],tile)).ok,'real tile operation queues a workspace save while the shortcut save is waiting');
+  assert.equal(h.workspaceCommits.at(-1).nextShortcut,'CommandOrControl+Alt+L','pending update has not been committed');
+  gate.resolve();assert.equal((await setting).ok,!fails);await flush();await flush();
+  const expected=fails?'CommandOrControl+Alt+L':'CommandOrControl+Alt+N';
+  const committed=h.workspaceCommits.at(-1);
+  assert.equal(committed.nextShortcut,expected,'a subsequent tile save must never persist an uncommitted or obsolete shortcut');
+  assert.equal(committed.tiles.appearance.pinned,false,'the concurrent tile preference is not lost');
+  assert.equal((await h.invoke('app:status')).data.nextShortcut,expected);
+  const restarted=await harness({workspace:committed});
+  assert.equal((await restarted.invoke('app:status')).data.nextShortcut,expected,'restart restores the committed shortcut');
+  assert.equal(restarted.shortcuts.at(-1).key,expected);
 });
 
 test('completing a new pairing clears the old output; its delayed close cannot hide the new mailbox',async()=>{
