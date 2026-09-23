@@ -343,27 +343,21 @@ function App() {
       }),
     [selectedId, topicId, mailClient],
   );
-  const pageTitle =
-    view === "connections"
-      ? "连接你的信箱"
-      : view === "settings"
-        ? "让来信，有你的风格"
-        : view === "topics"
-          ? "每场活动，都有自己的话题"
-          : view === "share"
-            ? "把投稿入口，交给观众"
-            : view === "inbox" && selected
-              ? "所有来信，在这里慢慢读"
-              : selected
-                ? "今天，也有值得倾听的声音"
-                : "让每一封来信，恰好被听见";
+  const pageTitle = {
+    connections: "网站连接",
+    settings: "设置与外观",
+    topics: "话题管理",
+    share: "投稿分享",
+    inbox: "收件箱",
+    studio: "直播工作台",
+  }[view];
   return (
     <div className="wc-desktop" data-view={view}>
       <style>{windChimeControlCss}</style>
       <div className="desktop-titlebar">
         <span>风铃桌面控制台</span>
         <span className="titlebar-private">
-          <Icon name="shield" size={12} /> PRIVATE SPACE
+          <Icon name="shield" size={12} /> 私人控制台
         </span>
       </div>
       <button
@@ -515,31 +509,7 @@ function App() {
         )}
         <header className="desktop-header">
           <div>
-            <div className="desktop-eyebrow">
-              {
-                {
-                  studio: "YOUR PRIVATE STUDIO",
-                  inbox: "LETTERS FOR YOU",
-                  topics: "EVERY OCCASION",
-                  share: "SHARE YOUR INBOX",
-                  connections: "STAY CONNECTED",
-                  settings: "MAKE IT YOURS",
-                }[view]
-              }
-            </div>
             <h1>{pageTitle}</h1>
-            <p>
-              {
-                {
-                  studio: "私下审阅，从容安排。准备好了，再交给观众。",
-                  inbox: "阅读、收藏和整理来信，决定哪些值得带到直播间。",
-                  topics: "安排开放时间，管理当前活动与往期来信。",
-                  share: "专属二维码与海报，让观众轻松找到你的信箱。",
-                  connections: "一个密钥，把网页里的来信带到桌面。",
-                  settings: "管理网站权限与辅助审核，调整你喜欢的展示风格。",
-                }[view]
-              }
-            </p>
           </div>
           <button
             className="desktop-hide"
@@ -596,23 +566,12 @@ function App() {
                 </div>
               </div>
               <div className="welcome-copy">
-                <span className="desktop-eyebrow">
-                  A LITTLE SPACE FOR EVERY VOICE
-                </span>
-                <h2>
-                  收好来信，
-                  <br />
-                  慢慢读。
-                </h2>
-                <p>
-                  让热闹留在直播间，
-                  <br />
-                  把选择的余地留给自己。
-                </p>
+                <h2>桌面控制台</h2>
+                <p>信箱管理、审核与直播展示</p>
               </div>
               <div className="welcome-steps">
                 <span>
-                  <b>01</b> 私下审阅
+                  <b>01</b> 审阅
                 </span>
                 <span>
                   <b>02</b> 批准待播
@@ -629,8 +588,8 @@ function App() {
                 <Icon name="link" size={24} />
               </div>
               <div>
-                <h2>{selected ? "添加另一个信箱" : "从连接一个信箱开始"}</h2>
-                <p>把网页后台的连接密钥粘贴到这里。</p>
+                <h2>{selected ? "添加连接" : "连接网站"}</h2>
+                <p>粘贴网页后台生成的连接密钥。</p>
               </div>
             </div>
             <details
@@ -839,10 +798,6 @@ function App() {
             )}
           </>
         ) : null}
-        <footer className="desktop-footer">
-          <span>WINDCHIME</span>
-          <span>风过有声，来信有回响。</span>
-        </footer>
       </main>
     </div>
   );

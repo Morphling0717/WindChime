@@ -50,11 +50,10 @@ function installerFrame(logo, frame) {
       <text x="72" y="77" fill="#63818b" font-family="Segoe UI, sans-serif" font-size="10" font-weight="600" letter-spacing="2.1">WINDCHIME DESKTOP</text>
       <rect x="499" y="58" width="69" height="25" rx="12.5" fill="#ffffff" fill-opacity="0.70" stroke="#ffffff"/>
       <text x="533.5" y="74.5" text-anchor="middle" fill="#5c7b86" font-family="Segoe UI, sans-serif" font-size="10.5">Windows</text>
-      <image x="100" y="83" width="440" height="227.34" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,${logo}"/>
-      <text x="299" y="284" fill="#597885" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="12">让每封来信，从容上场。</text>
+      <image x="100" y="77" width="440" height="227.34" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,${logo}"/>
       <path d="M72 309H568" stroke="#aac8ce" stroke-opacity="0.33"/>
       <circle cx="80" cy="324" r="4" fill="#54a89f"/>
-      <text x="95" y="329" fill="#416572" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="12">正在安装风铃，请稍候</text>
+      <text x="95" y="329" fill="#416572" font-family="Microsoft YaHei UI, Microsoft YaHei, sans-serif" font-size="12">正在安装</text>
       ${dots}
     </g>
     <rect x="8.75" y="8.75" width="622.5" height="382.5" rx="31.25" fill="none" stroke="#ffffff" stroke-opacity="0.86" stroke-width="1.5"/>

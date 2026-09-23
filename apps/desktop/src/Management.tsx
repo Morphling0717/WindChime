@@ -348,7 +348,6 @@ export function Inbox({
         <article className="glass-surface management-detail">
           {item ? (
             <>
-              <span className="desktop-eyebrow">ORIGINAL LETTER</span>
               <h2>{item.nickname || "匿名来信"}</h2>
               <p className="wc-muted">
                 {item.senderLabel || "匿名发送者"} ·{" "}
@@ -449,7 +448,7 @@ export function Inbox({
               </p>
             </>
           ) : (
-            <p className="empty-copy">选择一封来信，私下阅读原文。</p>
+            <p className="empty-copy">选择信件查看原文。</p>
           )}
         </article>
       </div>
@@ -1166,7 +1165,7 @@ export function Share({
           const saved = readWindChimePosterConfig(storageKey, {
             heading: data.posterDefaults?.title || data.topicTitle,
             body:
-              data.posterDefaults?.subtitle || "有话想说，就写一封匿名来信吧。",
+              data.posterDefaults?.subtitle || "扫码匿名投稿",
             footer: data.posterDefaults?.signature || data.siteName,
             avatarSrc: "",
           });

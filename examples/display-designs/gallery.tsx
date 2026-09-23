@@ -6,14 +6,14 @@ import { DEFAULT_WINDCHIME_LIVE_APPEARANCE, type WindChimeLiveSnapshot } from '.
 import './gallery.css';
 
 const sample: WindChimeLiveSnapshot = {
-  id: 'design-sample', messageId: 'design-sample', nickname: '一位路过的晚风',
-  text: '今天也想把一件小事说给你听。\n回家的路上，风把云吹成了一封信。\n愿你今晚有好梦，也有被认真听见的心事。',
+  id: 'design-sample', messageId: 'design-sample', nickname: '示例昵称',
+  text: '这是展示文字示例。\n可调整字体、字号、颜色和排版。\n图片固定在文字下方，长文本循环滚动。',
   linkUrl: null, assets: [],
 };
 const photo = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="260" viewBox="0 0 600 260"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#7894ac"/><stop offset="1" stop-color="#d9c6b1"/></linearGradient></defs><rect width="600" height="260" fill="url(#sky)"/><circle cx="454" cy="76" r="34" fill="#f6e5bd"/><path d="M0 210 108 139 251 230 384 154 600 211V260H0" fill="#607e82"/><path d="M0 250 191 202 311 237 470 190 600 225V260H0" fill="#365b69"/></svg>');
-const portraitPhoto = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900"><rect width="600" height="900" fill="#7894ac"/><circle cx="420" cy="175" r="78" fill="#f6e5bd"/><path d="M0 800 210 300 420 720 540 450 600 700V900H0" fill="#365b69"/><text x="300" y="865" text-anchor="middle" fill="#f6e5bd" font-size="28">风景的最下方</text></svg>');
+const portraitPhoto = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900"><rect width="600" height="900" fill="#7894ac"/><circle cx="420" cy="175" r="78" fill="#f6e5bd"/><path d="M0 800 210 300 420 720 540 450 600 700V900H0" fill="#365b69"/><text x="300" y="865" text-anchor="middle" fill="#f6e5bd" font-size="28">图片底部</text></svg>');
 const squarePhoto = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect width="600" height="600" fill="#baa383"/><circle cx="300" cy="250" r="150" fill="#e7d8b5"/><path d="M0 500 180 340 360 450 490 315 600 415V600H0" fill="#637d72"/></svg>');
-const media = { id: 'example-photo', caption: '把此刻的风景，寄给你。', mimeType: 'image/svg+xml', width: 600, height: 260, sha256: '' };
+const media = { id: 'example-photo', caption: '示例图片 1', mimeType: 'image/svg+xml', width: 600, height: 260, sha256: '' };
 
 type PreviewProps = {
   theme: WindChimeLiveTheme; layout: WindChimeLiveLayout; imageCount: number; long: boolean;
@@ -27,8 +27,8 @@ function Preview({ theme, layout, imageCount, long, width, height, speed, fontSi
   const appearance = { ...applyLiveTheme(DEFAULT_WINDCHIME_LIVE_APPEARANCE, theme), layout, maxWidth: width, viewportHeight: height, scrollSpeed: speed, imageHeightPercent, fontSize, animation: 'none' as const, imageLayout };
   const assets = imageCount ? [
     { ...media, height: portrait ? 900 : media.height },
-    { ...media, id: 'example-photo-2', height: portrait ? 260 : 900, caption: '第二张：不同方向的风景，也完整留在画面下方。' },
-    { ...media, id: 'example-photo-3', height: 600, caption: '第三张：愿你今晚也有被认真听见的心事。' },
+    { ...media, id: 'example-photo-2', height: portrait ? 260 : 900, caption: '示例图片 2' },
+    { ...media, id: 'example-photo-3', height: 600, caption: '示例图片 3' },
   ].slice(0, imageCount) : [];
   const snapshot = { ...sample, id: `design-sample-${reset}`, text: long ? (sample.text + '\n\n').repeat(8) : sample.text, assets };
   useEffect(() => {
@@ -65,7 +65,7 @@ function App() {
   const composition = LIVE_LAYOUTS.find(item => item.id === layout)!;
   const shared = { imageCount, long, speed, fontSize, portrait, imageHeightPercent, imageLayout, reset };
   return <main className="design-page" data-mode={mode}>
-    <header className="design-header"><div><span className="design-eyebrow">WINDCHIME · DISPLAY STUDIES</span><h1>文字慢慢读，风景一直在。</h1><p>六种排版，三种主题。窄侧栏、竖向信笺与横向舞台，可以自由搭配。</p></div><button onClick={() => setMode(mode === 'single' ? 'matrix' : 'single')}>{mode === 'single' ? '查看十八种组合' : '返回自由搭配'}</button></header>
+    <header className="design-header"><div><h1>展示样式预览</h1><p>6 种排版，3 种主题。</p></div><button onClick={() => setMode(mode === 'single' ? 'matrix' : 'single')}>{mode === 'single' ? '查看十八种组合' : '返回单个预览'}</button></header>
     <section className="design-controls" aria-label="样式选择">
       <label>视觉主题<select aria-label="视觉主题" value={theme} onChange={e => setTheme(e.target.value as WindChimeLiveTheme)}>{LIVE_THEMES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>内容排版<select aria-label="内容排版" value={layout} onChange={e => setLayout(e.target.value as WindChimeLiveLayout)}>{LIVE_LAYOUTS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -85,7 +85,7 @@ function App() {
       <label>展示宽度<select aria-label="展示宽度" value={width} onChange={e => setWidth(Number(e.target.value))}>{[360, 480, 600, 640, 960, 1000, 1200, 1280].map(value => <option key={value} value={value}>{value} px</option>)}</select></label>
       <label>展示高度<select aria-label="展示高度" value={height} onChange={e => setHeight(Number(e.target.value))}>{[300, 360, 420, 640, 800, 860, 900].map(value => <option key={value} value={value}>{value} px</option>)}</select></label>
       <button className="design-size" onClick={() => { setWidth(composition.recommendedWidth); setHeight(composition.recommendedHeight); }}>使用推荐尺寸</button>
-      <label>滚动速度<select aria-label="滚动速度" value={speed} onChange={e => setSpeed(Number(e.target.value))}><option value={24}>舒缓 · 24 px/秒</option><option value={60}>中速 · 60 px/秒</option><option value={120}>快速 · 120 px/秒</option></select></label>
+      <label>滚动速度<select aria-label="滚动速度" value={speed} onChange={e => setSpeed(Number(e.target.value))}><option value={24}>慢速 · 24 px/秒</option><option value={60}>中速 · 60 px/秒</option><option value={120}>快速 · 120 px/秒</option></select></label>
       <label>图片数量<select aria-label="图片数量" value={imageCount} onChange={e => setImageCount(Number(e.target.value))}><option value={0}>纯文字</option><option value={1}>1 张图片</option><option value={2}>2 张图片</option><option value={3}>3 张图片</option></select></label>
       <label>图片区域<select aria-label="图片区域" value={imageHeightPercent} onChange={e => setImageHeightPercent(Number(e.target.value))}><option value={20}>20%</option><option value={45}>45%</option><option value={60}>60%</option><option value={70}>70%</option></select></label>
       <label>图片排列<select aria-label="图片排列" value={imageLayout} onChange={e => setImageLayout(e.target.value as 'row' | 'column' | 'grid')}><option value="row">横排</option><option value="column">竖排</option><option value="grid">网格</option></select></label>

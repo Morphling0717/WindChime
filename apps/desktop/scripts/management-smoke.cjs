@@ -500,7 +500,7 @@ async function verifyAppearanceDimensions() {
   }, "automatic scroll reaches the end of the extreme sample", 60000);
   assert.equal(textEndVisible, true, "the final text character scrolls fully into view without manual scrolling");
   const tail = await evaluate(`(()=>{const card=document.querySelector('.wc-appearance-preview .wc-display'),viewport=card.querySelector('.wc-display-viewport'),bounds=viewport.getBoundingClientRect(),media=card.querySelector('.wc-display-media'),image=media.querySelector('figure:last-child img'),caption=viewport.querySelector('.wc-display-image-captions p:last-child'),ir=image.getBoundingClientRect(),mr=media.getBoundingClientRect(),cr=caption.getBoundingClientRect();return {lastCaption:caption.textContent,lastImageVisible:ir.left>=mr.left&&ir.right<=mr.right+1&&ir.top>=mr.top&&ir.bottom<=mr.bottom+1,lastCaptionVisible:cr.top>=bounds.top&&cr.bottom<=bounds.bottom+1,imageScrolls:viewport.contains(image),scrollTop:viewport.scrollTop,maxScroll:viewport.scrollHeight-viewport.clientHeight}})()`);
-  assert(tail.lastCaption.endsWith("月下微风"));
+  assert(tail.lastCaption.endsWith("示例图片 2"));
   assert.equal(tail.imageScrolls, false, "images remain outside the text scroll viewport");
   assert.equal(tail.lastImageVisible, true, "the complete final image stays visible in the stationary lower panel");
   assert.equal(tail.lastCaptionVisible, true, "the complete final caption is reachable");

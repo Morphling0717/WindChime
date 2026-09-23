@@ -7,13 +7,13 @@
 !define /ifndef INSTALL_REGISTRY_KEY "Software\${APP_GUID}"
 !define MUI_BGCOLOR F4F8FC
 !define MUI_TEXTCOLOR 233A4B
-!define MUI_WELCOMEPAGE_TITLE "欢迎安装风铃"
-!define MUI_WELCOMEPAGE_TEXT "私人审阅，从容上屏。$\r$\n$\r$\n此向导将引导你选择安装位置和快捷方式。点击最后一步的“安装”后才会开始安装。$\r$\n$\r$\n安装前，请保存正在编辑的内容，并从风铃托盘菜单退出程序。"
+!define MUI_WELCOMEPAGE_TITLE "安装风铃"
+!define MUI_WELCOMEPAGE_TEXT "选择安装位置和快捷方式。$\r$\n$\r$\n安装前，请保存编辑内容，并从托盘菜单退出风铃。"
 !define MUI_LICENSEPAGE_TEXT_TOP "风铃项目采用 MIT 开源许可证。以下是完整许可原文。"
-!define MUI_LICENSEPAGE_TEXT_BOTTOM "MIT 允许使用、修改和商业分发；分发时请保留版权及许可声明。第三方组件保留各自许可证。"
+!define MUI_LICENSEPAGE_TEXT_BOTTOM "分发时请保留版权与许可声明。第三方组件沿用各自许可证。"
 !define MUI_LICENSEPAGE_BUTTON "下一步(&N) >"
-!define MUI_FINISHPAGE_TITLE "风铃已安装完成"
-!define MUI_FINISHPAGE_TEXT "现在可以从你选择的位置打开风铃。$\r$\n$\r$\n原有连接和外观设置保留。首次打开依然为空白，只有手动上屏才会展示信件。"
+!define MUI_FINISHPAGE_TITLE "安装完成"
+!define MUI_FINISHPAGE_TEXT "点击“完成”退出安装向导。"
 !define MUI_FINISHPAGE_RUN_TEXT "启动风铃"
 !define MUI_FINISHPAGE_RUN_NOTCHECKED
 !define MUI_UNWELCOMEPAGE_TEXT "此向导将卸载这份风铃程序。$\r$\n$\r$\n连接凭据和个人设置将保留，网站中的信件不会被删除。$\r$\n$\r$\n请先保存编辑内容，并从托盘菜单退出风铃。"
@@ -268,7 +268,7 @@ FunctionEnd
 Function WCConfirmPage
   StrCpy $WCConfirmed "0"
   Call WCValidateDirectory
-  !insertmacro MUI_HEADER_TEXT "准备安装" "确认位置和快捷方式，点击“安装”后开始。"
+  !insertmacro MUI_HEADER_TEXT "安装选项" "确认后点击“安装”。"
   nsDialogs::Create 1018
   Pop $WCDialog
   ${If} $WCDialog == error
@@ -289,9 +289,9 @@ Function WCConfirmPage
   ${If} $WCValidationError != ""
     ${NSD_CreateLabel} 0u 100u 300u 54u "$WCValidationError$\r$\n请点击“上一步”重新选择。"
   ${ElseIf} $WCLegacy == "1"
-    ${NSD_CreateLabel} 0u 100u 300u 54u "检测到旧的一键安装版。新版将独立安装，沿用原有连接设置，不自动卸载旧版。$\r$\n新版快捷方式名为“风铃 WindChime”。确认新版正常后，可在 Windows 设置中自行卸载旧版。"
+    ${NSD_CreateLabel} 0u 100u 300u 54u "检测到旧版。新版将独立安装并沿用连接设置，旧版不会自动卸载。$\r$\n快捷方式名为“风铃 WindChime”。"
   ${Else}
-    ${NSD_CreateLabel} 0u 104u 300u 42u "程序文件与个人连接设置分别保存。$\r$\n安装或卸载不会删除网站信件，也不会自动播放。"
+    ${NSD_CreateLabel} 0u 104u 300u 42u "更新会保留已有连接和个人设置。"
   ${EndIf}
   Pop $0
   GetDlgItem $0 $HWNDPARENT 1

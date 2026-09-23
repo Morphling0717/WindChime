@@ -216,13 +216,12 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="230" /><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <Border CornerRadius="23" Background="#72FFFFFF" BorderBrush="#E9FFFFFF" BorderThickness="1" Padding="22,19,22,20">
               <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="182" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="200" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                 <Image x:Name="BrandImage" Width="183" Height="169" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="风铃 WindChime" />
-                <TextBlock Grid.Row="1" Text="让每封来信，从容上场。" FontSize="12" Foreground="#618392" HorizontalAlignment="Center" Margin="0,0,0,25" />
-                <StackPanel Grid.Row="2" Margin="8,0,0,0">
+                <StackPanel Grid.Row="1" Margin="8,18,0,0">
                   <StackPanel Orientation="Horizontal" Margin="0,0,0,17">
                     <Border x:Name="Step1Dot" Style="{StaticResource StepNumber}" Background="{StaticResource AccentBrush}" BorderBrush="#93C9D5"><TextBlock x:Name="Step1Number" Text="1" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="11" /></Border>
-                    <TextBlock x:Name="Step1Text" Text="欢迎" Style="{StaticResource StepText}" Foreground="#356477" FontWeight="SemiBold" />
+                    <TextBlock x:Name="Step1Text" Text="安装风铃" Style="{StaticResource StepText}" Foreground="#356477" FontWeight="SemiBold" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Margin="0,0,0,17">
                     <Border x:Name="Step2Dot" Style="{StaticResource StepNumber}"><TextBlock x:Name="Step2Number" Text="2" Foreground="#77909D" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="11" /></Border>
@@ -238,12 +237,8 @@
                   </StackPanel>
                   <StackPanel Orientation="Horizontal">
                     <Border x:Name="Step5Dot" Style="{StaticResource StepNumber}"><TextBlock x:Name="Step5Number" Text="5" Foreground="#77909D" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="11" /></Border>
-                    <TextBlock x:Name="Step5Text" Text="完成" Style="{StaticResource StepText}" />
+                    <TextBlock x:Name="Step5Text" Text="安装完成" Style="{StaticResource StepText}" />
                   </StackPanel>
-                </StackPanel>
-                <StackPanel Grid.Row="3" Margin="8,19,0,0">
-                  <Rectangle Height="1" Fill="#42ABC6CF" Margin="0,0,0,12" />
-                  <TextBlock Text="私下审阅 · 手动上屏" FontSize="10" Foreground="#7B97A2" />
                 </StackPanel>
               </Grid>
             </Border>
@@ -253,29 +248,22 @@
               <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <StackPanel>
-                  <TextBlock x:Name="PageHeading" Text="欢迎安装风铃" FontSize="25" FontWeight="SemiBold" Foreground="#2A4558" />
-                  <TextBlock x:Name="PageDescription" Text="几步准备，让下一封来信有一个温柔的落点。" Style="{StaticResource BodyText}" Margin="0,8,0,0" />
+                  <TextBlock x:Name="PageHeading" Text="安装风铃" FontSize="25" FontWeight="SemiBold" Foreground="#2A4558" />
+                  <TextBlock x:Name="PageDescription" Text="仅为当前 Windows 用户安装。" Style="{StaticResource BodyText}" Margin="0,8,0,0" />
                 </StackPanel>
 
                 <Grid Grid.Row="1" Margin="0,22,0,16">
                   <Grid x:Name="WelcomePage" Visibility="Visible">
-                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel VerticalAlignment="Center" Margin="1,0,0,14">
-                      <TextBlock FontSize="33" FontWeight="Light" LineHeight="49" Foreground="#2D4E64"><Run Text="一封来信。" /><LineBreak /><Run Text="一个从容的直播时刻。" /></TextBlock>
-                      <TextBlock Text="先在私下读完，再决定何时展示。&#xA;风铃把审阅、待播与播出，放在你手边。" Style="{StaticResource BodyText}" Margin="0,19,0,0" />
-                      <Grid Margin="0,26,0,0">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                        <Border CornerRadius="12" Background="#7DFFFFFF" BorderBrush="#EFFFFFFF" BorderThickness="1" Padding="12,13"><StackPanel><TextBlock Text="私下审阅" FontSize="13" Foreground="#486C7B" /><TextBlock Text="原信与上屏稿分开" FontSize="10" Foreground="#849BA6" Margin="0,6,0,0" /></StackPanel></Border>
-                        <Border Grid.Column="2" CornerRadius="12" Background="#7DFFFFFF" BorderBrush="#EFFFFFFF" BorderThickness="1" Padding="12,13"><StackPanel><TextBlock Text="手动上屏" FontSize="13" Foreground="#486C7B" /><TextBlock Text="每一封由你决定" FontSize="10" Foreground="#849BA6" Margin="0,6,0,0" /></StackPanel></Border>
-                        <Border Grid.Column="4" CornerRadius="12" Background="#7DFFFFFF" BorderBrush="#EFFFFFFF" BorderThickness="1" Padding="12,13"><StackPanel><TextBlock Text="一键隐藏" FontSize="13" Foreground="#486C7B" /><TextBlock Text="随时让画面留白" FontSize="10" Foreground="#849BA6" Margin="0,6,0,0" /></StackPanel></Border>
-                      </Grid>
+                    <StackPanel VerticalAlignment="Center" Margin="1,0,1,24">
+                      <TextBlock Text="安装前请退出风铃" FontSize="20" FontWeight="Medium" Foreground="#2D4E64" />
+                      <TextBlock Text="请保存正在编辑的内容，并从托盘菜单选择“退出并结束展示”。" Style="{StaticResource BodyText}" Margin="0,12,0,0" />
+                      <TextBlock Text="接下来可以选择安装位置和快捷方式。" Style="{StaticResource BodyText}" Margin="0,24,0,0" />
                     </StackPanel>
-                    <TextBlock Grid.Row="1" Text="你可以选择安装位置与快捷方式。确认点击「安装」后，才会开始写入程序文件。" Style="{StaticResource BodyText}" FontSize="11" LineHeight="19" />
                   </Grid>
 
                   <Grid x:Name="LicensePage" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <Border CornerRadius="9" Background="#63D8EEE8" Padding="11,8" Margin="0,0,0,12"><TextBlock Text="MIT · 允许使用、修改和商业分发" FontSize="12" Foreground="#4E7F7B" /></Border>
+                    <Border CornerRadius="9" Background="#63D8EEE8" Padding="11,8" Margin="0,0,0,12"><TextBlock Text="MIT License" FontSize="12" Foreground="#4E7F7B" /></Border>
                     <TextBox x:Name="LicenseBody" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontFamily="Consolas"
                              FontSize="12.5" Padding="15,13" VerticalContentAlignment="Top" AutomationProperties.Name="MIT 许可证原文" TabIndex="0" />
@@ -292,12 +280,12 @@
                           <TextBox x:Name="PathBox" Height="44" Padding="10,3" AutomationProperties.Name="安装位置" TabIndex="0" />
                           <Button x:Name="BrowseButton" Grid.Column="2" Content="浏览…" Padding="10,9" AutomationProperties.Name="选择安装文件夹" TabIndex="1" />
                         </Grid>
-                        <TextBlock Text="程序与连接设置分别保存，更新不会清除你的连接。" Style="{StaticResource BodyText}" FontSize="11" Margin="0,8,0,17" />
+                        <TextBlock Text="更新会保留已有连接和个人设置。" Style="{StaticResource BodyText}" FontSize="11" Margin="0,8,0,17" />
                         <TextBlock Text="快捷方式" FontSize="13" FontWeight="Medium" Foreground="#446271" Margin="0,0,0,12" />
                         <CheckBox x:Name="DesktopCheck" Content="在桌面创建快捷方式" IsChecked="True" Margin="0,0,0,10" TabIndex="2" />
                         <CheckBox x:Name="MenuCheck" Content="添加到开始菜单" IsChecked="True" TabIndex="3" />
                         <Border x:Name="LegacyNotice" Visibility="Collapsed" CornerRadius="12" Background="#8EF1F4DF" BorderBrush="#5BC4CAA4" BorderThickness="1" Padding="13,10" Margin="0,19,0,0">
-                          <TextBlock Text="检测到旧的一键安装版。新版将独立安装并沿用连接设置，不会自动卸载旧版。新版快捷方式名为「风铃 WindChime」。" FontSize="11" TextWrapping="Wrap" LineHeight="20" Foreground="#718063" />
+                          <TextBlock Text="检测到旧版。新版将独立安装并沿用连接设置，旧版不会自动卸载。快捷方式名为“风铃 WindChime”。" FontSize="11" TextWrapping="Wrap" LineHeight="20" Foreground="#718063" />
                         </Border>
                       </StackPanel>
                     </ScrollViewer>
@@ -315,7 +303,7 @@
                         <TextBlock x:Name="ProgressPercent" Text="{Binding ElementName=ProgressBar, Path=Value, StringFormat={}{0:0}%}" FontFamily="Segoe UI" FontSize="15" Foreground="#6595A3" HorizontalAlignment="Right" />
                       </Grid>
                       <ProgressBar x:Name="ProgressBar" Value="0" AutomationProperties.Name="安装进度" />
-                      <TextBlock Text="连接凭据与个人设置会保留。&#xA;安装完成前，请保持此窗口打开。" Style="{StaticResource BodyText}" Margin="0,22,0,0" />
+                      <TextBlock Text="已有连接和个人设置会保留。" Style="{StaticResource BodyText}" Margin="0,20,0,0" />
                     </StackPanel>
                   </Grid>
 
@@ -324,8 +312,6 @@
                       <Border Width="71" Height="71" CornerRadius="24" Background="#ADD9EDE5" BorderBrush="#EFFFFFFF" BorderThickness="1" HorizontalAlignment="Left" Margin="0,0,0,24">
                         <Path Data="M 21,35 L 31,45 L 51,24" Stroke="#559885" StrokeThickness="2.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                       </Border>
-                      <TextBlock Text="下一封来信，已经有了位置。" FontSize="20" FontWeight="Medium" Foreground="#3E6574" />
-                      <TextBlock Text="风铃已准备就绪。首次打开保持空白，&#xA;新的手动上屏操作才会让信件进入观众画面。" Style="{StaticResource BodyText}" Margin="0,11,0,19" />
                       <Border CornerRadius="10" Background="#A2FFFFFF" BorderBrush="#DFFFFFFF" BorderThickness="1" Padding="12,10">
                         <StackPanel><TextBlock Text="安装位置" FontSize="10" Foreground="#8198A4" /><TextBlock x:Name="FinishPath" TextWrapping="Wrap" FontSize="12" Foreground="#5A7887" Margin="0,5,0,0" /></StackPanel>
                       </Border>
@@ -341,7 +327,7 @@
                     <Button x:Name="CancelButton" Content="取消" HorizontalAlignment="Left" Background="Transparent" BorderBrush="Transparent" Padding="3,10" Foreground="#7F96A3" TabIndex="12" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                       <Button x:Name="BackButton" Content="上一步" Visibility="Collapsed" Margin="0,0,10,0" MinWidth="88" TabIndex="10" />
-                      <Button x:Name="NextButton" Content="开始设置" Style="{StaticResource PrimaryButton}" IsDefault="True" TabIndex="11" />
+                      <Button x:Name="NextButton" Content="下一步" Style="{StaticResource PrimaryButton}" IsDefault="True" TabIndex="11" />
                     </StackPanel>
                   </Grid>
                 </Grid>

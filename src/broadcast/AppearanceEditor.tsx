@@ -8,8 +8,8 @@ import { windChimeAppearanceEditorCss } from './appearance-editor-styles.js';
 
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
 const SAMPLE_ASSETS = [
-  { id: 'appearance-sample-day', caption: '山间晴日', mimeType: 'image/svg+xml', width: 280, height: 140, sha256: '' },
-  { id: 'appearance-sample-night', caption: '月下微风', mimeType: 'image/svg+xml', width: 280, height: 140, sha256: '' },
+  { id: 'appearance-sample-day', caption: '示例图片 1', mimeType: 'image/svg+xml', width: 280, height: 140, sha256: '' },
+  { id: 'appearance-sample-night', caption: '示例图片 2', mimeType: 'image/svg+xml', width: 280, height: 140, sha256: '' },
 ];
 const SAMPLE_URLS = {
   'appearance-sample-day': `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#dde9df"/><circle cx="219" cy="37" r="19" fill="#eabf72"/><path d="M0 128 69 46 144 131 206 70 280 140H0" fill="#6c9890"/><path d="m0 140 84-45 83 30 75-18 38 33" fill="#315d5c"/></svg>')}`,
@@ -17,8 +17,8 @@ const SAMPLE_URLS = {
 };
 const FONT_OPTIONS = [
   { value: 'system-ui', label: '系统字体' },
-  { value: LIVE_THEME_FONTS.uliuli, label: 'Uliuli · 清晰黑体' },
-  { value: LIVE_THEME_FONTS.mia, label: 'Mia · 书卷宋体' },
+  { value: LIVE_THEME_FONTS.uliuli, label: 'Uliuli · 黑体' },
+  { value: LIVE_THEME_FONTS.mia, label: 'Mia · 宋体' },
   { value: 'sans-serif', label: '无衬线字体' },
   { value: 'serif', label: '衬线字体' },
   { value: 'monospace', label: '等宽字体' },
@@ -82,10 +82,10 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
   }, []);
   const snapshot: WindChimeLiveSnapshot = {
     id: 'appearance-private-sample', messageId: 'appearance-private-sample',
-    nickname: '来自山间的风', text: '把今天的小小快乐，寄给此刻的你。\n愿每一封来信，都在这里得到温柔的回应。\n'.repeat(longLetter ? 12 : 1).trim(), linkUrl: null,
+    nickname: '示例昵称', text: '这是展示文字示例。\n可调整字体、字号、颜色和排版。\n'.repeat(longLetter ? 12 : 1).trim(), linkUrl: null,
     assets: withImages ? SAMPLE_ASSETS : [],
   };
-  return <section className="wc-appearance-preview" aria-label="外观私下预览">
+  return <section className="wc-appearance-preview" aria-label="外观预览">
     <div className="wc-appearance-preview-head"><strong>即时预览</strong><span className="wc-appearance-caption">示例内容 · 不参与播出</span></div>
     <div ref={viewport} className={`wc-appearance-viewport${lightCanvas ? ' wc-appearance-viewport-light' : ''}`} style={{ height: viewportHeight }} aria-label="固定视窗来信预览">
       <div className="wc-appearance-scroll-space" style={{ height: canvasHeight * scale }}>
@@ -144,7 +144,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
       <legend>界面主题</legend><p className="wc-appearance-section-note">选择配色与装饰风格，排版保持不变。</p>
       <div className="wc-appearance-choices">
         {LIVE_THEMES.map(theme => <button key={theme.id} type="button" className="wc-appearance-choice" aria-pressed={selectedTheme === theme.id} onClick={() => setAppearance(before => applyLiveTheme(before, theme.id))}>
-          <span className={`wc-appearance-theme-sample wc-appearance-theme-${theme.id}`} aria-hidden="true"><span className="wc-appearance-sample-eyebrow">{theme.id === 'uliuli' ? 'LIVE MAIL' : theme.id === 'mia' ? '一封来信' : '轻轻，读一封信'}</span><span className="wc-appearance-sample-text">风铃来信</span><span className="wc-appearance-sample-line" /></span>
+          <span className={`wc-appearance-theme-sample wc-appearance-theme-${theme.id}`} aria-hidden="true"><span className="wc-appearance-sample-text">文字示例</span><span className="wc-appearance-sample-line" /></span>
           <span className="wc-appearance-choice-name">{theme.name}<span className="wc-appearance-selected" aria-hidden="true">{selectedTheme === theme.id ? '✓' : ''}</span></span>
           <span className="wc-appearance-choice-note">{theme.description}</span>
         </button>)}
@@ -180,7 +180,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
         <ColorField label="文字颜色" value={appearance.textColor} onChange={value => change('textColor', value)} />
         <ColorField label="强调颜色" value={appearance.accentColor ?? '#2de2e6'} onChange={value => change('accentColor', value)} />
       </div>
-      <label className="wc-appearance-check wc-appearance-transparency"><input type="checkbox" checked={appearance.transparent} onChange={event => change('transparent', event.currentTarget.checked)} /><span><strong>透明背景</strong><span className="wc-appearance-caption">让直播画面透过来信背景</span></span></label>
+      <label className="wc-appearance-check wc-appearance-transparency"><input type="checkbox" checked={appearance.transparent} onChange={event => change('transparent', event.currentTarget.checked)} /><span><strong>透明背景</strong><span className="wc-appearance-caption">不显示背景色</span></span></label>
     </fieldset>
 
     <fieldset className="wc-appearance-section">

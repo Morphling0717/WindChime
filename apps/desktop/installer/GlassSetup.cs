@@ -148,11 +148,11 @@ namespace WindChime.Setup {
     void Show(int next) {
       page=next;Error(null);var names=new[]{"WelcomePage","LicensePage","OptionsPage","ProgressPage","FinishPage"};
       for(int i=0;i<names.Length;i++)UI<FrameworkElement>(names[i]).Visibility=i==page?Visibility.Visible:Visibility.Collapsed;
-      UI<TextBlock>("PageHeading").Text=new[]{"让每封来信，从容上场。","开放，也保留每一份署名。","按你的习惯安装。","正在为你准备风铃。","风铃，准备就绪。"}[page];
-      UI<TextBlock>("PageDescription").Text=new[]{"私人审阅 · 手动上屏 · 独立展示窗口","风铃使用 MIT 开源许可证，以下为完整许可原文。","确认下面的选项，点击“安装风铃”后才开始安装。","安装完成前，请保持此窗口打开。","已有连接和个人设置保留，展示窗口默认保持空白。"}[page];
+      UI<TextBlock>("PageHeading").Text=new[]{"安装风铃","开源许可","安装选项","正在安装","安装完成"}[page];
+      UI<TextBlock>("PageDescription").Text=new[]{"仅为当前 Windows 用户安装。","MIT 许可证原文。","确认后点击“安装风铃”。","请等待安装完成。","可选择立即启动风铃。"}[page];
       UI<Button>("BackButton").Visibility=page>0&&page<3?Visibility.Visible:Visibility.Collapsed;
       UI<Button>("CancelButton").Visibility=page==4?Visibility.Collapsed:Visibility.Visible;
-      UI<Button>("NextButton").Content=new[]{"开始设置  →","继续  →","安装风铃","正在安装…","完成"}[page];
+      UI<Button>("NextButton").Content=new[]{"下一步","下一步","安装风铃","正在安装…","完成"}[page];
       UI<Button>("NextButton").IsEnabled=page!=3;
       UI<Button>("CancelButton").IsEnabled=true;
       for(int i=1;i<=5;i++) {

@@ -28,8 +28,6 @@ export const windChimeAppearanceEditorCss = `
 .wc-live .wc-appearance-theme-pure{color:#f1f5f8;background:linear-gradient(140deg,#42505e,#2d3742)}
 .wc-live .wc-appearance-theme-uliuli{color:#fff;background:radial-gradient(ellipse at 100% 0,#10434c,#050508 75%);border-top:2px solid #2de2e6;border-bottom:1px solid #2de2e666;border-radius:2px;font-family:'Segoe UI','Microsoft YaHei',sans-serif}
 .wc-live .wc-appearance-theme-mia{color:#2b2620;background:linear-gradient(120deg,#fffdf6,#f3ead9);border:1px solid #c4a96e88;font-family:'Noto Serif SC','Songti SC',SimSun,serif}
-.wc-live .wc-appearance-sample-eyebrow{font-size:8px;letter-spacing:.08em;opacity:.65;white-space:nowrap}
-.wc-live .wc-appearance-theme-uliuli .wc-appearance-sample-eyebrow{color:#2de2e6;opacity:1;letter-spacing:.16em}
 .wc-live .wc-appearance-sample-text{font-size:16px;letter-spacing:.07em;line-height:1.3;white-space:nowrap}
 .wc-live .wc-appearance-sample-line{display:block;width:57%;height:2px;background:currentColor;opacity:.22}
 .wc-live .wc-appearance-theme-pure .wc-appearance-sample-line{visibility:hidden}
