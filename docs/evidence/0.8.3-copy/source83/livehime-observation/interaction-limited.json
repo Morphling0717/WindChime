@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "recordedAt": "2026-09-23T16:45:32.627Z",
+  "observationSource": {
+    "observer": "root agent",
+    "collector": "copy_audit agent",
+    "channel": "Explicit root task handoff describing Explorer launch and Computer Use window-state observations",
+    "independentlyObservedByCollector": false
+  },
+  "application": "Bilibili LiveHime",
+  "version": "7.54.0.10521",
+  "launchMethod": "Explorer opened the existing normal Windows Start menu shortcut",
+  "mainWindowObserved": true,
+  "previewInterfaceObserved": true,
+  "streamingStarted": false,
+  "interactionStatus": "limited-by-target-windows-integrity",
+  "windowStateTool": "Computer Use get_window_state",
+  "exactToolMessage": "Accessibility is limited because the target window has higher Windows integrity than the Computer Use helper.",
+  "sceneInteractionObservation": "Fresh screenshot-guided attempts to use the scene add control produced no response after two clicks.",
+  "privilegesElevatedForAutomation": false,
+  "securitySettingsChanged": false,
+  "alternateControlToolsAttempted": false,
+  "manualActionRequested": "Create an empty local test scene and add a window capture for WindChime Display · synthetic render 95a1991b. Do not start streaming.",
+  "captureAcceptancePassed": false,
+  "status": "awaiting-user-manual-scene-configuration",
+  "screenshotEvidenceIncluded": false,
+  "excludedPrivateData": "Full application screenshots, room title, account details and local user paths are not published.",
+  "limitation": "Successful application launch and visibility of the preview do not prove WindChime window capture, transparency, hiding or reopen behavior in LiveHime."
+}

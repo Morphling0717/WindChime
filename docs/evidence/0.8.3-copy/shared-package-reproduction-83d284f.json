@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "method": "clean-committed-worktree-npm-pack-exact-byte-reproduction",
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "sourceTree": "6e569f3c770feecf824cd668b6898f468d73c16d",
+  "sourceWorktreeClean": true,
+  "originalSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "originalSourceTree": "8ab8650c7763758386db6a36a73fc5d6a8102d04",
+  "originalVerificationReport": {
+    "name": "shared-package-verification.json",
+    "sha256": "de0516f210a0e277e4970de0dd3dd7dfae1e5d0c5ded080094199a24e83bd636"
+  },
+  "commands": [
+    "git status --porcelain=v1 --untracked-files=all",
+    "node --version",
+    "npm --version",
+    "npm pack --ignore-scripts --json --pack-destination <isolated reproduction directory>"
+  ],
+  "runtime": {
+    "node": "v22.22.3",
+    "npm": "10.9.8",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "sourceChanges": [
+    "apps/desktop/installer/GlassWizard.xaml",
+    "apps/desktop/scripts/build-install-art.mjs",
+    "apps/desktop/scripts/capture-window.cjs",
+    "apps/desktop/src/control.tsx",
+    "apps/desktop/src/glass.css"
+  ],
+  "sharedOrPackagedDocumentChanges": false,
+  "byteIdentical": true,
+  "artifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "bytes": 31415194,
+    "sha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+  },
+  "originalValidationSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "originalValidationChecks": [
+    {
+      "name": "install",
+      "exitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "imports-sqlite",
+      "exitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "typed-consumer",
+      "exitCode": 0,
+      "passed": true
+    }
+  ],
+  "finishedAt": "2026-09-23T16:00:47.081Z",
+  "note": "The original TGZ and original validation report are retained unchanged. This later commit changes desktop-only files; the complete independently repacked archive is byte-identical. Original installation/type/SQLite checks ran at the original validation source commit, not rerun here."
+}

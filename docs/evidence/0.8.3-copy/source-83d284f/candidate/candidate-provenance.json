@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 2,
+  "status": "built-pending-native",
+  "desktopVersion": "0.8.3",
+  "sharedVersion": "0.8.3",
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "sourceTree": "6e569f3c770feecf824cd668b6898f468d73c16d",
+  "sourceWorktreeClean": true,
+  "sourceTrackedFilesClean": true,
+  "sourceWasCleanBeforeBuild": true,
+  "untrackedGeneratedArtifacts": [],
+  "sharedSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "sharedReproducedFromCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "sharedReproducedByteForByte": true,
+  "packageVerification": {
+    "name": "package-verification.json",
+    "sha256": "42cdb305d6a37a7c4d34ae8cb45f6f46d2fed0698fea9ab1e87465e56d9434fd"
+  },
+  "payloadManifest": {
+    "name": "Payload.json",
+    "sha256": "0c3f889bd80b9c7aeda609bcc2ae37bbf169921b59c33dd268b9d5672e21f9d4"
+  },
+  "assets": [
+    {
+      "name": "WindChime-Setup-0.8.3.exe",
+      "bytes": 119133184,
+      "sha256": "2eadfa26fc5ef36dad7b1c73141a8ad0e52da8ca77a19c45bb60c716cbab297f"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.3.zip",
+      "bytes": 160660617,
+      "sha256": "f3b63a79606ce6ebc2797293442a6b7d9460ef9b002b1d545bbda4331365cf9c"
+    },
+    {
+      "name": "windchime-embed-0.8.3.tgz",
+      "bytes": 31415194,
+      "sha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 280,
+      "sha256": "bfe3b380230d9d5d5f643a0389045e81d2f4e8c0001fdfac4ddfd3527435c669"
+    }
+  ],
+  "desktopTestsPassed": 145,
+  "desktopTestsFailed": 0,
+  "nativeAcceptanceCompleted": false,
+  "productUIStartedByThisVerification": false,
+  "sharedSourceTree": "8ab8650c7763758386db6a36a73fc5d6a8102d04",
+  "sharedPackageVerification": {
+    "name": "shared-package-verification.json",
+    "sha256": "74edcc925e372e4e00f6ee4beca55becd791de5a16f4c294311832e08c18443a"
+  }
+}

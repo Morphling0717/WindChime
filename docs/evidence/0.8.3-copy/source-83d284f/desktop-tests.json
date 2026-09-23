@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-09-23T16:00:44.7178240Z",
+  "command": "npm test",
+  "workingDirectory": "apps/desktop",
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "desktopVersion": "0.8.3",
+  "sharedVersion": "0.8.3",
+  "node": "v22.22.3",
+  "npm": "10.9.8",
+  "platform": "win32",
+  "arch": "x64",
+  "workingTreePatch": false,
+  "tests": 145,
+  "passed": 145,
+  "failed": 0,
+  "skipped": 0,
+  "durationMs": 11108.2205,
+  "fullSuite": true,
+  "buildPassed": true,
+  "realElectronStarted": false,
+  "nativeAcceptanceCompleted": false,
+  "sourceSnapshot": {
+    "main.cjs": "eebed0b72b42d17f3e3ea856daf5e83198613a7f01e065e44babd6de2799c34d",
+    "tests/lifecycle.test.cjs": "93ff75795d9a128fc672761abd2aea76fa471932ba565e0deb49c11f35f2e9e7",
+    "installer/GlassSetup.cs": "7a4876ffa7d8d2414b5edf82a1245dd6cd14f61e8541d4a70420cb1ee1f25a24",
+    "installer/GlassWizard.xaml": "72c470949fda81f841a2724c1d705731ecddd0818d9302acdece48c9df2ed8a9"
+  }
+}

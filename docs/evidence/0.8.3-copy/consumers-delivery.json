@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-09-23T16:05:38.574Z",
+  "passed": true,
+  "sharedVersion": "0.8.3",
+  "artifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "bytes": 31415194,
+    "sha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+  },
+  "sites": [
+    {
+      "site": "Next_UliUli",
+      "branch": "codex/windchime-desktop-v0.6.0",
+      "baseCommit": "93e243e6d8463875b3f28146c53bc9a9cc077686",
+      "commit": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+      "sharedVersion": "0.8.3",
+      "packageSha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865",
+      "originalTsconfigPreserved": true,
+      "pushed": true,
+      "mainUnchanged": "1288e3d508407699a10605bef1ccfe6dea78d26a",
+      "testedFileHashesMatchCommit": true,
+      "pullRequest": {
+        "url": "https://github.com/Morphling0717/Next_UliUli/pull/1",
+        "draft": true,
+        "autoMerge": false
+      }
+    },
+    {
+      "site": "Next_Mia",
+      "branch": "codex/live-broadcast",
+      "baseCommit": "8a3be7589a7bf58c797cfa534b727420cf2bf4b4",
+      "commit": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+      "sharedVersion": "0.8.3",
+      "packageSha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865",
+      "originalTsconfigPreserved": true,
+      "pushed": true,
+      "mainUnchanged": "d457bf76e1816f7e3f5913a7e62ed5d6f0861783",
+      "testedFileHashesMatchCommit": true,
+      "pullRequest": {
+        "url": "https://github.com/Morphling0717/Next_Mia/pull/1",
+        "draft": true,
+        "autoMerge": false
+      }
+    }
+  ],
+  "productionDeployed": false,
+  "mainMerged": false,
+  "foregroundOperations": false,
+  "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67"
+}

@@ -1,0 +1,222 @@
+{
+  "passed": true,
+  "environment": {
+    "electron": "44.3.0",
+    "chromium": "152.0.7977.78",
+    "platform": "win32",
+    "architecture": "x64",
+    "backingService": "real WindChime SQLite service and HTTP handlers",
+    "osShortcutRegistration": "instrumented; callbacks exercised; no OS keystroke sent"
+  },
+  "checks": [
+    "all five modules launch from the actual private studio UI as separate sandboxed topmost native windows; reopening a module reuses its window",
+    "review tile native always-on-top state can be disabled and re-enabled",
+    "tile IPC denies credential import, connection/topic changes, opening another tile, editing global shortcut and requests targeting another topic or origin",
+    "unsaved review drafts survive native close, selected-letter change and topic-change cancellation; main enforces each guard",
+    "a concurrent server draft revision is reported inside the review tile, preserves local unsaved text, blocks stale save, and requires explicit reconciliation before saving",
+    "review tile saves and approves using the shared real SQLite service; approval stays blank, queue manual show reaches only independent output, revocation removes the active snapshot",
+    "transport tile next uses persisted approved order, clears at queue end and retains the approved queue",
+    "actual private settings UI persists a custom next accelerator; captured production callback fetches and advances the shared approved queue exactly once per trigger, without a real OS keypress",
+    "recording suspends the existing next callback through candidate keydown and partial keyup; held-key repeat cannot advance the queue, and next resumes only after every modifier is released; recorded Ctrl+Shift+N saves, occupied replacement keeps old binding, clear unregisters it, and shortcut errors stay private",
+    "topic switch clears previous native output, closes all context-bound tiles and leaves the next topic blank",
+    "a second independent site imports and its new tile displays only that site’s messages; connection switching does not reopen output"
+  ],
+  "screenshots": [
+    "tile-inbox.png",
+    "tile-review.png",
+    "tile-queue.png",
+    "tile-transport.png",
+    "tile-appearance.png",
+    "tile-review-approved.png",
+    "tile-queue-approved.png",
+    "tile-transport-playing.png",
+    "display-approved-tile.png",
+    "hotkey-settings.png"
+  ],
+  "tileGeometry": [
+    {
+      "label": "default transport dimensions",
+      "button": "下一封 →",
+      "x": 22.666667938232422,
+      "y": 149.83334350585938,
+      "width": 213.83334350585938,
+      "height": 40,
+      "right": 236.5000114440918,
+      "bottom": 189.83334350585938,
+      "viewportWidth": 480,
+      "viewportHeight": 362,
+      "uncovered": true
+    },
+    {
+      "label": "default transport dimensions",
+      "button": "■ 一键隐藏",
+      "x": 243.5,
+      "y": 149.83334350585938,
+      "width": 213.83334350585938,
+      "height": 40,
+      "right": 457.3333435058594,
+      "bottom": 189.83334350585938,
+      "viewportWidth": 480,
+      "viewportHeight": 362,
+      "uncovered": true
+    },
+    {
+      "label": "minimum transport dimensions",
+      "button": "下一封 →",
+      "x": 22.666667938232422,
+      "y": 149.83334350585938,
+      "width": 136.1666717529297,
+      "height": 40,
+      "right": 158.8333396911621,
+      "bottom": 189.83334350585938,
+      "viewportWidth": 340,
+      "viewportHeight": 262,
+      "uncovered": true
+    },
+    {
+      "label": "minimum transport dimensions",
+      "button": "■ 一键隐藏",
+      "x": 165.83334350585938,
+      "y": 149.83334350585938,
+      "width": 136.1666717529297,
+      "height": 40,
+      "right": 302.00001525878906,
+      "bottom": 189.83334350585938,
+      "viewportWidth": 340,
+      "viewportHeight": 262,
+      "uncovered": true
+    }
+  ],
+  "tileOpenObservations": [
+    {
+      "module": "inbox",
+      "stage": "window-discovered",
+      "visible": false,
+      "loading": true,
+      "topmost": true
+    },
+    {
+      "module": "inbox",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "inbox",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "review",
+      "stage": "window-discovered",
+      "visible": false,
+      "loading": true,
+      "topmost": true
+    },
+    {
+      "module": "review",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "review",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "queue",
+      "stage": "window-discovered",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "queue",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "queue",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "transport",
+      "stage": "window-discovered",
+      "visible": false,
+      "loading": true,
+      "topmost": true
+    },
+    {
+      "module": "transport",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "transport",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "appearance",
+      "stage": "window-discovered",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "appearance",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "appearance",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "inbox",
+      "stage": "window-discovered",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "inbox",
+      "stage": "native-window-shown",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    },
+    {
+      "module": "inbox",
+      "stage": "visible-renderer-ready",
+      "visible": true,
+      "loading": false,
+      "topmost": true
+    }
+  ],
+  "requests": 233,
+  "consoleErrors": [],
+  "profile": "<user-profile>\\AppData\\Local\\Temp\\windchime-tiles-I2AwCR",
+  "at": "2026-09-23T15:50:20.175Z"
+}

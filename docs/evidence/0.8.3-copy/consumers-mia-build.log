@@ -1,0 +1,80 @@
+▲ Next.js 16.2.7 (Turbopack)
+
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+
+Import trace:
+  App Route:
+    ./next.config.ts
+    ./lib/windchime-live.ts
+    ./app/api/mail/live/[...path]/route.ts
+
+
+✓ Compiled successfully in 6.8s
+  Running TypeScript ...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+    - include was updated to add '.windchime-shared083/types/**/*.ts'
+    - include was updated to add '.windchime-shared083/dev/types/**/*.ts'
+
+  Finished TypeScript in 40s ...
+  Collecting page data using 31 workers ...
+⚠ Using edge runtime on a page currently disables static generation for that page
+  Generating static pages using 31 workers (0/13) ...
+  Generating static pages using 31 workers (3/13)
+  Generating static pages using 31 workers (6/13)
+  Generating static pages using 31 workers (9/13)
+✓ Generating static pages using 31 workers (13/13) in 321ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ○ /admin
+├ ƒ /api/admin/save
+├ ƒ /api/admin/upload
+├ ƒ /api/auth/session
+├ ƒ /api/bilibili
+├ ƒ /api/config
+├ ƒ /api/health
+├ ƒ /api/mail/blocked-terms
+├ ƒ /api/mail/blocklist
+├ ƒ /api/mail/blocklist/[hash]
+├ ƒ /api/mail/live/[...path]
+├ ƒ /api/mail/messages
+├ ƒ /api/mail/messages/[id]
+├ ƒ /api/mail/messages/[id]/block
+├ ƒ /api/mail/messages/batch
+├ ƒ /api/mail/proxy-image
+├ ƒ /api/mail/settings
+├ ƒ /api/mail/topics
+├ ƒ /api/mail/topics/[id]
+├ ƒ /api/mail/topics/[id]/purge
+├ ƒ /m
+├ ƒ /m/[slug]
+├ ○ /mail
+├ ○ /mail/connect
+├ ƒ /mail/live
+├ ○ /manifest.webmanifest
+├ ○ /offline
+├ ƒ /pwa-splash
+├ ○ /robots.txt
+└ ○ /sitemap.xml
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

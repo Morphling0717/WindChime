@@ -1,0 +1,16 @@
+{
+  "ready": true,
+  "currentMessageId": "35261d84-22a9-42b6-b7b0-5a5a561ac4f2",
+  "currentSnapshot": {
+    "messageId": "35261d84-22a9-42b6-b7b0-5a5a561ac4f2",
+    "snapshotId": "cc105196-2c82-45e0-b57f-1d4fa07778b9"
+  },
+  "firstId": "ee2564fb-76a2-49fb-8fd9-4fa8ee1df9ac",
+  "secondId": "35261d84-22a9-42b6-b7b0-5a5a561ac4f2",
+  "nextShortcut": "CommandOrControl+Alt+PageDown",
+  "shortcutError": "",
+  "displayTitle": "WindChime Display · synthetic render 95a1991b",
+  "privateWindowTitle": "风铃 · 私人控制台",
+  "deadline": "2026-09-23T17:19:12.556Z",
+  "updatedAt": "2026-09-23T16:35:41.582Z"
+}
