@@ -1,0 +1,52 @@
+{
+  "observedAtUtc": "2026-09-23T13:18:14.185797+00:00",
+  "status": "capacity_release_complete_build_reserve_not_met",
+  "imageRelease": {
+    "passed": true,
+    "archivedImageCount": 5,
+    "removedImageCount": 5,
+    "removedTagCount": 7,
+    "freeBytesBefore": 1525248000,
+    "freeBytesAfter": 5669195776,
+    "offhostArchivesVerified": true,
+    "protectedImagesPreserved": true,
+    "databaseMediaConfigurationOrVolumesModified": false
+  },
+  "cacheRelease": {
+    "passed": true,
+    "removedRecordCount": 17,
+    "remainingSelectedRecordCount": 0,
+    "allOtherCacheRecordsPreserved": true,
+    "allImagesAndContainersPreserved": true,
+    "nativeCommandReturnCode": 0,
+    "freeBytesAfter": 8311451648,
+    "databaseMediaConfigurationsImagesContainersVolumesModified": false
+  },
+  "buildReserve": {
+    "requiredFreeBytes": 8589934592,
+    "freeBytesAfterCapacityRelease": 8311451648,
+    "met": false,
+    "shortfallBytes": 278482944,
+    "releaseHelperStoppedAtCapacityGate": true,
+    "noBuildStarted": true,
+    "currentFreeBytes": 8311324672
+  },
+  "deployment": {
+    "prepareExecuted": false,
+    "buildExecuted": false,
+    "cutoverExecuted": false,
+    "new082BackupPresent": false,
+    "currentVersion": "0.8.1",
+    "currentCommit": "e1dba96ea040a17b7b53bda0cb1c9b24e66eaa38",
+    "currentImage": "sha256:c724c75195eb9fd4e944954cb73bb1fea3e03183b88eeaa9447cb13b15133a60",
+    "running": true,
+    "homeHttpStatus": 200,
+    "capabilitiesHttpStatus": 200,
+    "healthHttpStatus": 200
+  },
+  "verification": {
+    "readOnlyRemoteChecks": true,
+    "liveDatabaseNotRead": true,
+    "privateDetailsExcluded": true
+  }
+}
