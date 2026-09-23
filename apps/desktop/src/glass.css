@@ -156,13 +156,6 @@ button svg {
   height: 100%;
   object-fit: contain;
 }
-.sidebar-label {
-  font-size: 10px;
-  color: #788e96;
-  letter-spacing: 0.12em;
-  padding: 0 13px;
-  margin: 0 0 12px;
-}
 .desktop-sidebar nav {
   display: grid;
   gap: 6px;
@@ -230,21 +223,6 @@ button svg {
   display: block;
   font-size: 9px;
   margin-top: 3px;
-}
-.sidebar-signature {
-  font-size: 10px;
-  color: #8a9ba4;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  justify-content: center;
-  padding-top: 18px;
-}
-.quiet-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #94b9b2;
 }
 .desktop-main {
   margin-left: 244px;
@@ -1086,11 +1064,9 @@ button svg {
   .brand-mark {
     width: 44px;
   }
-  .desktop-sidebar > .sidebar-label,
   .desktop-sidebar nav button > span,
   .nav-dot,
-  .capture-note,
-  .sidebar-signature {
+  .capture-note {
     display: none;
   }
   .desktop-sidebar nav {

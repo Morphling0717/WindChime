@@ -47,7 +47,6 @@ function installerFrame(logo, frame) {
       <path d="M-10 317C112 203 138 456 338 371" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5"/>
       <rect x="40" y="40" width="560" height="320" rx="26" fill="url(#glass)" stroke="url(#edge)" stroke-width="1.5" filter="url(#shadow)"/>
       <path d="M65 41H573" stroke="#ffffff" stroke-opacity="0.9" stroke-linecap="round"/>
-      <text x="72" y="77" fill="#63818b" font-family="Segoe UI, sans-serif" font-size="10" font-weight="600" letter-spacing="2.1">WINDCHIME DESKTOP</text>
       <rect x="499" y="58" width="69" height="25" rx="12.5" fill="#ffffff" fill-opacity="0.70" stroke="#ffffff"/>
       <text x="533.5" y="74.5" text-anchor="middle" fill="#5c7b86" font-family="Segoe UI, sans-serif" font-size="10.5">Windows</text>
       <image x="100" y="77" width="440" height="227.34" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,${logo}"/>

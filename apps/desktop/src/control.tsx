@@ -388,7 +388,6 @@ function App() {
             />
           </picture>
         </div>
-        <div className="sidebar-label">你的创作空间</div>
         <nav aria-label="桌面导航">
           {(
             [
@@ -421,10 +420,6 @@ function App() {
               <strong>观众只看到展示窗口</strong>
               <span>采集 WindChime Display</span>
             </div>
-          </div>
-          <div className="sidebar-signature">
-            <span className="quiet-dot" />
-            每一封，都由你决定
           </div>
         </div>
       </aside>

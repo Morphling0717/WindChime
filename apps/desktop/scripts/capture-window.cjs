@@ -189,7 +189,8 @@ async function run() {
   const beforeHideReceiver = receiverOpens;
   const committed = performance.now(); await invoke('hide'); const responded = performance.now();
   await until(async () => (await screenshot(inputName, '05-hidden-source.png')).visible === 0, 'captured window hide');
-  check('Hide clears the captured source', true, { responseToBlankMs: Math.round(performance.now() - responded), commandToBlankMs: Math.round(performance.now() - committed) });
+  const localHideLatency = Math.round(performance.now() - responded);
+  check('Hide clears the captured source within one second', localHideLatency <= 1000, { responseToBlankMs: localHideLatency, commandToBlankMs: Math.round(performance.now() - committed) });
   await until(() => receiverOpens > beforeHideReceiver, 'fresh receiver after hide');
   await command('show'); await delay(1200); const beforeRevoke = receiverOpens; await command('revoke');
   await until(async () => (await screenshot(inputName, '06-revoked-source.png')).visible === 0, 'captured revocation'); check('Revocation clears captured window', true);
@@ -235,10 +236,11 @@ async function run() {
   await command('show');
   await until(async () => (await screenshot(inputName, '13-final-manual-show.png')).visible > 0, 'manual show after delayed hide');
   if (faultsOnly) {
-    const beforeDisconnect = receiverOpens, disconnectedAt = performance.now(); silentDisconnect = true;
+    const beforeDisconnect = receiverOpens, disconnectedAt = performance.now(), lastFrameBeforeDisconnect = lastConfirmedFrame; silentDisconnect = true;
     await until(async () => (await screenshot(inputName, '14-silent-disconnect.png')).visible === 0, 'silent disconnect clears captured pixels', 3100);
     const disconnectedMs = Math.round(performance.now() - disconnectedAt);
-    check('Silent disconnect clears actual capture within three seconds', disconnectedMs <= 3000, { elapsedMs: disconnectedMs });
+    const disconnectedLeaseMs = Math.round(performance.now() - lastFrameBeforeDisconnect);
+    check('Silent disconnect clears actual capture within three seconds of the last confirmed frame', disconnectedLeaseMs <= 3000, { elapsedMs: disconnectedMs, fromLastFrameDispatchMs: disconnectedLeaseMs });
     silentDisconnect = false;
     await until(() => receiverOpens > beforeDisconnect, 'new connection after silent disconnect');
     await delay(1100);
