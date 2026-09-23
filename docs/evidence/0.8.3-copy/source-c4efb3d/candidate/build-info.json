@@ -1,0 +1,9 @@
+{
+  "version": "0.8.3",
+  "installer": "wpf-glass-transaction-engine",
+  "stage": "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W",
+  "packaged": "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W\\WindChime-win32-x64",
+  "payload": "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W\\nsis\\transaction-payload",
+  "engine": "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W\\nsis\\WindChime-Engine-0.8.3.exe",
+  "createdAt": "2026-09-23T17:42:12.070Z"
+}

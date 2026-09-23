@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "createdAt": "2026-09-23T16:59:46.064Z",
+  "observationStage": "initial-allowlisted",
+  "evidenceKind": "literal LiveHime preview canvas extraction from root native screenshot",
+  "rootCaptureTool": "sky.get_window_state screenshots[0].url",
+  "geometryConfirmedBy": "root-fresh-ui-observation",
+  "targetVerification": {
+    "method": "root per-image SHA-256 allowlist plus fresh geometry confirmation",
+    "rootConfirmedTarget": true,
+    "targetApplication": "Bilibili LiveHime",
+    "allowlistSha256": "1ef6e310c50b8e747d7d0fe102f6423cfe5383f50ab39ddfdf262f91123bf13e"
+  },
+  "originalScreenshot": {
+    "format": "jpeg",
+    "width": 1707,
+    "height": 1019,
+    "bytes": 144484,
+    "sha256": "a3240de4d48a886a88c52f7cd3f20dd9223cdb2039aa84b2fe5e58a8868af602",
+    "published": false
+  },
+  "canvas": {
+    "left": 284,
+    "top": 198,
+    "width": 1139,
+    "height": 639
+  },
+  "image": {
+    "name": "initial-allowlisted-canvas.png",
+    "format": "png",
+    "width": 1139,
+    "height": 639,
+    "bytes": 251417,
+    "sha256": "f9637f830a486fe1f2a8fdfe0f0ebe2a09e46778c555d00a70abdc7d35657a42"
+  },
+  "changes": "rectangle extraction and PNG encoding only; no image content edited",
+  "passed": null,
+  "limitations": [
+    "This extraction script does not interact with LiveHime or claim a capture acceptance result.",
+    "Original screenshot remains private; only the preview canvas may be considered for public evidence after inspection.",
+    "Screenshot dimensions are checked automatically. Canvas position is separately attested by the root fresh UI observation supplied on the command line.",
+    "The input must also be explicitly root-approved by its exact source SHA-256. A requested application name or matching screenshot size alone is never treated as proof of the captured application.",
+    "A JPEG native screenshot has no transparency channel; capture transparency must be judged against the deliberate test background and separate operational observations.",
+    "Pixel comparison numbers are descriptive only. JPEG compression and live rendering may cause differences; no automatic visual pass/fail is inferred."
+  ]
+}

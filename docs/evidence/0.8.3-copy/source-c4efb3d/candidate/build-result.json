@@ -1,0 +1,34 @@
+{
+  "status": "built-pending-native",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "sourceTree": "dbf10f9587d0095fa16e3d22d30e557cadbdd970",
+  "sourceWorktreeClean": true,
+  "finishedAt": "2026-09-23T17:44:53.100Z",
+  "assets": [
+    {
+      "name": "WindChime-Setup-0.8.3.exe",
+      "bytes": 119133184,
+      "sha256": "d9d5dff2fe9bb1c7c9af1f81ada17289d80dba0f2989753a1b3d1d932fc60ef4"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.3.zip",
+      "bytes": 160660617,
+      "sha256": "8f7b25bddbca1fa32ec618291ab476968c9153016e584dfb93b49f5c12a4127f"
+    },
+    {
+      "name": "windchime-embed-0.8.3.tgz",
+      "bytes": 54912376,
+      "sha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 280,
+      "sha256": "de110c4baa8ff66a30a2f90f18047e3a1cf74bd9374b3f76791c009c6c59df28"
+    }
+  ],
+  "oldArtifactsOverwritten": false,
+  "oldUiEvidenceReusedAsNew": false,
+  "initialVerificationFailureRetained": true,
+  "verificationRecovery": "verification-recovery.json",
+  "nativeAcceptanceCompleted": false
+}

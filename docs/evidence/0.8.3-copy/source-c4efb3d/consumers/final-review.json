@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-23T17:53:34.8137412Z",
+  "passed": true,
+  "sites": [
+    {
+      "repository": "Next_UliUli",
+      "head": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+      "originalHead": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+      "trackedChanges": [
+        "package-lock.json",
+        "package.json",
+        "vendor/SHA256SUMS"
+      ],
+      "untrackedFiles": [
+        "vendor/windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz"
+      ],
+      "isolatedTsconfigUnchanged": true,
+      "originalOnlyPriorTsconfigDirty": true,
+      "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+      "vendorChecksumFileSha256": "af1f8af15f9ad6dcbfbf4fb8449c8a07e41303a5b0ac9cec467fc4b8811340c4"
+    },
+    {
+      "repository": "Next_Mia",
+      "head": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+      "originalHead": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+      "trackedChanges": [
+        "package-lock.json",
+        "package.json",
+        "vendor/SHA256SUMS"
+      ],
+      "untrackedFiles": [
+        "vendor/windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz"
+      ],
+      "isolatedTsconfigUnchanged": true,
+      "originalOnlyPriorTsconfigDirty": true,
+      "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+      "vendorChecksumFileSha256": "14e6a58bc9c5f477447b90ff5663666bf0fdf9915f7c10b42ae2e506138ddcf0"
+    }
+  ],
+  "testPortsReleased": true,
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "mainMerged": false,
+  "verificationReport": "logs/report.json",
+  "preparationReport": "logs/prepare-report.json",
+  "historicalHarnessFailurePreserved": "logs/prepare-attempt-1.json"
+}

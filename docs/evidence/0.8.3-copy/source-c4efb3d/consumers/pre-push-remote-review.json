@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-09-23T17:58:32.5877222Z",
+  "singleSnapshot": true,
+  "checks": [
+    {
+      "repository": "Next_UliUli",
+      "branch": "codex/windchime-desktop-v0.6.0",
+      "workflowCount": 0,
+      "workflowNames": [],
+      "matchingBranchDeploymentCount": 0,
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/Morphling0717/Next_UliUli/pull/1",
+        "state": "open",
+        "draft": true,
+        "merged": false,
+        "head": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+        "headRef": "codex/windchime-desktop-v0.6.0",
+        "baseRef": "main",
+        "autoMergeEnabled": false
+      }
+    },
+    {
+      "repository": "Next_Mia",
+      "branch": "codex/live-broadcast",
+      "workflowCount": 0,
+      "workflowNames": [],
+      "matchingBranchDeploymentCount": 0,
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/Morphling0717/Next_Mia/pull/1",
+        "state": "open",
+        "draft": true,
+        "merged": false,
+        "head": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+        "headRef": "codex/live-broadcast",
+        "baseRef": "main",
+        "autoMergeEnabled": false
+      }
+    }
+  ],
+  "scope": "Repository workflows, current branch deployment records and draft PR state; no hosting-account settings modified"
+}

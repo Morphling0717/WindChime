@@ -1,0 +1,1642 @@
+{
+  "version": "0.8.3",
+  "kind": "native display renderer, not software capture",
+  "startedAt": "2026-09-23T17:51:35.230Z",
+  "passed": true,
+  "cases": [
+    {
+      "layout": "stack",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "pure",
+        "layout": "stack",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1000,
+          "height": 640,
+          "right": 1000.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1001,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 952,
+          "height": 295.84375,
+          "right": 976.6666679382324,
+          "bottom": 319.84375
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 331.84375,
+          "width": 952,
+          "height": 284.15625,
+          "right": 976.6666679382324,
+          "bottom": 616
+        },
+        "scrollTop": 50.66666793823242,
+        "scrollHeight": 2098,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 24.666667938232422,
+              "y": 341.16668701171875,
+              "width": 472,
+              "height": 265.5,
+              "right": 496.6666679382324,
+              "bottom": 606.6666870117188
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 645.9479370117188,
+              "y": 331.84375,
+              "width": 189.4375,
+              "height": 284.15625,
+              "right": 835.3854370117188,
+              "bottom": 616
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "stack-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "stack",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "stack",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1000,
+          "height": 640,
+          "right": 1000.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1001,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 950.6666870117188,
+          "height": 295.15625,
+          "right": 976.000020980835,
+          "bottom": 319.8229179382324
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 331.82293701171875,
+          "width": 950.6666870117188,
+          "height": 283.51043701171875,
+          "right": 976.000020980835,
+          "bottom": 615.3333740234375
+        },
+        "scrollTop": 58,
+        "scrollHeight": 2098,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 341.0208435058594,
+              "width": 471.32293701171875,
+              "height": 265.1145935058594,
+              "right": 496.65627098083496,
+              "bottom": 606.1354370117188
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 645.8333740234375,
+              "y": 331.82293701171875,
+              "width": 189,
+              "height": 283.5,
+              "right": 834.8333740234375,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "stack-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "stack",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "mia",
+        "layout": "stack",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1000,
+          "height": 640,
+          "right": 1000.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1001,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 950.6666870117188,
+          "height": 295.15625,
+          "right": 976.000020980835,
+          "bottom": 319.8229179382324
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 331.82293701171875,
+          "width": 950.6666870117188,
+          "height": 283.51043701171875,
+          "right": 976.000020980835,
+          "bottom": 615.3333740234375
+        },
+        "scrollTop": 58,
+        "scrollHeight": 2098,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 341.0208435058594,
+              "width": 471.32293701171875,
+              "height": 265.1145935058594,
+              "right": 496.65627098083496,
+              "bottom": 606.1354370117188
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 645.8333740234375,
+              "y": 331.82293701171875,
+              "width": 189,
+              "height": 283.5,
+              "right": 834.8333740234375,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "stack-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "split",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "pure",
+        "layout": "split",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1200,
+          "height": 640,
+          "right": 1200.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1201,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 1152,
+          "height": 295.84375,
+          "right": 1176.6666679382324,
+          "bottom": 319.84375
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 331.84375,
+          "width": 1152,
+          "height": 284.15625,
+          "right": 1176.6666679382324,
+          "bottom": 616
+        },
+        "scrollTop": 58,
+        "scrollHeight": 1623,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 58.083335876464844,
+              "y": 331.84375,
+              "width": 505.16668701171875,
+              "height": 284.15625,
+              "right": 563.2500228881836,
+              "bottom": 616
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 795.9479370117188,
+              "y": 331.84375,
+              "width": 189.4375,
+              "height": 284.15625,
+              "right": 985.3854370117188,
+              "bottom": 616
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "split-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "split",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "split",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1200,
+          "height": 640,
+          "right": 1200.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1201,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 1150.666748046875,
+          "height": 295.15625,
+          "right": 1176.0000820159912,
+          "bottom": 319.8229179382324
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 331.82293701171875,
+          "width": 1150.666748046875,
+          "height": 283.51043701171875,
+          "right": 1176.0000820159912,
+          "bottom": 615.3333740234375
+        },
+        "scrollTop": 52,
+        "scrollHeight": 1623,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 59,
+              "y": 331.82293701171875,
+              "width": 504,
+              "height": 283.5,
+              "right": 563,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 795.8333740234375,
+              "y": 331.82293701171875,
+              "width": 189,
+              "height": 283.5,
+              "right": 984.8333740234375,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "split-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "split",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "mia",
+        "layout": "split",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1200,
+          "height": 640,
+          "right": 1200.6666666865349,
+          "bottom": 640
+        },
+        "window": {
+          "width": 1201,
+          "height": 641,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 1150.666748046875,
+          "height": 295.15625,
+          "right": 1176.0000820159912,
+          "bottom": 319.8229179382324
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 331.82293701171875,
+          "width": 1150.666748046875,
+          "height": 283.51043701171875,
+          "right": 1176.0000820159912,
+          "bottom": 615.3333740234375
+        },
+        "scrollTop": 54.66666793823242,
+        "scrollHeight": 1623,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 59,
+              "y": 331.82293701171875,
+              "width": 504,
+              "height": 283.5,
+              "right": 563,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 795.8333740234375,
+              "y": 331.82293701171875,
+              "width": 189,
+              "height": 283.5,
+              "right": 984.8333740234375,
+              "bottom": 615.3229370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "split-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "banner",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "pure",
+        "layout": "banner",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1280,
+          "height": 360,
+          "right": 1280.6666666865349,
+          "bottom": 360
+        },
+        "window": {
+          "width": 1281,
+          "height": 361,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 1232,
+          "height": 150.25,
+          "right": 1256.6666679382324,
+          "bottom": 174.25
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 186.25,
+          "width": 1232,
+          "height": 149.75,
+          "right": 1256.6666679382324,
+          "bottom": 336
+        },
+        "scrollTop": 58.66666793823242,
+        "scrollHeight": 2048,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 197.55209350585938,
+              "y": 186.25,
+              "width": 266.21875,
+              "height": 149.73959350585938,
+              "right": 463.7708435058594,
+              "bottom": 335.9895935058594
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 900.75,
+              "y": 186.25,
+              "width": 99.83333587646484,
+              "height": 149.75,
+              "right": 1000.5833358764648,
+              "bottom": 336
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "banner-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "banner",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "banner",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1280,
+          "height": 360,
+          "right": 1280.6666666865349,
+          "bottom": 360
+        },
+        "window": {
+          "width": 1281,
+          "height": 361,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 1230.666748046875,
+          "height": 149.55209350585938,
+          "right": 1256.0000820159912,
+          "bottom": 174.2187614440918
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 186.21875,
+          "width": 1230.666748046875,
+          "height": 149.11459350585938,
+          "right": 1256.0000820159912,
+          "bottom": 335.3333435058594
+        },
+        "scrollTop": 59.33333206176758,
+        "scrollHeight": 2048,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 198.45834350585938,
+              "y": 186.21875,
+              "width": 265.0833435058594,
+              "height": 149.1041717529297,
+              "right": 463.54168701171875,
+              "bottom": 335.3229217529297
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 900.625,
+              "y": 186.21875,
+              "width": 99.40625,
+              "height": 149.1041717529297,
+              "right": 1000.03125,
+              "bottom": 335.3229217529297
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "banner-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "banner",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "mia",
+        "layout": "banner",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 1280,
+          "height": 360,
+          "right": 1280.6666666865349,
+          "bottom": 360
+        },
+        "window": {
+          "width": 1281,
+          "height": 361,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 1230.666748046875,
+          "height": 149.55209350585938,
+          "right": 1256.0000820159912,
+          "bottom": 174.2187614440918
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 186.21875,
+          "width": 1230.666748046875,
+          "height": 149.11459350585938,
+          "right": 1256.0000820159912,
+          "bottom": 335.3333435058594
+        },
+        "scrollTop": 54,
+        "scrollHeight": 2048,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 198.45834350585938,
+              "y": 186.21875,
+              "width": 265.0833435058594,
+              "height": 149.1041717529297,
+              "right": 463.54168701171875,
+              "bottom": 335.3229217529297
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 900.625,
+              "y": 186.21875,
+              "width": 99.40625,
+              "height": 149.1041717529297,
+              "right": 1000.03125,
+              "bottom": 335.3229217529297
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "banner-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "sidebar",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "pure",
+        "layout": "sidebar",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 360,
+          "height": 800,
+          "right": 360.6666666865349,
+          "bottom": 800
+        },
+        "window": {
+          "width": 361,
+          "height": 801,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 312,
+          "height": 379.04168701171875,
+          "right": 336.6666679382324,
+          "bottom": 403.04168701171875
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 415.04168701171875,
+          "width": 312,
+          "height": 360.9583435058594,
+          "right": 336.6666679382324,
+          "bottom": 776.0000305175781
+        },
+        "scrollTop": 56,
+        "scrollHeight": 3236,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 24.666667938232422,
+              "y": 552.7708740234375,
+              "width": 152,
+              "height": 85.5,
+              "right": 176.66666793823242,
+              "bottom": 638.2708740234375
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 184.6666717529297,
+              "y": 481.5208435058594,
+              "width": 152,
+              "height": 228,
+              "right": 336.6666717529297,
+              "bottom": 709.5208435058594
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "sidebar-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "sidebar",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "sidebar",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 360,
+          "height": 800,
+          "right": 360.6666666865349,
+          "bottom": 800
+        },
+        "window": {
+          "width": 361,
+          "height": 801,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 310.66668701171875,
+          "height": 378.35418701171875,
+          "right": 336.00002098083496,
+          "bottom": 403.0208549499512
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 415.0208435058594,
+          "width": 310.66668701171875,
+          "height": 360.3125,
+          "right": 336.00002098083496,
+          "bottom": 775.3333435058594
+        },
+        "scrollTop": 56.66666793823242,
+        "scrollHeight": 4008,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 552.6146240234375,
+              "width": 151.3229217529297,
+              "height": 85.11458587646484,
+              "right": 176.6562557220459,
+              "bottom": 637.7292098999023
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 184.6666717529297,
+              "y": 481.6875,
+              "width": 151.3229217529297,
+              "height": 226.9791717529297,
+              "right": 335.9895935058594,
+              "bottom": 708.6666717529297
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "sidebar-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "sidebar",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "mia",
+        "layout": "sidebar",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 360,
+          "height": 800,
+          "right": 360.6666666865349,
+          "bottom": 800
+        },
+        "window": {
+          "width": 361,
+          "height": 801,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 310.66668701171875,
+          "height": 378.35418701171875,
+          "right": 336.00002098083496,
+          "bottom": 403.0208549499512
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 415.0208435058594,
+          "width": 310.66668701171875,
+          "height": 360.3125,
+          "right": 336.00002098083496,
+          "bottom": 775.3333435058594
+        },
+        "scrollTop": 53.33333206176758,
+        "scrollHeight": 4008,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 552.6146240234375,
+              "width": 151.3229217529297,
+              "height": 85.11458587646484,
+              "right": 176.6562557220459,
+              "bottom": 637.7292098999023
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 184.6666717529297,
+              "y": 481.6875,
+              "width": 151.3229217529297,
+              "height": 226.9791717529297,
+              "right": 335.9895935058594,
+              "bottom": 708.6666717529297
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "sidebar-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "portrait",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "pure",
+        "layout": "portrait",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 480,
+          "height": 860,
+          "right": 480.6666666865349,
+          "bottom": 860
+        },
+        "window": {
+          "width": 481,
+          "height": 861,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 432,
+          "height": 410.25,
+          "right": 456.6666679382324,
+          "bottom": 434.25
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 446.25,
+          "width": 432,
+          "height": 389.75,
+          "right": 456.6666679382324,
+          "bottom": 836
+        },
+        "scrollTop": 52,
+        "scrollHeight": 2498,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 24.666667938232422,
+              "y": 581.5,
+              "width": 212,
+              "height": 119.25,
+              "right": 236.66666793823242,
+              "bottom": 700.75
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 244.6666717529297,
+              "y": 482.125,
+              "width": 212,
+              "height": 318,
+              "right": 456.6666717529297,
+              "bottom": 800.125
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "portrait-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "portrait",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "portrait",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 480,
+          "height": 860,
+          "right": 480.6666666865349,
+          "bottom": 860
+        },
+        "window": {
+          "width": 481,
+          "height": 861,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 430.66668701171875,
+          "height": 409.5520935058594,
+          "right": 456.00002098083496,
+          "bottom": 434.2187614440918
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 446.21875,
+          "width": 430.66668701171875,
+          "height": 389.1145935058594,
+          "right": 456.00002098083496,
+          "bottom": 835.3333435058594
+        },
+        "scrollTop": 54.66666793823242,
+        "scrollHeight": 2498,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 581.34375,
+              "width": 211.3229217529297,
+              "height": 118.86458587646484,
+              "right": 236.6562557220459,
+              "bottom": 700.2083358764648
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 244.6666717529297,
+              "y": 482.28125,
+              "width": 211.3229217529297,
+              "height": 316.97918701171875,
+              "right": 455.9895935058594,
+              "bottom": 799.2604370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "portrait-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "portrait",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 26,
+      "geometry": {
+        "theme": "mia",
+        "layout": "portrait",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 480,
+          "height": 860,
+          "right": 480.6666666865349,
+          "bottom": 860
+        },
+        "window": {
+          "width": 481,
+          "height": 861,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 430.66668701171875,
+          "height": 409.5520935058594,
+          "right": 456.00002098083496,
+          "bottom": 434.2187614440918
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 446.21875,
+          "width": 430.66668701171875,
+          "height": 389.1145935058594,
+          "right": 456.00002098083496,
+          "bottom": 835.3333435058594
+        },
+        "scrollTop": 51.33333206176758,
+        "scrollHeight": 2498,
+        "scrollPhase": "scrolling",
+        "fontSize": 26,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 581.34375,
+              "width": 211.3229217529297,
+              "height": 118.86458587646484,
+              "right": 236.6562557220459,
+              "bottom": 700.2083358764648
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 244.6666717529297,
+              "y": 482.28125,
+              "width": 211.3229217529297,
+              "height": 316.97918701171875,
+              "right": 455.9895935058594,
+              "bottom": 799.2604370117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "portrait-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "focus",
+      "theme": "pure",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "pure",
+        "layout": "focus",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 600,
+          "height": 900,
+          "right": 600.6666666865349,
+          "bottom": 900
+        },
+        "window": {
+          "width": 601,
+          "height": 901,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 24.666667938232422,
+          "y": 24,
+          "width": 552,
+          "height": 431.04168701171875,
+          "right": 576.6666679382324,
+          "bottom": 455.04168701171875
+        },
+        "media": {
+          "x": 24.666667938232422,
+          "y": 467.04168701171875,
+          "width": 552,
+          "height": 408.9583435058594,
+          "right": 576.6666679382324,
+          "bottom": 876.0000305175781
+        },
+        "scrollTop": 55.33333206176758,
+        "scrollHeight": 4966,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "system-ui",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 24.666667938232422,
+              "y": 595.0208740234375,
+              "width": 272,
+              "height": 153,
+              "right": 296.6666679382324,
+              "bottom": 748.0208740234375
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 304.66668701171875,
+              "y": 467.5208435058594,
+              "width": 272,
+              "height": 408,
+              "right": 576.6666870117188,
+              "bottom": 875.5208435058594
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "focus-pure.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "focus",
+      "theme": "uliuli",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "uliuli",
+        "layout": "focus",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 600,
+          "height": 900,
+          "right": 600.6666666865349,
+          "bottom": 900
+        },
+        "window": {
+          "width": 601,
+          "height": 901,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 550.6666870117188,
+          "height": 430.35418701171875,
+          "right": 576.000020980835,
+          "bottom": 455.0208549499512
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 467.0208435058594,
+          "width": 550.6666870117188,
+          "height": 408.3125,
+          "right": 576.000020980835,
+          "bottom": 875.3333435058594
+        },
+        "scrollTop": 54.66666793823242,
+        "scrollHeight": 4966,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Segoe UI\", \"Microsoft YaHei\", sans-serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 594.8646240234375,
+              "width": 271.32293701171875,
+              "height": 152.61459350585938,
+              "right": 296.65627098083496,
+              "bottom": 747.4792175292969
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 304.66668701171875,
+              "y": 467.6875,
+              "width": 271.32293701171875,
+              "height": 406.97918701171875,
+              "right": 575.9896240234375,
+              "bottom": 874.6666870117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "focus-uliuli.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    },
+    {
+      "layout": "focus",
+      "theme": "mia",
+      "passed": true,
+      "fontSize": 32,
+      "geometry": {
+        "theme": "mia",
+        "layout": "focus",
+        "card": {
+          "x": 0.6666666865348816,
+          "y": 0,
+          "width": 600,
+          "height": 900,
+          "right": 600.6666666865349,
+          "bottom": 900
+        },
+        "window": {
+          "width": 601,
+          "height": 901,
+          "devicePixelRatio": 1.5
+        },
+        "viewport": {
+          "x": 25.33333396911621,
+          "y": 24.666667938232422,
+          "width": 550.6666870117188,
+          "height": 430.35418701171875,
+          "right": 576.000020980835,
+          "bottom": 455.0208549499512
+        },
+        "media": {
+          "x": 25.33333396911621,
+          "y": 467.0208435058594,
+          "width": 550.6666870117188,
+          "height": 408.3125,
+          "right": 576.000020980835,
+          "bottom": 875.3333435058594
+        },
+        "scrollTop": 52.66666793823242,
+        "scrollHeight": 4016,
+        "scrollPhase": "scrolling",
+        "fontSize": 32,
+        "fontFamily": "\"Noto Serif SC\", \"Songti SC\", SimSun, serif",
+        "fontReady": true,
+        "fontHasChinese": true,
+        "overflowX": false,
+        "images": [
+          {
+            "rect": {
+              "x": 25.33333396911621,
+              "y": 594.8646240234375,
+              "width": 271.32293701171875,
+              "height": 152.61459350585938,
+              "right": 296.65627098083496,
+              "bottom": 747.4792175292969
+            },
+            "naturalWidth": 1280,
+            "naturalHeight": 720,
+            "complete": true,
+            "fit": "contain"
+          },
+          {
+            "rect": {
+              "x": 304.66668701171875,
+              "y": 467.6875,
+              "width": 271.32293701171875,
+              "height": 406.97918701171875,
+              "right": 575.9896240234375,
+              "bottom": 874.6666870117188
+            },
+            "naturalWidth": 640,
+            "naturalHeight": 960,
+            "complete": true,
+            "fit": "contain"
+          }
+        ],
+        "privateUi": 0,
+        "privateText": false,
+        "hasApprovedText": true
+      },
+      "screenshot": "focus-mia.png",
+      "textScrolled": true,
+      "imagesStayedFixed": true
+    }
+  ],
+  "checks": [
+    {
+      "label": "Process 1 launches the verified packaged entrypoint with only its private window",
+      "passed": true
+    },
+    {
+      "label": "New unapproved message leaves output blank",
+      "passed": true
+    },
+    {
+      "label": "Approval alone never displays the letter",
+      "passed": true
+    },
+    {
+      "label": "Packaged process contacted only its synthetic site",
+      "passed": true
+    },
+    {
+      "label": "Process 2 launches the verified packaged entrypoint with only its private window",
+      "passed": true
+    },
+    {
+      "label": "Second process restores only its synthetic connection",
+      "passed": true
+    },
+    {
+      "label": "Approval queue persists across independent processes",
+      "passed": true
+    },
+    {
+      "label": "Reopened display remains blank until a new manual show",
+      "passed": true
+    },
+    {
+      "label": "A new manual show works after restart",
+      "passed": true
+    },
+    {
+      "label": "Packaged process contacted only its synthetic site",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "stack-pure.png",
+    "stack-uliuli.png",
+    "stack-mia.png",
+    "split-pure.png",
+    "split-uliuli.png",
+    "split-mia.png",
+    "banner-pure.png",
+    "banner-uliuli.png",
+    "banner-mia.png",
+    "sidebar-pure.png",
+    "sidebar-uliuli.png",
+    "sidebar-mia.png",
+    "portrait-pure.png",
+    "portrait-uliuli.png",
+    "portrait-mia.png",
+    "focus-pure.png",
+    "focus-uliuli.png",
+    "focus-mia.png",
+    "hidden.png",
+    "restart-blank.png"
+  ],
+  "productionDataUsed": false,
+  "obsStarted": false,
+  "realKeysPressed": false,
+  "networkPermissionsChanged": false,
+  "finalBinary": {
+    "passed": true,
+    "version": "0.8.3",
+    "releaseDirectory": "<repository>\\.work\\candidates\\uninstall083-c4efb3d",
+    "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+    "buildInfoSha256": "ce2659d006207b15cb0101df755d8f03f52a23463bced06d240c7bbdf42f5924",
+    "packageVerificationSha256": "7773c3a638153f871eccc2f5815eaec89f6860ac387603950cedfac2726f843f",
+    "payloadManifestSha256": "9a526a7e426733072a3e949e2293e8c045fa5b6fdf8789bbfe2928ea2d34c471",
+    "assets": {
+      "WindChime-Setup-0.8.3.exe": {
+        "bytes": 119133184,
+        "sha256": "d9d5dff2fe9bb1c7c9af1f81ada17289d80dba0f2989753a1b3d1d932fc60ef4"
+      },
+      "WindChime-win32-x64-0.8.3.zip": {
+        "bytes": 160660617,
+        "sha256": "8f7b25bddbca1fa32ec618291ab476968c9153016e584dfb93b49f5c12a4127f"
+      }
+    },
+    "runtime": {
+      "WindChime.exe": {
+        "bytes": 246089728,
+        "sha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987"
+      },
+      "resources/app.asar": {
+        "bytes": 3206242,
+        "sha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff"
+      }
+    },
+    "installedRuntimeMatchesCandidate": true,
+    "productStartedDuringVerification": false
+  },
+  "processes": [
+    {
+      "ordinal": 1,
+      "pid": 36312,
+      "version": "0.8.3",
+      "packaged": true,
+      "isolatedProfile": true,
+      "primaryDisplay": {
+        "scaleFactor": 1.5,
+        "size": {
+          "width": 1707,
+          "height": 1067
+        },
+        "workAreaSize": {
+          "width": 1707,
+          "height": 1019
+        }
+      }
+    },
+    {
+      "ordinal": 2,
+      "pid": 27928,
+      "version": "0.8.3",
+      "packaged": true,
+      "isolatedProfile": true,
+      "primaryDisplay": {
+        "scaleFactor": 1.5,
+        "size": {
+          "width": 1707,
+          "height": 1067
+        },
+        "workAreaSize": {
+          "width": 1707,
+          "height": 1019
+        }
+      }
+    }
+  ],
+  "syntheticGrantsRevoked": true,
+  "finishedAt": "2026-09-23T17:52:02.733Z",
+  "nativeCaptureValidated": false
+}

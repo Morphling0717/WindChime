@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "packageName": "@windchime/embed",
+  "version": "0.8.3",
+  "license": "MIT",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "sourceTree": "dbf10f9587d0095fa16e3d22d30e557cadbdd970",
+  "sourceWorktreeClean": true,
+  "startedAt": "2026-09-23T17:38:14.155Z",
+  "passed": true,
+  "artifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "sha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+    "bytes": 54912376
+  },
+  "runtime": {
+    "node": "v22.22.3",
+    "platform": "win32",
+    "arch": "x64",
+    "npm": "10.9.8"
+  },
+  "checks": [
+    {
+      "name": "install",
+      "startedAt": "2026-09-23T17:38:14.346Z",
+      "finishedAt": "2026-09-23T17:38:22.843Z",
+      "exitCode": 0,
+      "passed": true,
+      "log": "shared-verification-logs/install.log",
+      "logSha256": "6ef945d55e8830af93012dde4835a87950bb11b648f26f29a66ca8a771c79593"
+    },
+    {
+      "name": "imports-sqlite",
+      "startedAt": "2026-09-23T17:38:22.897Z",
+      "finishedAt": "2026-09-23T17:38:24.519Z",
+      "exitCode": 0,
+      "passed": true,
+      "log": "shared-verification-logs/imports-sqlite.log",
+      "logSha256": "f428f4b37f7d6bb7ca728f507e6b1a7dc1514b49cf3bd068d15b78836b4cb8b8"
+    },
+    {
+      "name": "typed-consumer",
+      "startedAt": "2026-09-23T17:38:24.520Z",
+      "finishedAt": "2026-09-23T17:38:25.270Z",
+      "exitCode": 0,
+      "passed": true,
+      "log": "shared-verification-logs/typed-consumer.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "separateTemporaryInstall": true,
+  "tarballRepacked": false,
+  "productionDataAccessed": false,
+  "previousVerificationReused": false,
+  "package": {
+    "name": "@windchime/embed",
+    "version": "0.8.3",
+    "license": "MIT",
+    "licenseFilePresent": true
+  },
+  "lockIntegrityMatched": true,
+  "headlessEntries": [
+    "core",
+    "client",
+    "react",
+    "server",
+    "sqlite",
+    "next",
+    "media",
+    "broadcast"
+  ],
+  "finishedAt": "2026-09-23T17:38:25.347Z"
+}

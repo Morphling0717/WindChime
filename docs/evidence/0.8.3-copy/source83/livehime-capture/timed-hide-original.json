@@ -1,0 +1,15 @@
+{
+  "type": "command-result",
+  "at": "2026-09-23T17:01:42.301Z",
+  "atMs": 1790182902301,
+  "id": "bili-timed-hide-01",
+  "action": "hide",
+  "startedAt": 1790182901965,
+  "finishedAt": 1790182902301,
+  "durationMs": 336,
+  "passed": true,
+  "submittedAt": 1790182901816,
+  "ackObservedAt": 1790182902322,
+  "captureReturnedAt": 1790182902938,
+  "responseToCaptureReturnedMs": 637
+}

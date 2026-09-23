@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "sourceTree": "dbf10f9587d0095fa16e3d22d30e557cadbdd970",
+  "packageVersion": "0.8.3",
+  "artifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "sha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+    "bytes": 54912376
+  },
+  "proposedVendorFilename": "windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz",
+  "previousArtifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "sha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+  },
+  "archiveChanged": true,
+  "preservePreviousVendorFiles": true,
+  "updateBothSitesToSameBytes": true,
+  "consumerLockfileAndProductionBuildVerificationRequired": true,
+  "consumerWorkPerformedByThisScript": false
+}

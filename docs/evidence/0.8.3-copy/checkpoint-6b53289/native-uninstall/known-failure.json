@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-23T17:18:26.596Z",
+  "status": "known-reproduced-defect-awaiting-fix",
+  "passed": false,
+  "operation": "native uninstall of the superseded 6b53289 isolated test installation",
+  "sourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "installerSha256": "8ed71daf4ae8b386780b3a58f3219140934633abc42c004d0a9f05237c429ad8",
+  "observationSource": "User manually launched the uninstaller; root confirmed the resulting dialog through read-only Computer Use. copy_audit records the explicit root handoff and did not launch any program.",
+  "exactDialogText": "无法安全确认这份风铃的安装目录。已停止卸载，个人设置未被删除。请检查安装位置是否被移动或包含目录、文件链接。",
+  "thisIsNotAnAppStillRunningPrompt": true,
+  "thisIsNotOnlyTheEarlierToolPolicyBlock": true,
+  "rootCause": "under investigation",
+  "finalCandidateRelation": {
+    "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+    "sameUninstallSourceReportedByRoot": true,
+    "nativeFailureActuallyReproducedOnFinal83Candidate": false,
+    "interpretation": "Shared uninstall source makes the final candidate relevant to investigation, but it is not evidence that the final 83 candidate has been separately installed and reproduced failing."
+  },
+  "releaseBlocked": true,
+  "screenshotsIncluded": false,
+  "limitations": [
+    "The dialog states that personal settings were not deleted; this observation does not replace an independent file-preservation check.",
+    "No cleanup, alternate launch tool, security-setting change or code fix is performed by this evidence collection."
+  ],
+  "runtimeFixtureExitedNormallyBeforeErrorInspection": true,
+  "uninstallerStartedAt": "2026-09-23T17:13:05Z",
+  "uninstallerStartedAtPrecision": "second, observed from CIM",
+  "fixtureFinishedAt": "2026-09-23T17:13:38.968Z",
+  "runtimeFixtureWasRunningAtUninstallerStart": true,
+  "chronologyCorrection": "CIM shows the user launched the uninstaller before the capture fixture finished. The fixture exited normally before error inspection, not before launch. The observed error is installation-directory validation, not the running-application prompt; root cause remains under investigation."
+}

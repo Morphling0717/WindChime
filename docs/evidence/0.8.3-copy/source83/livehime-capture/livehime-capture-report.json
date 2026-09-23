@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "version": "0.8.3",
+  "recordedAt": "2026-09-23T17:15:22.399Z",
+  "application": "Bilibili LiveHime",
+  "applicationVersion": "7.54.0.10521",
+  "overallStatus": "partial-validation",
+  "allRequiredChecksPassed": false,
+  "streamingStarted": false,
+  "observationProvenance": "Root performed actual local LiveHime operations and approved every source image after visual inspection. copy_audit extracted only approved preview rectangles, checked source/crop SHA-256 and inspected representative cropped images. No source screenshot is published.",
+  "setup": "User added the synthetic WindChime window capture and a full-canvas checkerboard background beneath it. This proceeds after the previously recorded higher-integrity interaction limitation; no privilege escalation or security-setting change was made.",
+  "candidateAssets": [
+    {
+      "name": "WindChime-Setup-0.8.3.exe",
+      "bytes": 119133184,
+      "sha256": "2eadfa26fc5ef36dad7b1c73141a8ad0e52da8ca77a19c45bb60c716cbab297f"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.3.zip",
+      "bytes": 160660617,
+      "sha256": "f3b63a79606ce6ebc2797293442a6b7d9460ef9b002b1d545bbda4331365cf9c"
+    }
+  ],
+  "canvas": {
+    "left": 284,
+    "top": 198,
+    "width": 1139,
+    "height": 639
+  },
+  "screenshotSize": {
+    "width": 1707,
+    "height": 1019
+  },
+  "checks": [
+    {
+      "name": "initial capture",
+      "status": "passed",
+      "evidence": [
+        "initial-allowlisted-canvas.png"
+      ],
+      "observation": "Synthetic long letter and two images are visible; no private controller UI is present."
+    },
+    {
+      "name": "transparent capture",
+      "status": "passed",
+      "evidence": [
+        "checkerboard-show-canvas.png"
+      ],
+      "observation": "The deliberately added checkerboard is visible around the letter and images in the actual LiveHime preview."
+    },
+    {
+      "name": "hide within one second after HTTP response",
+      "status": "passed",
+      "upperBoundMs": 953,
+      "evidence": [
+        "timed-hide-canvas.png",
+        "hide-api-events.json",
+        "timed-hide-original.json"
+      ],
+      "observation": "The returned native screenshot shows only the checkerboard, no letter or private UI."
+    },
+    {
+      "name": "close display",
+      "status": "passed",
+      "evidence": [
+        "before-close-confirmed-canvas.png",
+        "closed-display-canvas.png"
+      ],
+      "observation": "Closing the display removes the letter from the LiveHime preview."
+    },
+    {
+      "name": "reopen blank",
+      "status": "passed",
+      "evidence": [
+        "reopened-blank-canvas.png"
+      ],
+      "observation": "Reopening the display does not replay the old letter."
+    },
+    {
+      "name": "new show after reopen",
+      "status": "passed",
+      "evidence": [
+        "reopened-manual-show-canvas.png"
+      ],
+      "observation": "A new manual show is captured automatically, without reconfiguring the capture source."
+    },
+    {
+      "name": "eventual blank after silent disconnect",
+      "status": "passed",
+      "evidence": [
+        "silent-disconnect-later-canvas.png"
+      ],
+      "observation": "A later root-confirmed native preview is blank."
+    },
+    {
+      "name": "restore connection stays blank",
+      "status": "passed",
+      "evidence": [
+        "restored-still-blank-canvas.png"
+      ],
+      "observation": "Restoring connectivity does not replay old content."
+    },
+    {
+      "name": "new show after connection restore",
+      "status": "passed",
+      "evidence": [
+        "restored-manual-show-canvas.png"
+      ],
+      "observation": "Only a new manual show makes the letter visible again."
+    },
+    {
+      "name": "silent disconnect captured blank within three seconds",
+      "status": "inconclusive",
+      "evidence": [
+        "silent-disconnect-timing-original.json",
+        "silent-disconnect-observation.json"
+      ],
+      "observation": "The first screenshot call began before the deadline and returned after it while retaining an earlier letter frame; renderer state was blank within the deadline. Exact capture sampling time is unknown. This neither proves a three-second capture pass nor proves the product exceeded the deadline."
+    }
+  ],
+  "hideTiming": {
+    "requestId": 630,
+    "method": "POST",
+    "pathname": "/api/mail/live/control/action",
+    "apiLogLines": {
+      "first": 1265,
+      "last": 1266
+    },
+    "httpRequestStartedAt": 1790182901970,
+    "httpResponseFinishedAt": 1790182901985,
+    "helperCommandFinishedAt": 1790182902301,
+    "captureReturnedAt": 1790182902938,
+    "httpResponseToBlankScreenshotReturnedUpperBoundMs": 953,
+    "originalFieldResponseToCaptureReturnedMs": 637,
+    "originalFieldActualMeaning": "637 ms is measured from helper command-result completion, not from the actual HTTP response; it is retained as historical raw input and not used for the one-second HTTP-response threshold."
+  },
+  "firstSilentDisconnectTiming": {
+    "lastConfirmedFrameRequestId": 1369,
+    "lastConfirmedFrameRequestStartedAt": 1790183281165,
+    "lastConfirmedFrameResponseFinishedAt": 1790183281171,
+    "captureStartedAt": 1790183283927,
+    "captureReturnedAt": 1790183284372,
+    "requestStartToCaptureStartMs": 2762,
+    "requestStartToCaptureReturnMs": 3207,
+    "responseFinishToCaptureStartMs": 2756,
+    "responseFinishToCaptureReturnMs": 3201,
+    "rendererBlankObservedAt": 1790183284044,
+    "requestStartToRendererBlankObservedMs": 2879,
+    "status": "inconclusive",
+    "rawDataPreserved": true
+  },
+  "images": [
+    {
+      "name": "initial-allowlisted-canvas.png",
+      "sha256": "f9637f830a486fe1f2a8fdfe0f0ebe2a09e46778c555d00a70abdc7d35657a42",
+      "bytes": 251417,
+      "originalScreenshotSha256": "a3240de4d48a886a88c52f7cd3f20dd9223cdb2039aa84b2fe5e58a8868af602",
+      "originalScreenshotPublished": false,
+      "metadata": "initial-allowlisted-canvas-evidence.json"
+    },
+    {
+      "name": "checkerboard-show-canvas.png",
+      "sha256": "0506bfe978e91469203f99e2d6b3ea434225c75089af8dcd2cf7deae7459c12e",
+      "bytes": 307057,
+      "originalScreenshotSha256": "876ebf73c3608e51d54554e67d383825a49cefad39dcb002437df8a7d69713f3",
+      "originalScreenshotPublished": false,
+      "metadata": "checkerboard-show-canvas-evidence.json"
+    },
+    {
+      "name": "timed-hide-canvas.png",
+      "sha256": "247c8ce1d21ae75b5c4e0cf445c6d86c18ae5884900d56f0237d58f6580deb27",
+      "bytes": 107386,
+      "originalScreenshotSha256": "51d3c813b1d53cd0225e65cc1dfb1d5cf27e7a5cb074dfac009de49e8696b116",
+      "originalScreenshotPublished": false,
+      "metadata": "timed-hide-canvas-evidence.json"
+    },
+    {
+      "name": "before-close-confirmed-canvas.png",
+      "sha256": "383b01faab243b192afa6b601a6d995ad3ceb079596255412cc713a5af88e139",
+      "bytes": 319775,
+      "originalScreenshotSha256": "f2cd230b189bb4b2cc0c040817cc04e0679d465277c9910588f03de08484e67c",
+      "originalScreenshotPublished": false,
+      "metadata": "before-close-confirmed-canvas-evidence.json"
+    },
+    {
+      "name": "closed-display-canvas.png",
+      "sha256": "dd1f9a49f6a2b80da3bc0d4e54cdfce5827f9501cff5fcefa0d614a0dd65612e",
+      "bytes": 107177,
+      "originalScreenshotSha256": "3c6bc5a42e234a57ff7cf14dd857fb64eaa783cbfd3fa220257fce70c44d1133",
+      "originalScreenshotPublished": false,
+      "metadata": "closed-display-canvas-evidence.json"
+    },
+    {
+      "name": "reopened-blank-canvas.png",
+      "sha256": "dd1f9a49f6a2b80da3bc0d4e54cdfce5827f9501cff5fcefa0d614a0dd65612e",
+      "bytes": 107177,
+      "originalScreenshotSha256": "b05f08a30ecd0b5a38ca3567aace382635260e6bd4252737368b1a673cb48be5",
+      "originalScreenshotPublished": false,
+      "metadata": "reopened-blank-canvas-evidence.json"
+    },
+    {
+      "name": "reopened-manual-show-canvas.png",
+      "sha256": "8009a21e87961a772087f16a912d79fb67b5ae8dc25c458acd1a15e979bcdf08",
+      "bytes": 307868,
+      "originalScreenshotSha256": "69b2ccad76f75277c99eafd78d19c5ab2bf46eaad908e4d3bd4e6cdbbbe70451",
+      "originalScreenshotPublished": false,
+      "metadata": "reopened-manual-show-canvas-evidence.json"
+    },
+    {
+      "name": "silent-disconnect-later-canvas.png",
+      "sha256": "1ba7e5bbc192e8f31cf919b431064659e9f5e693384e14c8f1a2ef40a79a5138",
+      "bytes": 107278,
+      "originalScreenshotSha256": "6b46cf7a9fd1d91b3664de8cc7c71cf8837ccb63a37e8bf6ac5e415e3a657b04",
+      "originalScreenshotPublished": false,
+      "metadata": "silent-disconnect-later-canvas-evidence.json"
+    },
+    {
+      "name": "restored-still-blank-canvas.png",
+      "sha256": "1ba7e5bbc192e8f31cf919b431064659e9f5e693384e14c8f1a2ef40a79a5138",
+      "bytes": 107278,
+      "originalScreenshotSha256": "f34cf4b679d28f55b6ad8c48a2718dfe0ddcb7c8b265b9117145705a97681618",
+      "originalScreenshotPublished": false,
+      "metadata": "restored-still-blank-canvas-evidence.json"
+    },
+    {
+      "name": "restored-manual-show-canvas.png",
+      "sha256": "b1eba0b4a690037e2b5fd8b6fc178ce0560803928e155348d6e27e1d64d0f7e3",
+      "bytes": 315304,
+      "originalScreenshotSha256": "1513ce5fe5f5eb6aff26cbc56c02318edd4784b286690b84b0ce4f05f46643a3",
+      "originalScreenshotPublished": false,
+      "metadata": "restored-manual-show-canvas-evidence.json"
+    }
+  ],
+  "exclusions": [
+    "hide-first was an early sample with old content; no pass or failure is inferred.",
+    "hide-later showed Codex and hide-refocused showed a file dialog; neither is cropped, published or used for acceptance.",
+    "before-close without confirmed in its filename was an earlier blank sample without a conclusion and is excluded.",
+    "The first silent-disconnect native image is not a passing frame and remains private; its raw timing is retained as inconclusive."
+  ],
+  "remainingRequiredChecks": [
+    "LiveHime three-second silent-disconnect capture deadline",
+    "real operating-system sleep/resume",
+    "final installer native install/upgrade/uninstall acceptance"
+  ]
+}

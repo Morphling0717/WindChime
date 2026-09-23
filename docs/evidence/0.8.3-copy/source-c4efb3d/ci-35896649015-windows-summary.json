@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-09-23T17:49:58.484Z",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "runId": 35896649015,
+  "jobId": 107302126378,
+  "url": "https://github.com/Morphling0717/WindChime/actions/runs/35896649015/job/107302126378",
+  "status": "completed",
+  "conclusion": "success",
+  "tests": 159,
+  "passed": 159,
+  "failed": 0,
+  "skipped": 0,
+  "fullLogBytes": 64136,
+  "fullLogSha256": "008ba9ed8bebb87b4d91496411552d3cb8b112bf00880230af3d3b2e64e257c1",
+  "excerpts": [
+    {
+      "line": 203,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:17.5301178Z   ✔ a request cannot redirect extraction outside its fresh transaction (60.8423ms)"
+    },
+    {
+      "line": 209,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:20.3996841Z   ✔ absolute choices keep their drive, Unicode and an exactly-once application folder (1988.5833ms)"
+    },
+    {
+      "line": 218,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:25.3868411Z   ✔ WPF and the installed engine agree on the application identity and registry namespace (379.1422ms)"
+    },
+    {
+      "line": 219,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:27.0042662Z   ✔ private staging request survives the real Windows INI parser with exact scope and Unicode (1621.7038ms)"
+    },
+    {
+      "line": 221,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:27.0139183Z ✔ locked payload removal preserves the real NSIS ownership marker and uninstaller for retry (6964.6248ms)"
+    },
+    {
+      "line": 231,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:27.0152983Z ✔ Windows installer Unicode shortcuts (1394.6065ms)"
+    },
+    {
+      "line": 259,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8045410Z ✔ real .NET installation transactions in new isolated fixtures (12487.9041ms)"
+    },
+    {
+      "line": 260,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8143606Z ✔ the actual NSIS tree preflight accepts normal and empty folders and refuses junctions (515.9168ms)"
+    },
+    {
+      "line": 263,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8157494Z   ✔ exact long Unicode path (414.5309ms)"
+    },
+    {
+      "line": 265,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8160142Z   ✔ 8.3 uninstall location with long registry (410.8924ms)"
+    },
+    {
+      "line": 266,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8161009Z   ✔ 8.3 registry with long uninstall location (404.2715ms)"
+    },
+    {
+      "line": 268,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8162428Z   ✔ registry mismatch (364.8799ms)"
+    },
+    {
+      "line": 269,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8163256Z   ✔ missing registry value (330.9959ms)"
+    },
+    {
+      "line": 276,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8167698Z ✔ the complete NSIS uninstall target check validates identity and canonical paths without changing fixture data (6685.867ms)"
+    },
+    {
+      "line": 308,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8209942Z ✔ legacy Squirrel layout still handles its own uninstall message (2.1314ms)"
+    },
+    {
+      "line": 370,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8267410Z ℹ tests 159"
+    },
+    {
+      "line": 371,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8267735Z ℹ suites 4"
+    },
+    {
+      "line": 372,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8268082Z ℹ pass 159"
+    },
+    {
+      "line": 373,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8268414Z ℹ fail 0"
+    },
+    {
+      "line": 374,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8268726Z ℹ cancelled 0"
+    },
+    {
+      "line": 375,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8269099Z ℹ skipped 0"
+    },
+    {
+      "line": 376,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8269408Z ℹ todo 0"
+    },
+    {
+      "line": 377,
+      "text": "desktop-windows\tRun the complete desktop and Windows installer test suite\t2026-09-23T17:36:31.8269753Z ℹ duration_ms 17406.9585"
+    }
+  ],
+  "nativeProductAcceptance": false
+}

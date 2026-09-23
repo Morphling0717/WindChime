@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-23T17:53:04.247Z",
+  "candidateSourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "originalFailingInstallationSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "status": "root-cause-still-under-investigation",
+  "observationSource": "Explicit main verification thread handoff. This evidence collector did not launch the probes, inspect user registry keys or operate native UI; it records the limited reported observations without publishing private keys, SID, paths or screenshots.",
+  "rootReportedObservations": [
+    "The same no-delete diagnostic executable passed from the command line and rejected when double-clicked through Explorer.",
+    "The first failure was the HKCU InstallLocation read returning an empty value; path and directory-tree validation had not yet executed.",
+    "Read-only probes reported the same SID digest, both 32-bit and neither having package identity.",
+    "Command-line probes could open the isolated test installation HKCU/HKU keys in both registry views (result 0); the Explorer-launched probe reported RegOpenKeyEx result 2 for the same keys."
+  ],
+  "conclusion": "Launch-context or registry visibility differences remain under investigation. The c4 short-path compatibility fix cannot be claimed to resolve the original user failure.",
+  "nativeInstallOrUninstallPassed": false,
+  "sourceFixConfirmedForOriginalFailure": false,
+  "personalDataIncluded": false,
+  "earlierEvidenceModified": false
+}

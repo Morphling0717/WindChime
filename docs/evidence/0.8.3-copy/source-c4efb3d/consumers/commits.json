@@ -1,0 +1,56 @@
+[
+  {
+    "site": "Next_UliUli",
+    "branch": "codex/windchime-desktop-v0.6.0",
+    "baseCommit": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+    "commit": "a32e763da57b14e4df49033e789c5ea402fb22db",
+    "files": [
+      "docs/WINDCHIME-083-UPGRADE.md",
+      "docs/WINDCHIME-LIVE.md",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/README.md",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/SHA256SUMS",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/build.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/install.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/mail.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/migrations.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/report.json",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/routes.log",
+      "package-lock.json",
+      "package.json",
+      "vendor/SHA256SUMS",
+      "vendor/windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz"
+    ],
+    "artifactSha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+    "passedVerification": "logs/report.json",
+    "pushed": true,
+    "originalHeadPreserved": true,
+    "originalTsconfigPreserved": true
+  },
+  {
+    "site": "Next_Mia",
+    "branch": "codex/live-broadcast",
+    "baseCommit": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+    "commit": "4085a0a26bfe904e12328db345a885f1e5a74c8c",
+    "files": [
+      "docs/WINDCHIME-083-UPGRADE.md",
+      "docs/WINDCHIME-LIVE.md",
+      "docs/WINDCHIME.md",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/README.md",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/SHA256SUMS",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/build.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/install.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/mail.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/migrations.log",
+      "docs/evidence/shared-0.8.3-qc/c4efb3d/report.json",
+      "package-lock.json",
+      "package.json",
+      "vendor/SHA256SUMS",
+      "vendor/windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz"
+    ],
+    "artifactSha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+    "passedVerification": "logs/report.json",
+    "pushed": true,
+    "originalHeadPreserved": true,
+    "originalTsconfigPreserved": true
+  }
+]

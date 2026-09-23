@@ -1,0 +1,133 @@
+[
+  {
+    "label": "root-ci",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "ci"
+    ],
+    "startedAt": "2026-09-23T17:37:57.040Z",
+    "finishedAt": "2026-09-23T17:38:04.744Z",
+    "exitCode": 0,
+    "log": "logs/root-ci.log",
+    "logSha256": "666a297256e8eaf6fafee639ca43b861eeb09da507c0f5c6ba7e7751c436cf0f"
+  },
+  {
+    "label": "shared-pack",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "pack",
+      "--json",
+      "--pack-destination",
+      "<repository>\\.work\\candidates\\uninstall083-c4efb3d\\fresh-shared"
+    ],
+    "startedAt": "2026-09-23T17:38:04.870Z",
+    "finishedAt": "2026-09-23T17:38:13.513Z",
+    "exitCode": 0,
+    "log": "logs/shared-pack.log",
+    "logSha256": "6c633582623bd783dd737b6af99809d2a91e7e0ad69690c0bf7ffa8381636596"
+  },
+  {
+    "label": "shared-package-verification",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "<repository>\\.work\\rebuild-083\\verify-shared.cjs",
+      "--tgz",
+      "<repository>\\.work\\candidates\\uninstall083-c4efb3d\\windchime-embed-0.8.3.tgz",
+      "--sha256",
+      "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+      "--source-commit",
+      "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "--source-tree",
+      "dbf10f9587d0095fa16e3d22d30e557cadbdd970",
+      "--checkout",
+      "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d",
+      "--report",
+      "<repository>\\.work\\candidates\\uninstall083-c4efb3d\\shared-package-verification.json",
+      "--logs",
+      "<repository>\\.work\\candidates\\uninstall083-c4efb3d\\shared-verification-logs",
+      "--npm-cli",
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js"
+    ],
+    "startedAt": "2026-09-23T17:38:13.758Z",
+    "finishedAt": "2026-09-23T17:38:25.363Z",
+    "exitCode": 0,
+    "log": "logs/shared-package-verification.log",
+    "logSha256": "3e209a4c25b81626baf86c3ab9f2bc6a4facc4487ed4c13a550b88c52d6d5245"
+  },
+  {
+    "label": "shared-tests",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "test"
+    ],
+    "startedAt": "2026-09-23T17:38:25.525Z",
+    "finishedAt": "2026-09-23T17:38:36.413Z",
+    "exitCode": 0,
+    "log": "logs/shared-tests.log",
+    "logSha256": "d5ae845d1beed1584e06f5ff64910ee782d9b607cba949034a7354cc0d628dcc"
+  },
+  {
+    "label": "desktop-ci",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d\\apps\\desktop",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "ci"
+    ],
+    "startedAt": "2026-09-23T17:38:36.537Z",
+    "finishedAt": "2026-09-23T17:38:43.001Z",
+    "exitCode": 0,
+    "log": "logs/desktop-ci.log",
+    "logSha256": "94e7d41de6affd74589cb444df0ea4a5076161b87d8d25ba5413d980271374c7"
+  },
+  {
+    "label": "desktop-tests",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d\\apps\\desktop",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "test"
+    ],
+    "startedAt": "2026-09-23T17:38:50.796Z",
+    "finishedAt": "2026-09-23T17:39:03.395Z",
+    "exitCode": 0,
+    "log": "logs/desktop-tests.log",
+    "logSha256": "5e0fa14746ecf0720ee2db6240a3d720e1790ed6808d50414bdbc68a3c9ab683"
+  },
+  {
+    "label": "make",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d\\apps\\desktop",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      "run",
+      "make"
+    ],
+    "startedAt": "2026-09-23T17:39:03.520Z",
+    "finishedAt": "2026-09-23T17:42:12.105Z",
+    "exitCode": 0,
+    "log": "logs/make.log",
+    "logSha256": "6ebb43cbab32844cc40f6c9a66219339cd80638281729fa0dca18e2a1c210c81"
+  },
+  {
+    "label": "package-verification",
+    "cwd": "<user-profile>\\AppData\\Local\\Temp\\windchime-uninstall083-c4efb3d\\apps\\desktop",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "scripts/verify-package.cjs",
+      "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W"
+    ],
+    "startedAt": "2026-09-23T17:42:12.235Z",
+    "finishedAt": "2026-09-23T17:42:12.401Z",
+    "exitCode": 1,
+    "log": "logs/package-verification.log",
+    "logSha256": "7f729716c7c2cd58a5a9750e24bcf6185676d227b6a84a9f96c87f2b40093274"
+  }
+]

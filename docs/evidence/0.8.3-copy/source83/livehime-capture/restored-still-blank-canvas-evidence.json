@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "createdAt": "2026-09-23T17:12:45.947Z",
+  "observationStage": "restored-still-blank",
+  "evidenceKind": "literal LiveHime preview canvas extraction from root native screenshot",
+  "rootCaptureTool": "sky.get_window_state screenshots[0].url",
+  "geometryConfirmedBy": "root-fresh-ui-observation",
+  "targetVerification": {
+    "method": "root per-image SHA-256 allowlist plus fresh geometry confirmation",
+    "rootConfirmedTarget": true,
+    "targetApplication": "Bilibili LiveHime",
+    "allowlistSha256": "fc68bd4a0e542e0eb39ff4f7632722aae79cd58c81fd919b97ec2faa46e77087"
+  },
+  "originalScreenshot": {
+    "format": "jpeg",
+    "width": 1707,
+    "height": 1019,
+    "bytes": 137484,
+    "sha256": "f34cf4b679d28f55b6ad8c48a2718dfe0ddcb7c8b265b9117145705a97681618",
+    "published": false
+  },
+  "canvas": {
+    "left": 284,
+    "top": 198,
+    "width": 1139,
+    "height": 639
+  },
+  "image": {
+    "name": "restored-still-blank-canvas.png",
+    "format": "png",
+    "width": 1139,
+    "height": 639,
+    "bytes": 107278,
+    "sha256": "1ba7e5bbc192e8f31cf919b431064659e9f5e693384e14c8f1a2ef40a79a5138"
+  },
+  "changes": "rectangle extraction and PNG encoding only; no image content edited",
+  "passed": null,
+  "limitations": [
+    "This extraction script does not interact with LiveHime or claim a capture acceptance result.",
+    "Original screenshot remains private; only the preview canvas may be considered for public evidence after inspection.",
+    "Screenshot dimensions are checked automatically. Canvas position is separately attested by the root fresh UI observation supplied on the command line.",
+    "The input must also be explicitly root-approved by its exact source SHA-256. A requested application name or matching screenshot size alone is never treated as proof of the captured application.",
+    "A JPEG native screenshot has no transparency channel; capture transparency must be judged against the deliberate test background and separate operational observations.",
+    "Pixel comparison numbers are descriptive only. JPEG compression and live rendering may cause differences; no automatic visual pass/fail is inferred."
+  ],
+  "comparison": {
+    "referenceSha256": "f9637f830a486fe1f2a8fdfe0f0ebe2a09e46778c555d00a70abdc7d35657a42",
+    "exactByteMatch": false,
+    "channelThreshold": 12,
+    "changedPixels": 725698,
+    "totalPixels": 727821,
+    "changedPixelFraction": 0.9970830739975901,
+    "meanAbsoluteRgbDifference": 97.93724647498034,
+    "maximumChannelDifference": 255,
+    "passed": null
+  }
+}
