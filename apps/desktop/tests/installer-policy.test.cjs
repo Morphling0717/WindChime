@@ -15,7 +15,10 @@ const desktop = path.resolve(__dirname, '..');
 describe('Windows installer destination and confirmation protocol', { skip: process.platform !== 'win32' }, () => {
   let temporary, library, rootDrive;
   before(async () => {
-    temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'windchime-installer-policy-'));
+    // Windows CI may expose TEMP through an 8.3 alias (for example RUNNER~1).
+    // Resolve the existing fixture independently of InstallPolicy so exact path
+    // assertions compare canonical names while the alias tests remain intact.
+    temporary = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'windchime-installer-policy-')));
     rootDrive = path.parse(temporary).root;
     library = path.join(temporary, 'InstallPolicy.dll');
     const framework = path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET/Framework64/v4.0.30319');
