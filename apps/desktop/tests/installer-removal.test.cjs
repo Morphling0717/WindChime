@@ -22,7 +22,13 @@ test('locked payload removal preserves the real NSIS ownership marker and uninst
  await exec(compiler.path,['-INPUTCHARSET','UTF8','-V2',script],{windowsHide:true,timeout:30000,env:{...process.env,...compiler.env}});
  const shell=path.join(process.env.WINDIR,'System32/WindowsPowerShell/v1.0/powershell.exe');
  const command=String.raw`$ErrorActionPreference='Stop';$r=$env:WINDCHIME_REMOVAL_FIXTURE|ConvertFrom-Json;$lock=[IO.File]::Open($r.locked,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read);try{$p=Start-Process -FilePath $r.executable -Wait -PassThru -WindowStyle Hidden;exit $p.ExitCode}finally{$lock.Dispose()}`;
- await assert.rejects(exec(shell,['-NoProfile','-NonInteractive','-Command',command],{windowsHide:true,timeout:15000,env:{...process.env,WINDCHIME_REMOVAL_FIXTURE:JSON.stringify({locked,executable})}}),error=>error.code===74);
+ // This budget includes Windows PowerShell and the isolated NSIS fixture cold start.
+ // A killed or timed-out process must never count as the expected locked-file exit.
+ const lockedRemovalTimeoutMs=45000,lockedRemovalStarted=performance.now();
+ const failure=await exec(shell,['-NoProfile','-NonInteractive','-Command',command],{windowsHide:true,timeout:lockedRemovalTimeoutMs,env:{...process.env,WINDCHIME_REMOVAL_FIXTURE:JSON.stringify({locked,executable})}}).then(()=>null,error=>error);
+ const outcome={code:failure?.code,killed:failure?.killed,signal:failure?.signal};
+ const diagnostic={code:outcome.code??null,killed:outcome.killed??null,signal:outcome.signal??null,elapsedMs:Math.round(performance.now()-lockedRemovalStarted),timeoutMs:lockedRemovalTimeoutMs,stdout:String(failure?.stdout??'').slice(0,2048),stderr:String(failure?.stderr??'').slice(0,2048)};
+ assert.deepEqual(outcome,{code:74,killed:false,signal:null},`Locked payload fixture did not return its expected exit: ${JSON.stringify(diagnostic)}`);
  assert.equal(await fs.readFile(marker,'utf8'),'fixture ownership marker');assert.equal(await fs.readFile(uninstaller,'utf8'),'fixture uninstaller identity');assert.equal(await fs.readFile(locked,'utf8'),'locked fixture payload');
  await exec(executable,[],{windowsHide:true,timeout:15000});
  assert.equal(await fs.readFile(marker,'utf8'),'fixture ownership marker');assert.equal(await fs.readFile(uninstaller,'utf8'),'fixture uninstaller identity');
