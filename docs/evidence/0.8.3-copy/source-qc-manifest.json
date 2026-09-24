@@ -2829,6 +2829,206 @@
       "publishedBytes": 1941,
       "publishedSha256": "ca485167f888e330f39c4d65313cd3e92bccd3511970ecc2d0eea1b3f8c66f05",
       "normalizedOrSanitized": false
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生安装验收-c4efb3d-20260924/after-user-uninstall.json",
+      "path": "source-c4efb3d/native-lifecycle/after-user-uninstall.json",
+      "originalBytes": 730,
+      "originalSha256": "e85e7b0373c4d418eae7c3e9109470512bdc037a0b3fb8697aa0a7bdfb7f8aa2",
+      "publishedBytes": 710,
+      "publishedSha256": "78219ddf4932709fbe153c4164797c68c255e8fd5021cdb2d93b848bea22a04b",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/native-install-acceptance-c4-v2-RmjUXc/summary-native-20260924T0007496929183Z-10290494506b44e4b355491e9cd83672.json",
+      "path": "source-c4efb3d/native-lifecycle/uninstalled-native-summary.json",
+      "originalBytes": 643,
+      "originalSha256": "169fa8b8a551be8059ee16fc81799847cb83987441dadadc8e3aed3ae8223768",
+      "publishedBytes": 737,
+      "publishedSha256": "08375bb192176ba4ce5a022764e08cf149099a921ead9c32a01a218e4e0c8af5",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生升级验收-082-c4-20260924-BhwpWO/probe-old082/summary-native-20260924T0012517150571Z-de3b7e70e37b4c36962cd519618adedc.json",
+      "path": "source-c4efb3d/native-lifecycle/old082-installed-native-summary.json",
+      "originalBytes": 644,
+      "originalSha256": "5421845648b70bd81e136e20ba9ce11392749a24329b97bd8e527bab82baefa3",
+      "publishedBytes": 738,
+      "publishedSha256": "b16ac4e0b1611ba6de60e7171aed0cde1dd33eeae8ce6502823cb97be1aef0da",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生升级验收-082-c4-20260924-BhwpWO/probe-upgraded-c4/summary-native-20260924T0016563729301Z-9bdbf4eec9c14e6ba7e57f059c1b3deb.json",
+      "path": "source-c4efb3d/native-lifecycle/upgraded-native-summary.json",
+      "originalBytes": 645,
+      "originalSha256": "dfc3d9497f1c68413e5617229d7ef0c2d14a77a2b09cfb9be465f1f67db1a450",
+      "publishedBytes": 739,
+      "publishedSha256": "85e196dc14341025a933e9bd32ee6bd819acfcff3a879d305de68a81254d318c",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生升级验收-082-c4-20260924-BhwpWO/runtime-0.8.2-2026-09-24T00-12-07-451Z-9b348da9/public-runtime-verification.json",
+      "path": "source-c4efb3d/native-lifecycle/runtime-0.8.2.json",
+      "originalBytes": 574,
+      "originalSha256": "5e09e6379fa95ab5445cf7843508f9f7349fde5cb892e8372496d91ea9dde21b",
+      "publishedBytes": 575,
+      "publishedSha256": "f9fc05babd36389bb2e63a277e54fe64e26370deb5a7a8edd50e34095130a3da",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生升级验收-082-c4-20260924-BhwpWO/runtime-0.8.3-2026-09-24T00-15-08-286Z-e65e4c85/public-runtime-verification.json",
+      "path": "source-c4efb3d/native-lifecycle/runtime-0.8.3.json",
+      "originalBytes": 573,
+      "originalSha256": "f64c99b8247dd0ff4f354b0dc27d64b25bf5698c087eb05c485a0af1ef510431",
+      "publishedBytes": 574,
+      "publishedSha256": "070a3425dfc296d28cf358ea6f207295ad21b14d3d617b96aaa20be3f5ca99c0",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/原生升级验收-082-c4-20260924-BhwpWO/synthetic-workspace-082.json",
+      "path": "source-c4efb3d/native-lifecycle/preserved-synthetic-setting.json",
+      "originalBytes": 188,
+      "originalSha256": "f83bb8726813fccb86f6bb4730c106825c7a183d90fbe47aa48f894b1edc589d",
+      "publishedBytes": 189,
+      "publishedSha256": "203e05d88ddf748a853796fe9b0975b49a1491292c4b0d24a81e460f6f8ff62c",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/root-observation.json",
+      "path": "source-c4efb3d/livehime-native/root-observation.json",
+      "originalBytes": 1026,
+      "originalSha256": "129796d29f575b27d7d8265a84d04efa653a833bdbb67788032ec262c1709626",
+      "publishedBytes": 1027,
+      "publishedSha256": "14084e6f456b94e7121efa6d05321b93bb014d0efe020f9477cf1abd83e810a5",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/hide-timing.json",
+      "path": "source-c4efb3d/livehime-native/hide-timing.json",
+      "originalBytes": 764,
+      "originalSha256": "9fd361a3386bf197cb0738f8249889a66d191a4a3aa7f38f1d8d3eb39a26dc92",
+      "publishedBytes": 765,
+      "publishedSha256": "f241bfd2383154b062ab71a0cf3ebd4c443264c71a63d5ee362b9209600f3034",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/disconnect-timing-first.json",
+      "path": "source-c4efb3d/livehime-native/disconnect-timing-first.json",
+      "originalBytes": 971,
+      "originalSha256": "f13993a84a8c08d278765dfb7ea5a412e5b2d6f7e937a305d2991d6c36113e25",
+      "publishedBytes": 972,
+      "publishedSha256": "f34c9d1740cc957abfae96a065ac3e5ff73b5c51df22b5bb087117a47379b54c",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/initial-livehime-private.jpg",
+      "path": "source-c4efb3d/livehime-native/initial-livehime-canvas.png",
+      "originalBytes": 159276,
+      "originalSha256": "f4d5867e6ac72c85728a4622fa1fbca207a935934985b53a331500848a8268eb",
+      "publishedBytes": 318977,
+      "publishedSha256": "5bb7ea7e7f2d48e770746130a93e3a25b8f55cf04c7d868600e81b1e2cb360a3",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/hidden-livehime-private.jpg",
+      "path": "source-c4efb3d/livehime-native/hidden-livehime-canvas.png",
+      "originalBytes": 136807,
+      "originalSha256": "75b3093c19518405b17dcf68d809bf48f209382d8905d5d20fa47d6f816537aa",
+      "publishedBytes": 105486,
+      "publishedSha256": "1df8c0fb0aeeb6434dd7d7ec9cecc695451a731df9bafd811f5be55019236ede",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/before-disconnect-private.jpg",
+      "path": "source-c4efb3d/livehime-native/before-disconnect-canvas.png",
+      "originalBytes": 158339,
+      "originalSha256": "241685d6b1b556397265064f211336faaca8b26b0b2030719154446aa8974a01",
+      "publishedBytes": 322960,
+      "publishedSha256": "0df7796de3072bab22c224e87d3647ad168856645c1e25f606e1ed579e66531d",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/disconnect-first-observation-private.jpg",
+      "path": "source-c4efb3d/livehime-native/disconnect-first-observation-canvas.png",
+      "originalBytes": 158137,
+      "originalSha256": "314b90a28a8057a66941e71ea5dae178254d2b9a930f1cae2ce7f8507d06afff",
+      "publishedBytes": 317661,
+      "publishedSha256": "b64df6af194f769317d9a013c8dd99ec4b763410daef7bb07731df1579a2cefc",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/disconnected-blank-private.jpg",
+      "path": "source-c4efb3d/livehime-native/disconnected-blank-canvas.png",
+      "originalBytes": 137828,
+      "originalSha256": "b35a25f05edaeaee7727256034d96e51df95863f135342a2f7e2ceec2a19a5ac",
+      "publishedBytes": 105686,
+      "publishedSha256": "632690bebc275a9b78041ca85966c0c5cc477bef8f4b694d51663f0b47295a39",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/restored-blank-private.jpg",
+      "path": "source-c4efb3d/livehime-native/restored-blank-canvas.png",
+      "originalBytes": 136213,
+      "originalSha256": "efa6820d27c63dc3598e409db9919b770d65b9069d541ef7abafcbb097f0797f",
+      "publishedBytes": 105541,
+      "publishedSha256": "962fbe850f7624226ee45bf8b99e58fb9ad701e9c344b1973d3802ce3a88be3f",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/before-close-private.jpg",
+      "path": "source-c4efb3d/livehime-native/before-close-canvas.png",
+      "originalBytes": 157986,
+      "originalSha256": "49ad813126dca328ee70409255b67fee3d6e7dc1408940dcc4f75a2325d45db4",
+      "publishedBytes": 316953,
+      "publishedSha256": "98a22f700475a2634e1d61395dd41574af8934aa33eae59d75506248364cfcb8",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/closed-private.jpg",
+      "path": "source-c4efb3d/livehime-native/closed-canvas.png",
+      "originalBytes": 136214,
+      "originalSha256": "f61574d673d3b347d23d658df2fb5f32ec1bf5d99b8bb781347a9b7af6a0d3cf",
+      "publishedBytes": 105541,
+      "publishedSha256": "962fbe850f7624226ee45bf8b99e58fb9ad701e9c344b1973d3802ce3a88be3f",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/reopened-blank-private.jpg",
+      "path": "source-c4efb3d/livehime-native/reopened-blank-canvas.png",
+      "originalBytes": 136218,
+      "originalSha256": "f5390a5db068f446af80d29dc3bf435a307538e48ac88b318e0b2e0e93a61b25",
+      "publishedBytes": 105541,
+      "publishedSha256": "962fbe850f7624226ee45bf8b99e58fb9ad701e9c344b1973d3802ce3a88be3f",
+      "normalizedOrSanitized": true
+    },
+    {
+      "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+      "input": ".work/livehime-native-c4efb3d-e3uoHs/native-evidence/before-sleep-private.jpg",
+      "path": "source-c4efb3d/livehime-native/before-sleep-canvas.png",
+      "originalBytes": 157818,
+      "originalSha256": "98e2c210392cf27c31069b55dfbb385fccdc6c32cfd0250b8c19242c1738123f",
+      "publishedBytes": 314378,
+      "publishedSha256": "bd428e1fe0d5b117abfb068c2c05c4765b1ccf1880b0bddd7c32b80aee5ebd28",
+      "normalizedOrSanitized": true
     }
   ],
   "ci": [
@@ -3112,5 +3312,15 @@
   },
   "additionalCandidateSourceCommits": [
     "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58"
-  ]
+  ],
+  "latestNativeCheckpoint": {
+    "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+    "uninstalled": true,
+    "upgradedFrom082": true,
+    "settingsPreserved": true,
+    "livehimeThreeSecondTiming": "inconclusive",
+    "realSleep": "suspend observed; harness interrupted; post-wake blank observed, full resume not verified",
+    "releaseDecision": "User authorized release with disclosed verification limitations if no major defect was found",
+    "recordedAt": "2026-09-24T00:32:04.170Z"
+  }
 }

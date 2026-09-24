@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "version": "0.8.3",
+  "artifactDigestsVerified": true,
+  "isolatedProfile": true,
+  "explicitReuseOfPreviouslyVerifiedProfile": true,
+  "syntheticMarkerPreserved": true,
+  "packagedVersionVerified": true,
+  "privateWindowOnly": true,
+  "noAutomaticDisplay": true,
+  "sandboxEnabled": true,
+  "contextIsolationEnabled": true,
+  "nodeIntegrationDisabled": true,
+  "connectionUIRendered": true,
+  "approvedLogoRendered": true,
+  "noManagementCredentials": true,
+  "trayCloseReopenPassed": true,
+  "gracefulExit": true,
+  "unhandledRuntimeErrors": false
+}
