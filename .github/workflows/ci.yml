@@ -23,3 +23,25 @@ jobs:
         working-directory: examples/next-sqlite
       - run: docker build -f examples/next-sqlite/Dockerfile -t windchime-example .
         if: matrix.node == 24
+  desktop-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: apps/desktop
+      - name: Prepare the pinned NSIS compiler for real installer regression tests
+        working-directory: apps/desktop
+        run: >-
+          node -e "require('app-builder-lib/out/toolsets/windows').getMakeNsisPath().then(result => require('node:fs').appendFileSync(process.env.GITHUB_ENV, 'WINDCHIME_NSIS_TEST_COMPILER=' + result.path + '\n')).catch(error => { console.error(error); process.exitCode = 1; })"
+      - name: Run the complete desktop and Windows installer test suite
+        run: npm test
+        working-directory: apps/desktop

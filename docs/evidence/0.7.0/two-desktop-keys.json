@@ -1,0 +1,80 @@
+{
+  "passed": true,
+  "date": "2026-09-13T05:54:28.469Z",
+  "directory": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-key-smoke-3aYpem",
+  "checks": [
+    "UliUli-A: browser key -> two desktop forms; repeat import; reviewed image; approve blank; show/hide/next; edit and dirty conflict; scope; refresh blank; flags/order preserved",
+    "UliUli-B: browser key -> two desktop forms; repeat import; reviewed image; approve blank; show/hide/next; edit and dirty conflict; scope; refresh blank; flags/order preserved",
+    "Mia-A: browser key -> two desktop forms; repeat import; reviewed image; approve blank; show/hide/next; edit and dirty conflict; scope; refresh blank; flags/order preserved",
+    "Mia-B: browser key -> two desktop forms; repeat import; reviewed image; approve blank; show/hide/next; edit and dirty conflict; scope; refresh blank; flags/order preserved",
+    "legacy topic key displays for 7.2 seconds across at least two management polls without requesting site settings",
+    "actual encrypted vault restart stays blank while another receiver is active",
+    "browser revokes shared key: both processes lose control and output; other grant remains valid"
+  ],
+  "observations": [
+    {
+      "name": "UliUli-A",
+      "hide": {
+        "responseToBlankMs": 293,
+        "commandToBlankMs": 507
+      },
+      "scope": {
+        "siteKeyOtherTopic": 200,
+        "legacyKeyOtherTopic": 403,
+        "crossSite": 401
+      },
+      "processes": [
+        53360,
+        46672
+      ]
+    },
+    {
+      "name": "UliUli-B",
+      "hide": {
+        "responseToBlankMs": 333,
+        "commandToBlankMs": 514
+      },
+      "scope": {
+        "siteKeyOtherTopic": 200,
+        "legacyKeyOtherTopic": 403,
+        "crossSite": 401
+      },
+      "processes": [
+        53360,
+        46672
+      ]
+    },
+    {
+      "name": "Mia-A",
+      "hide": {
+        "responseToBlankMs": 339,
+        "commandToBlankMs": 541
+      },
+      "scope": {
+        "siteKeyOtherTopic": 200,
+        "legacyKeyOtherTopic": 403,
+        "crossSite": 401
+      },
+      "processes": [
+        53360,
+        46672
+      ]
+    },
+    {
+      "name": "Mia-B",
+      "hide": {
+        "responseToBlankMs": 305,
+        "commandToBlankMs": 522
+      },
+      "scope": {
+        "siteKeyOtherTopic": 200,
+        "legacyKeyOtherTopic": 403,
+        "crossSite": 401
+      },
+      "processes": [
+        53360,
+        46672
+      ]
+    }
+  ]
+}

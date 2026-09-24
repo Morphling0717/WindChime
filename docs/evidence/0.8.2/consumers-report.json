@@ -1,0 +1,76 @@
+[
+  {
+    "site": "Next_UliUli",
+    "node": "v20.20.2",
+    "startedAt": "2026-09-19T22:24:33.778Z",
+    "buildDirectory": ".windchime-v082-validation",
+    "steps": [
+      {
+        "name": "migrations",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0
+      },
+      {
+        "name": "mail",
+        "exitCode": 0
+      }
+    ],
+    "passed": true,
+    "finishedAt": "2026-09-19T22:24:50.992Z",
+    "isolatedDatabase": true,
+    "isolatedServerStopped": true,
+    "priorAttempts": [
+      {
+        "stage": "build",
+        "exitCode": 3221225477,
+        "report": "first-build-attempt.json",
+        "sameSourceRetry": true
+      }
+    ],
+    "package": {
+      "version": "0.8.2",
+      "sha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "integrity": "sha512-VhIplPmw+VadMdRYPasjN5LdEyzEl1nW6piCu1EnZkiUFZfz0TzE3KzQr4vgPgCHzF1j6tFGGqtIeE3L7g91gQ=="
+    },
+    "npm": "10.8.2",
+    "tsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+    "unrelatedDependenciesUnchanged": true,
+    "scope": "Isolated local production build and HTTP regression only; no production deployment or live capture."
+  },
+  {
+    "site": "Next_Mia",
+    "node": "v20.20.2",
+    "startedAt": "2026-09-19T22:23:51.508Z",
+    "buildDirectory": ".windchime-v082-validation",
+    "steps": [
+      {
+        "name": "migrations",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "exitCode": 0
+      },
+      {
+        "name": "mail",
+        "exitCode": 0
+      }
+    ],
+    "passed": true,
+    "finishedAt": "2026-09-19T22:24:06.120Z",
+    "isolatedDatabase": true,
+    "isolatedServerStopped": true,
+    "package": {
+      "version": "0.8.2",
+      "sha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "integrity": "sha512-VhIplPmw+VadMdRYPasjN5LdEyzEl1nW6piCu1EnZkiUFZfz0TzE3KzQr4vgPgCHzF1j6tFGGqtIeE3L7g91gQ=="
+    },
+    "npm": "10.8.2",
+    "tsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+    "unrelatedDependenciesUnchanged": true,
+    "scope": "Isolated local production build and HTTP regression only; no production deployment or live capture."
+  }
+]

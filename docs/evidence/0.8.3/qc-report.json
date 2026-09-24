@@ -1,0 +1,77 @@
+{
+  "atUtc": "2026-09-23T14:48:16.257Z",
+  "passed": true,
+  "runtime": {
+    "node": "v22.22.3",
+    "npm": "10.9.8",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "versions": {
+    "shared": "0.8.2",
+    "desktop": "0.8.3"
+  },
+  "desktop": {
+    "command": "npm test",
+    "tests": 137,
+    "passed": 137,
+    "failed": 0,
+    "skipped": 0,
+    "log": "desktop-tests.log",
+    "installerShortcutTests": 8,
+    "realDotNetFrameworkAndUnicodeCOM": true,
+    "cultureAssertedOnCOMThread": true,
+    "MTAAssertedInsideTaskRun": true,
+    "realInstallation": false,
+    "realUserShortcutsModified": false
+  },
+  "shared": {
+    "command": "npm test",
+    "tests": 238,
+    "passed": 238,
+    "failed": 0,
+    "skipped": 0,
+    "log": "shared-tests.log"
+  },
+  "package": {
+    "command": "npm run pack:check",
+    "passed": true,
+    "isolatedTarballInstall": true,
+    "headlessImports": true,
+    "freshSqlite": true,
+    "consumerTypecheck": true,
+    "log": "shared-pack-check.log"
+  },
+  "ci": {
+    "workflow": ".github/workflows/ci.yml",
+    "ubuntuJobPreserved": true,
+    "windowsNodeMajor": 24,
+    "pinnedLockfileInstalls": true,
+    "fullDesktopSuite": true,
+    "NSISCompilerPreloaded": true,
+    "syntaxValidatedLocally": true,
+    "githubHostedRunExecuted": false
+  },
+  "review": {
+    "areas": [
+      "display and control grant scope",
+      "parent revocation",
+      "immutable approved snapshot and source hash",
+      "queue deletion cursor and invalidation"
+    ],
+    "newConcreteDefectFound": false,
+    "sharedBusinessFilesChanged": false
+  },
+  "harnessCorrection": {
+    "observed": "A new assertion showed .NET Framework does not always flow caller culture into Task.Run; the old zh-CN MTA label alone did not prove its actual culture.",
+    "change": "Each case now sets and asserts culture on the COM-calling thread, and MTA is asserted inside Task.Run.",
+    "initialAssertionPass": 7,
+    "initialAssertionFail": 1,
+    "finalShortcutPass": 8
+  },
+  "limitations": [
+    "Unit and fixture checks do not replace final packaged EXE installation, upgrade or uninstall acceptance.",
+    "Local suite ran Node 22; the added GitHub Windows job selects Node 24 and has not run on GitHub in this task."
+  ],
+  "checkpointScope": "Early source checkpoint before hotkey fixes; see desktop-tests-final.json, ci-final-source.json and candidate-report.json for final source and current gates"
+}

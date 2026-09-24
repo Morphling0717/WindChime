@@ -1,0 +1,47 @@
+{
+  "assets": [
+    {
+      "digest": "sha256:95c9861597dad2364f7c9bf83b157479a778c30631782ed48e6a329447e9218c",
+      "name": "RELEASES",
+      "size": 80,
+      "state": "uploaded"
+    },
+    {
+      "digest": "sha256:5aab4c355d6e7ac22c092e73759136d598b0d312e10b1584ac9a9cf7604aea64",
+      "name": "SHA256SUMS.txt",
+      "size": 442,
+      "state": "uploaded"
+    },
+    {
+      "digest": "sha256:10875b28fc89930711a0bc8b572c027674548b07d9f9d8fc9b7d03371ab00316",
+      "name": "WindChime-0.8.0-full.nupkg",
+      "size": 154934108,
+      "state": "uploaded"
+    },
+    {
+      "digest": "sha256:d754cb191a07107ffa81a0b50ae6322b690481f3f720f1f131844a5f5da2d3e3",
+      "name": "windchime-embed-0.8.0.tgz",
+      "size": 16744028,
+      "state": "uploaded"
+    },
+    {
+      "digest": "sha256:c013d1ec369439aa1b0655a7ea44cfd631dfcb8b7ac0c31d0077743b7379af86",
+      "name": "WindChime-Setup.exe",
+      "size": 157397504,
+      "state": "uploaded"
+    },
+    {
+      "digest": "sha256:a49bcad4799759df819577d5437eed3313184c6ca30d9d36cc87e283cb6b60cd",
+      "name": "WindChime-win32-x64-0.8.0.zip",
+      "size": 160182789,
+      "state": "uploaded"
+    }
+  ],
+  "id": 392169764,
+  "tag_name": "v0.8.0",
+  "allUploadedAssetDigestsMatchLocal": true,
+  "checkedAt": "2026-09-19T18:15:26.648Z",
+  "phase": "Draft asset verification before final publication",
+  "draftAtVerification": true,
+  "targetCommitAtVerification": "d60aeb964f9abad3862d4f4914ec8cf910eb1d4e"
+}

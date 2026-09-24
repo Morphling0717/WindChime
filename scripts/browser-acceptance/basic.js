@@ -1,0 +1,34 @@
+assert(Array.isArray(globalThis.wcPages) && wcPages.length === wcFixtures.length, 'Run open phase and preserve the browser task first');
+for (const {p,out,f,paths} of wcPages) {
+  const check=name=>wcReport.checks.push({site:f.base,check:name});
+  await p.locator('.wc-mail').filter({hasText:'收尾粉丝 A'}).click();
+  await p.getByLabel('图片 1 说明',{exact:true}).fill('确认过的蓝色图片');
+  await p.getByLabel('图片 2 说明',{exact:true}).fill('确认过的橙色图片');
+  await p.getByRole('button',{name:'保存展示稿',exact:true}).click();
+  await expect(p.getByText('展示稿已保存',{exact:true})).toBeVisible();
+  await p.getByRole('button',{name:'批准进入待播',exact:true}).click();
+  await expect(p.locator('.wc-queue li')).toHaveCount(1);
+  await expect(out.locator('article')).toHaveCount(0);check('approve snapshot does not play');
+  await p.locator('.wc-queue li').first().getByRole('button',{name:'上屏',exact:true}).click();
+  await expect(out.locator('article')).toContainText('第一封：谢谢今天的陪伴。');
+  await expect(out.locator('article img')).toHaveCount(2);
+  await out.waitForFunction(()=>[...document.querySelectorAll('article img')].every(i=>i.complete&&i.naturalWidth>0));
+  await expect(out.locator('article')).toContainText('确认过的蓝色图片');check('manual show includes reviewed nickname text images and captions');
+  const isolation=await out.evaluate(()=>({background:getComputedStyle(document.body).backgroundColor,sw:!!navigator.serviceWorker.controller,controls:document.querySelectorAll('input,button,textarea').length}));
+  assert.equal(isolation.background,'rgba(0, 0, 0, 0)');assert.equal(isolation.sw,false);assert.equal(isolation.controls,0);
+  assert(!paths.some(p=>p.includes('/control/')||p==='/api/mail/messages'));check('transparent independent output, no controls SW or inbox requests');
+  await p.locator('.wc-mail').filter({hasText:'收尾粉丝 B'}).click();
+  await p.getByRole('button',{name:'批准进入待播',exact:true}).click();
+  await expect(p.locator('.wc-queue li')).toHaveCount(2);await expect(out.locator('article')).toContainText('第一封');
+  await p.getByRole('button',{name:'下一封 →',exact:true}).click();await expect(out.locator('article')).toContainText('第二封');
+  await p.getByRole('button',{name:'下一封 →',exact:true}).click();await expect(out.locator('article')).toHaveCount(0);
+  await expect(p.locator('.wc-queue li')).toHaveCount(2);check('manual next and queue end blank retain all approved letters');
+  await p.locator('.wc-queue li').first().getByRole('button',{name:'上屏',exact:true}).click();await expect(out.locator('article')).toContainText('第一封');
+  await out.reload({waitUntil:'domcontentloaded'});await expect(out.locator('article')).toHaveCount(0);
+  await expect(p.getByText('1 个展示端就绪',{exact:true})).toBeVisible({timeout:15000});
+  await p.locator('.wc-queue li').first().getByRole('button',{name:'上屏',exact:true}).click();await expect(out.locator('article')).toContainText('第一封');check('refresh blanks and fresh manual show works');
+  await p.locator('.wc-queue li').first().getByRole('button',{name:'撤销批准',exact:true}).click();await expect(out.locator('article')).toHaveCount(0);await expect(p.locator('.wc-queue li')).toHaveCount(1);check('revoke currently shown letter withdraws it');
+  await p.locator('.wc-queue li').first().getByRole('button',{name:'上屏',exact:true}).click();await expect(out.locator('article')).toContainText('第二封');
+  await p.getByRole('button',{name:'结束展示',exact:true}).click();await expect(out.locator('article')).toHaveCount(0);await expect(p.locator('.wc-queue li')).toHaveCount(1);check('end blanks without deleting approvals');
+}
+return wcReport;

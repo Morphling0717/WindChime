@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "at": "2026-09-13T06:16:30.445Z",
+  "origin": "https://uliuli.cn",
+  "targetHead": "fc16de50011227cd69fba064b541a38f85cf76d9",
+  "imageId": "sha256:038d370fcb95f75b6493a429bfdae89a575719f0e18d1a173140410c27a3df65",
+  "branch": "codex/windchime-desktop-v0.6.0",
+  "mainUnchanged": true,
+  "environmentPreserved": true,
+  "mountsPreserved": true,
+  "oldColumnContentsPreserved": true,
+  "originalTableCount": 34,
+  "oldGrantsRemainTopicOnly": true,
+  "keywordFilterDefaultOff": true,
+  "migrationRuns": 2,
+  "cloneManagement": {
+    "passed": true,
+    "assertions": 254,
+    "httpRequests": 188,
+    "expectedSettingsWriteException": "Only default topic updated_at; every other original topic column and all original business rows preserved; original setting values restored"
+  },
+  "resourcesVerified": 200,
+  "publicChecks": [
+    {
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "path": "/api/mail/live/capabilities",
+      "status": 200
+    },
+    {
+      "path": "/mail",
+      "status": 200
+    },
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/app",
+      "status": 200
+    },
+    {
+      "path": "/api/mail/live/control/identity",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/topics",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/messages",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/settings",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/blocklist",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/blocked-terms",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/grants",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/share",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/control/state?topicId=default",
+      "status": 401
+    },
+    {
+      "path": "/api/mail/live/display/frame?receiverId=probe",
+      "status": 401
+    },
+    {
+      "path": "/mail/live",
+      "status": 307
+    }
+  ],
+  "homepageTitles": {
+    "/": "丝瓜Uli | UliUli 主站",
+    "/app": "UliUli App Hub"
+  },
+  "buildSeconds": 480.97,
+  "stopToVerificationSeconds": 6.34,
+  "backup": "/root/windchime-deploy-backups/uliuli-070-20260913T051557Z/codes.final.sqlite",
+  "wholeDataBackup": "/root/windchime-deploy-backups/uliuli-070-20260913T051557Z/data-final",
+  "miaDeployed": false,
+  "scope": "No production fixture writes; clone uses separate database, disabled platform settings and synthetic password"
+}

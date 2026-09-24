@@ -1,0 +1,17 @@
+{
+  "name": "@windchime/live-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-only Bilibili lifecycle and display delegation gateway; never stores inbox content",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node --env-file-if-exists=.env src/main.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "node --test test/site-contract.integration.mjs",
+    "check": "node --check src/server.mjs && node --check src/bilibili.mjs && node --check src/security.mjs && node --check public/h5.mjs"
+  },
+  "dependencies": { "react":"19.3.0", "react-dom":"19.3.0" },
+  "devDependencies": { "esbuild":"0.28.2" }
+}

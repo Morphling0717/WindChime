@@ -1,0 +1,43 @@
+{
+  "utc": "2026-09-23T18:03:00.0081639Z",
+  "mode": "native",
+  "sourceDescription": "Native read-only baseline after user manually removed two test shortcuts",
+  "newInstallerRegistryKeysAbsentInBothViews": true,
+  "originalSquirrelRecordPresent": true,
+  "testShortcuts": [
+    {
+      "ordinal": 1,
+      "exists": false
+    },
+    {
+      "ordinal": 2,
+      "exists": false
+    }
+  ],
+  "protectedFileCount": 5,
+  "protectedFiles": [
+    {
+      "ordinal": 1,
+      "exists": true
+    },
+    {
+      "ordinal": 2,
+      "exists": false
+    },
+    {
+      "ordinal": 3,
+      "exists": true
+    },
+    {
+      "ordinal": 4,
+      "exists": true
+    },
+    {
+      "ordinal": 5,
+      "exists": true
+    }
+  ],
+  "registryModified": false,
+  "realUninstallerRun": false,
+  "rawPrivateReportPublished": false
+}

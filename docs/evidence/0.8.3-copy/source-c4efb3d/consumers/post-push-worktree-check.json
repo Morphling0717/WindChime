@@ -1,0 +1,26 @@
+[
+  {
+    "site": "Next_UliUli",
+    "commit": "a32e763da57b14e4df49033e789c5ea402fb22db",
+    "remoteRefs": [
+      "a32e763da57b14e4df49033e789c5ea402fb22db\trefs/heads/codex/windchime-desktop-v0.6.0",
+      "1288e3d508407699a10605bef1ccfe6dea78d26a\trefs/heads/main"
+    ],
+    "isolatedClean": true,
+    "originalHead": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+    "originalStatus": "M tsconfig.json",
+    "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67"
+  },
+  {
+    "site": "Next_Mia",
+    "commit": "4085a0a26bfe904e12328db345a885f1e5a74c8c",
+    "remoteRefs": [
+      "4085a0a26bfe904e12328db345a885f1e5a74c8c\trefs/heads/codex/live-broadcast",
+      "d457bf76e1816f7e3f5913a7e62ed5d6f0861783\trefs/heads/main"
+    ],
+    "isolatedClean": true,
+    "originalHead": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+    "originalStatus": "M tsconfig.json",
+    "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67"
+  }
+]

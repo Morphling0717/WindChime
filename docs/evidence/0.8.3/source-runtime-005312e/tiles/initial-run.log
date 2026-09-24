@@ -1,0 +1,7 @@
+
+AssertionError [ERR_ASSERTION]: inbox is initially topmost
+
+false !== true
+
+    at run (<workspace>\apps\desktop\scripts\tiles-smoke.cjs:202:12)
+tiles-smoke.cjs failed: 1

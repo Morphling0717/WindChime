@@ -1,0 +1,36 @@
+{
+  "lastFrame": {
+    "type": "request",
+    "at": "2026-09-24T00:25:36.914Z",
+    "atMs": 1790209536914,
+    "phase": "response",
+    "id": 275,
+    "method": "GET",
+    "pathname": "/api/mail/live/display/frame",
+    "startedAt": 1790209536889,
+    "finishedAt": 1790209536899,
+    "durationMs": 10,
+    "httpStatus": 200
+  },
+  "command": {
+    "type": "command-result",
+    "at": "2026-09-24T00:25:37.343Z",
+    "atMs": 1790209537343,
+    "id": "native-disconnect-c4-1",
+    "action": "disconnect",
+    "startedAt": 1790209537341,
+    "finishedAt": 1790209537343,
+    "durationMs": 2,
+    "passed": true,
+    "disconnected": true,
+    "changedAt": 1790209537342,
+    "mainMonotonicMs": 167716.9348
+  },
+  "screenshotCallAt": 1790209539520,
+  "screenshotReturnedAt": 1790209539994,
+  "callAfterLastConfirmedMs": 2631,
+  "returnAfterLastConfirmedMs": 3105,
+  "rootObservedLetterStillInCapturedFrame": true,
+  "captureInstantUnknown": true,
+  "result": "inconclusive"
+}

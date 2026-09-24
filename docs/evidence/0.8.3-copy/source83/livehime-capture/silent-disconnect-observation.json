@@ -1,0 +1,21 @@
+{
+  "sourceInput": ".work/final-display-matrix-083-GjB7HR/capture-events.jsonl",
+  "originalLine": 2760,
+  "originalLineSha256": "154f1b7f330b48468828647e769d489160157cbd46f9adb1e98f229697add8c9",
+  "type": "display-state",
+  "at": "2026-09-23T17:08:04.044Z",
+  "atMs": 1790183284044,
+  "disconnected": true,
+  "render": {
+    "cardVisible": false,
+    "theme": null,
+    "layout": null,
+    "images": 0,
+    "bodyText": "",
+    "devicePixelRatio": 1.5
+  },
+  "omittedFields": [
+    "window title, native id and handle"
+  ],
+  "limitation": "Renderer state alone does not prove what LiveHime had captured at that time."
+}

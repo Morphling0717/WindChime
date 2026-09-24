@@ -1,0 +1,36 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const os=require('node:os');
+const {execFile}=require('node:child_process');
+const {promisify}=require('node:util');
+const exec=promisify(execFile);
+test('locked payload removal preserves the real NSIS ownership marker and uninstaller for retry',{skip:process.platform!=='win32'},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'windchime-removal-fixture-'));
+ const target=path.join(root,'WindChime');await fs.mkdir(path.join(target,'resources'),{recursive:true});
+ const marker=path.join(target,'resources/windchime-install.ini'),uninstaller=path.join(target,'Uninstall WindChime.exe'),locked=path.join(target,'held-open.bin');
+ await fs.writeFile(marker,'fixture ownership marker');await fs.writeFile(uninstaller,'fixture uninstaller identity');await fs.writeFile(locked,'locked fixture payload');await fs.writeFile(path.join(target,'normal.bin'),'ordinary fixture payload');
+ const source=await fs.readFile(path.resolve(__dirname,'../installer/transaction-engine.nsi'),'utf8');
+ const actual=/^Function un\.WCRemovePayload\r?\n[\s\S]*?^FunctionEnd\r?$/m.exec(source)?.[0];assert(actual);
+ const body=actual.replaceAll('un.WCRemovePayload','FixtureRemove');
+ assert(!/^\s*(?:Exec\w*|WriteReg\w*|DeleteReg\w*|Reboot|RMDir\s+\/r)\b/m.test(body));
+ const {getMakeNsisPath}=require('app-builder-lib/out/toolsets/windows');const compiler=await getMakeNsisPath();
+ const {nsisEscapeString:escape}=require('app-builder-lib/out/targets/nsis/nsisScriptGenerator');
+ const executable=path.join(root,'RemovalFixture.exe'),script=path.join(root,'fixture.nsi');
+ await fs.writeFile(script,`Unicode true\nName "Private WindChime removal fixture"\nOutFile "${escape(executable)}"\nRequestExecutionLevel user\nSilentInstall silent\n!include LogicLib.nsh\nVar WCRemoveError\n${body}\nSection\nStrCpy $INSTDIR "${escape(target)}"\nStrCpy $WCRemoveError ""\nPush "$INSTDIR"\nCall FixtureRemove\nStrCmp $WCRemoveError "" success\nSetErrorLevel 74\nQuit\nsuccess:\nSetErrorLevel 0\nSectionEnd\n`);
+ await exec(compiler.path,['-INPUTCHARSET','UTF8','-V2',script],{windowsHide:true,timeout:30000,env:{...process.env,...compiler.env}});
+ const shell=path.join(process.env.WINDIR,'System32/WindowsPowerShell/v1.0/powershell.exe');
+ const command=String.raw`$ErrorActionPreference='Stop';$r=$env:WINDCHIME_REMOVAL_FIXTURE|ConvertFrom-Json;$lock=[IO.File]::Open($r.locked,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read);try{$p=Start-Process -FilePath $r.executable -Wait -PassThru -WindowStyle Hidden;exit $p.ExitCode}finally{$lock.Dispose()}`;
+ // This budget includes Windows PowerShell and the isolated NSIS fixture cold start.
+ // A killed or timed-out process must never count as the expected locked-file exit.
+ const lockedRemovalTimeoutMs=45000,lockedRemovalStarted=performance.now();
+ const failure=await exec(shell,['-NoProfile','-NonInteractive','-Command',command],{windowsHide:true,timeout:lockedRemovalTimeoutMs,env:{...process.env,WINDCHIME_REMOVAL_FIXTURE:JSON.stringify({locked,executable})}}).then(()=>null,error=>error);
+ const outcome={code:failure?.code,killed:failure?.killed,signal:failure?.signal};
+ const diagnostic={code:outcome.code??null,killed:outcome.killed??null,signal:outcome.signal??null,elapsedMs:Math.round(performance.now()-lockedRemovalStarted),timeoutMs:lockedRemovalTimeoutMs,stdout:String(failure?.stdout??'').slice(0,2048),stderr:String(failure?.stderr??'').slice(0,2048)};
+ assert.deepEqual(outcome,{code:74,killed:false,signal:null},`Locked payload fixture did not return its expected exit: ${JSON.stringify(diagnostic)}`);
+ assert.equal(await fs.readFile(marker,'utf8'),'fixture ownership marker');assert.equal(await fs.readFile(uninstaller,'utf8'),'fixture uninstaller identity');assert.equal(await fs.readFile(locked,'utf8'),'locked fixture payload');
+ await exec(executable,[],{windowsHide:true,timeout:15000});
+ assert.equal(await fs.readFile(marker,'utf8'),'fixture ownership marker');assert.equal(await fs.readFile(uninstaller,'utf8'),'fixture uninstaller identity');
+ await assert.rejects(fs.stat(locked),{code:'ENOENT'});await assert.rejects(fs.stat(path.join(target,'normal.bin')),{code:'ENOENT'});
+});

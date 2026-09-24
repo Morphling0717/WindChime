@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-23T17:59:14.370Z",
+  "candidateSourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "status": "awaiting-user-manual-removal-of-two-isolated-test-shortcuts",
+  "observationSource": "Explicit main verification thread handoff; the evidence collector did not query registry keys, delete shortcuts, launch installers or operate native UI.",
+  "rootReportedObservation": "The normal Explorer-launched read-only probe found both new-installer test registry keys absent while the existing Squirrel 0.8.0 installation record remained present. Both isolated test shortcuts still existed; the main thread confirmed their file hashes matched command-line reads and their targets referenced the older 6b test installation. CaptureLink protection would reject replacing those existing links.",
+  "nextStepReportedByRoot": "The main thread clarified that only the two test .lnk files should be manually removed, leaving the original WindChime untouched. The user asked whether the desktop link was included; that question is not confirmation of removal. A new empty isolated install directory is prepared but the installer has not been launched.",
+  "automaticCleanupPerformed": false,
+  "earlierAutomaticApprovalRefusalBypassed": false,
+  "nativeInstallOrUninstallPassed": false,
+  "originalUninstallFailureFixed": false,
+  "privatePathsAndRegistryKeysIncluded": false,
+  "updatedAt": "2026-09-23T18:02:19.666Z",
+  "privateSource": {
+    "path": ".work/native-baseline-probe-gAuAVT/context-explorer.json",
+    "sha256": "3e2f5d16ba5c1e234f4500a53e9bc978ea5507295324448bbb4094f2d6eaf006",
+    "rawPublished": false
+  },
+  "immediateRefusalCause": "Normal double-click context has no installation registration record for the test install. Why the earlier command-line context could read those keys remains a separate unresolved investigation.",
+  "userConfirmedShortcutRemoval": false,
+  "newInstallerStarted": false
+}

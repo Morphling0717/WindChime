@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="WindChime"><title>WindChime</title><circle cx="61" cy="11" r="4.2" fill="#FFFFFF"/>
+<path fill="#FFFFFF" d="M61 20C38 20 19 39 19 61C19 71 23 77 28 81C37 76 49 73 61 73C75 73 88 76 97 81C102 76 105 69 105 60C105 38 85 20 61 20Z"/>
+<path fill="#FFFFFF" fill-rule="evenodd" d="M28 86C43 76 80 76 97 86C82 98 44 98 28 86ZM39 86C51 91 75 92 87 86C74 82 52 82 39 86Z"/>
+<circle cx="60" cy="96" r="4" fill="#FFFFFF"/>
+<path fill="#FFFFFF" d="M58 99C48 110 52 119 70 122C60 113 59 106 60 100Z M61 100C75 105 85 111 95 122C77 119 68 111 61 100Z"/></svg>

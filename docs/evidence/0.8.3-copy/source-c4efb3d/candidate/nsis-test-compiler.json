@@ -1,0 +1,5 @@
+{
+  "path": "<user-profile>\\AppData\\Local\\electron-builder\\Cache\\nsis-3.0.4.1\\nsis-3.0.4.1-1mx3n\\Bin\\makensis.exe",
+  "sha256": "e277b7378931b74392015f5ad6b1d744dcd8a347baa4480350a75ebeab8d8e3d",
+  "source": "app-builder-lib pinned toolset, same resolver as Windows CI"
+}

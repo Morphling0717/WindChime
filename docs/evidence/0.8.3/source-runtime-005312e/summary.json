@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-09-23T14:59:18.288Z",
+  "commit": "005312e7270f391f6ac526ebe7e33ca4ac8af1fc",
+  "desktopVersion": "0.8.3",
+  "electron": "44.3.0",
+  "scope": "Existing source build, Electron main/preload/renderer; before subsequent hotkey concurrency fix. Not final packaged EXE acceptance.",
+  "management": {
+    "passed": true,
+    "checkGroups": 16,
+    "requests": 336,
+    "consoleErrors": [],
+    "backend": "Loopback synthetic HTTP fixture",
+    "posterIndependentProcessPassed": true,
+    "posterRestartChecks": 4,
+    "command": "node scripts/run-management-smoke.cjs"
+  },
+  "tiles": {
+    "passed": false,
+    "completedCheckGroups": 0,
+    "backend": "Real WindChime HTTP handlers and temporary SQLite for two synthetic sites",
+    "command": "node scripts/run-tiles-smoke.cjs",
+    "failure": "inbox is initially topmost: isAlwaysOnTop() returned false",
+    "causeConfirmed": false,
+    "restartHarnessExecuted": false,
+    "oldSeptember19ReportsExcluded": true,
+    "notes": "Stopped native diagnostics at root request before installation; no runtime or harness changes made. Rerun required after final hotkey fix; investigate initial topmost failure."
+  },
+  "privacy": {
+    "temporaryProfilesOnly": true,
+    "syntheticContentOnly": true,
+    "userInstanceModified": false,
+    "credentialsPublished": false
+  },
+  "processes": {
+    "fixtureElectronProcessesExited": true,
+    "newElectronLaunchesPausedForNativeQC": true
+  },
+  "finalAcceptance": false
+}

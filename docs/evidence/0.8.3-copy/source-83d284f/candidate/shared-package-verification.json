@@ -1,0 +1,76 @@
+{
+  "startedAt": "2026-09-23T15:46:33.542Z",
+  "passed": true,
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "artifact": {
+    "name": "windchime-embed-0.8.3.tgz",
+    "sha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865",
+    "bytes": 31415194
+  },
+  "runtime": {
+    "node": "v20.20.2",
+    "npm": "10.9.8",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "checks": [
+    {
+      "name": "install",
+      "exitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "imports-sqlite",
+      "exitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "typed-consumer",
+      "exitCode": 0,
+      "passed": true
+    }
+  ],
+  "separateTemporaryInstall": true,
+  "tarballRepacked": false,
+  "productionDataAccessed": false,
+  "package": {
+    "name": "@windchime/embed",
+    "version": "0.8.3",
+    "license": "MIT",
+    "licenseFilePresent": true
+  },
+  "lockIntegrityMatched": true,
+  "headlessEntries": [
+    "core",
+    "client",
+    "react",
+    "server",
+    "sqlite",
+    "next",
+    "media",
+    "broadcast"
+  ],
+  "finishedAt": "2026-09-23T15:46:46.956Z",
+  "schemaVersion": 1,
+  "packageName": "@windchime/embed",
+  "version": "0.8.3",
+  "license": "MIT",
+  "sourceTree": "6e569f3c770feecf824cd668b6898f468d73c16d",
+  "commands": [
+    "Node 20.20.2 / npm 10.9.8: install exact windchime-embed-0.8.3.tgz with sqlite3 6.0.1, React/React DOM 19.2.8, qrcode 1.5.4, TypeScript 5.9.3, @types/react 19.2.14, @types/node 20.19.43",
+    "node smoke.mjs: eight headless imports and fresh SQLite service/public DTO checks",
+    "node node_modules/typescript/bin/tsc --noEmit --strict --skipLibCheck --jsx react-jsx --module NodeNext --moduleResolution NodeNext --target ES2022 types.tsx"
+  ],
+  "verificationSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "verificationSourceTree": "8ab8650c7763758386db6a36a73fc5d6a8102d04",
+  "verificationMethod": "same exact TGZ bytes; original validation retained, new source reproduced",
+  "reproducedAt": "2026-09-23T16:00:47.081Z",
+  "originalVerificationReport": {
+    "name": "shared-package-verification.original.json",
+    "sha256": "de0516f210a0e277e4970de0dd3dd7dfae1e5d0c5ded080094199a24e83bd636"
+  },
+  "reproductionReport": {
+    "name": "shared-package-reproduction.json",
+    "sha256": "6efa8345e06cac6af810f4dcda430bbdf46099d9682dfd75c27998aa4a3ba5d3"
+  }
+}

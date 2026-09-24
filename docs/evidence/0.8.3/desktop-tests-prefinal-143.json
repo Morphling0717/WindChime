@@ -1,0 +1,87 @@
+{
+  "recordedAt": "2026-09-23T15:08:24.438Z",
+  "command": "npm test",
+  "workingDirectory": "apps/desktop",
+  "versions": {
+    "desktop": "0.8.3",
+    "shared": "0.8.2",
+    "node": "v22.22.3",
+    "npm": "10.9.8"
+  },
+  "platform": "win32",
+  "arch": "x64",
+  "tests": 143,
+  "passed": 143,
+  "failed": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "durationMs": 18005.2519,
+  "buildPassed": true,
+  "fullSuite": true,
+  "sourceChangedByThisRun": false,
+  "realElectronStarted": false,
+  "foregroundInterfaceStarted": false,
+  "fixtures": "Temporary .NET/Unicode COM and silent NSIS fixtures plus mocked Electron lifecycle/security. No user installation or shortcuts changed.",
+  "log": "desktop-tests-prefinal-143.log",
+  "github": {
+    "run": 35878571008,
+    "commit": "4315c684adaa7c3cd2e7d3fa5d177923b7e82703",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Morphling0717/WindChime/actions/runs/35878571008",
+    "jobs": [
+      {
+        "id": 107240797896,
+        "name": "verify (20)",
+        "conclusion": "success"
+      },
+      {
+        "id": 107240797942,
+        "name": "desktop-windows",
+        "conclusion": "success"
+      },
+      {
+        "id": 107240798128,
+        "name": "verify (24)",
+        "conclusion": "success"
+      }
+    ],
+    "windowsTests": {
+      "tests": 137,
+      "passed": 137,
+      "failed": 0,
+      "skipped": 0,
+      "node": "24.20.0",
+      "npm": "11.19.0",
+      "includesSubsequentHotkeyFix": false,
+      "evidence": "ci-4315c68-windows-summary.log"
+    }
+  },
+  "limitations": [
+    "Final packaged installer/native capture and magnetic-tile topmost rerun remain separate; this pass does not claim those checks.",
+    "Foreground tests stayed paused after the user Escape stop.",
+    "GitHub 4315c68 checks covered 137 desktop tests before the currently uncommitted hotkey fix; local final run covered 143. A new CI run is needed after committing that fix.",
+    "Parent reported additional review of whether a newly registered candidate shortcut can trigger nextLetter before configuration commits; further edits and another final run may be required. This checkpoint must not be presented as the final released source."
+  ],
+  "baseCommit": "4315c684adaa7c3cd2e7d3fa5d177923b7e82703",
+  "testedWorkingTreeIncludesUncommittedHotkeyFix": true,
+  "sourceSnapshot": {
+    "apps/desktop/main.cjs": "f65409ddf387b0e7ab38be920053efc3aad272a9e11594b07d386d524be76919",
+    "apps/desktop/tests/lifecycle.test.cjs": "57a1ba50882dfaec807efa5e366997d18f065bfecdabee8b3616a813e61a2702",
+    "apps/desktop/scripts/tiles-smoke.cjs": "4cec4d5b5225be178f1c12710e0389f3790ece3c9f16d3c833c4814c39e88df8",
+    "apps/desktop/tests/installer-policy.test.cjs": "0c102b5d414b78689c1d8b96edb71c47e4fee6714677b4fbf5da22842f11405e"
+  },
+  "validationStage": "pre-final 143-test checkpoint; candidate under additional hotkey callback review",
+  "workingTreeChanges": [
+    {
+      "file": "apps/desktop/main.cjs",
+      "sha256": "f65409ddf387b0e7ab38be920053efc3aad272a9e11594b07d386d524be76919"
+    },
+    {
+      "file": "apps/desktop/tests/lifecycle.test.cjs",
+      "sha256": "57a1ba50882dfaec807efa5e366997d18f065bfecdabee8b3616a813e61a2702"
+    }
+  ],
+  "runtimeSourceFrozenForRelease": false,
+  "finalReleaseAcceptance": false
+}

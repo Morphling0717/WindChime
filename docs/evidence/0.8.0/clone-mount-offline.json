@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "at": "2026-09-19T18:32:02.255352+00:00",
+  "cases": 6,
+  "checks": [
+    "Exact three isolated bind mounts with data RW and both verified public paths RO accepted",
+    "Extra anonymous volume rejected",
+    "Writable public mount rejected",
+    "Missing public mount rejected",
+    "Production public source rejected",
+    "Read-only data mount rejected"
+  ],
+  "helperSha256": "cf40446091ae9b61a5435ad79c02714dbc74c200db8a45793a981ab3ea15c330",
+  "networkOrDockerCalls": false,
+  "productionDataTouched": false
+}

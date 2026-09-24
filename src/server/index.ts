@@ -9,8 +9,13 @@ import type {
 } from "../sqlite/index.js";
 import { createTopicOperations } from "./topics.js";
 import { createMessageOperations } from "./messages.js";
+import { readBlockedTermsEnabled } from "./keyword-settings.js";
 import { getWindChimeClientIp } from "./identity.js";
 import { boolInput, fail } from "./validation.js";
+import { createWindChimeBroadcast } from "./live.js";
+import { cleanupLiveMedia, saveLiveUpload } from "./live-media.js";
+export { readLiveAsset } from "./live-media.js";
+export type { LiveGrantRow, LiveProof } from "./live.js";
 export {
   getWindChimeClientIp,
   computeWindChimeSenderIdentity,
@@ -28,6 +33,8 @@ export type WindChimeServiceOptions = {
   ready?: () => Promise<unknown>;
   fetch?: typeof fetch;
   now?: () => number;
+  /** Test/embedded runtime override. Defaults to a fresh identity per Node process. */
+  runtimeEpoch?: string;
 };
 /** Server-only service. Authorization belongs to the host/route adapter; do not expose methods directly to public server actions. */
 export function createWindChimeService(options: WindChimeServiceOptions) {
@@ -64,6 +71,19 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
   async function getBlockedTerms() {
     await ready();
     return readTerms(storage);
+  }
+  async function getBlockedTermsEnabled() {
+    await ready();
+    return readBlockedTermsEnabled(storage);
+  }
+  async function setBlockedTermsEnabled(value: boolean) {
+    boolInput(value, "blockedTermsEnabled");
+    await ready();
+    await storage.run(
+      "INSERT INTO mail_settings(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+      ["mail.blocked_terms_enabled", JSON.stringify(value), new Date(now()).toISOString()],
+    );
+    return getSettings();
   }
   async function setBlockedTerms(terms: string[]): Promise<string[]> {
     if (!Array.isArray(terms) || terms.some((term) => typeof term !== "string"))
@@ -118,17 +138,49 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
     getBlockedTerms: readTerms,
     verifyTurnstile,
   });
+  const live = createWindChimeBroadcast({ storage, ready, now, runtimeEpoch: options.runtimeEpoch });
+  const broadcast = {
+    ...live,
+    upload: async (req: Request, topicId: string, files: Uint8Array[], directory: string, token: string | null) => {
+      if (!files.length || files.length > 3) fail("INVALID_ATTACHMENTS", "每次上传 1 至 3 张图片");
+      await ready();
+      await live.rateLimit("upload:" + getClientIp(req), 10, 60000);
+      await verifyTurnstile(req, token);
+      const topic = (await topics.getTopicById(topicId)) ?? (await topics.getTopicBySlug(topicId));
+      if (!topic || !topic.isEnabledNow) fail("TOPIC_UNAVAILABLE", "当前信箱不接受投稿", 423);
+      await cleanupLiveMedia(storage, directory, now());
+      const attachments = [];
+      for (const bytes of files) attachments.push(await saveLiveUpload(storage, topic.id, bytes, directory, now()));
+      return { ...(attachments.length === 1 ? attachments[0] : {}), attachments };
+    },
+    cleanupMedia: (directory: string) => cleanupLiveMedia(storage, directory, now()),
+    uploadReview: async (req: Request, topicId: string, messageId: string, files: Uint8Array[], directory: string) => {
+      if (!files.length || files.length > 3) fail("INVALID_ATTACHMENTS", "每次上传 1 至 3 张图片");
+      await ready(); await live.rateLimit("review-upload:" + getClientIp(req), 20, 60000);
+      const topic = (await topics.getTopicById(topicId)) ?? (await topics.getTopicBySlug(topicId));
+      if (!topic || topic.archivedAt) fail("TOPIC_UNAVAILABLE", "当前信箱不可编辑", 423);
+      await messages.getMessage(messageId, topic.id);
+      await cleanupLiveMedia(storage, directory, now());
+      const attachments = [];
+      for (const bytes of files) {
+        const { receipt: _receipt, ...asset } = await saveLiveUpload(storage, topic.id, bytes, directory, now(), messageId);
+        attachments.push({ ...asset, caption: "" });
+      }
+      return { ...(attachments.length === 1 ? attachments[0] : {}), attachments };
+    },
+    clientIp: getClientIp,
+  };
   async function getSettings() {
     const topic = await topics.getDefaultTopic();
     if (!topic) fail("NOT_INITIALIZED", "默认主题未初始化", 503);
-    return { enabled: topic.isEnabled };
+    return { enabled: topic.isEnabled, blockedTermsEnabled: await getBlockedTermsEnabled() };
   }
   async function updateSettings(input: { enabled: boolean }) {
     boolInput(input.enabled, "enabled");
     const topic = await topics.updateTopic("default", {
       isEnabled: input.enabled,
     });
-    return { enabled: topic.isEnabled };
+    return { enabled: topic.isEnabled, blockedTermsEnabled: await getBlockedTermsEnabled() };
   }
   // Legacy blocklist previews have no source message ID. Only expose a preview
   // when its sender and text prefix still match an unflagged original, and no
@@ -168,10 +220,13 @@ export function createWindChimeService(options: WindChimeServiceOptions) {
   }
   return {
     ready,
+    broadcast,
     ...topics,
     ...messages,
     getBlockedTerms,
     setBlockedTerms,
+    getBlockedTermsEnabled,
+    setBlockedTermsEnabled,
     getSettings,
     updateSettings,
     listBlockedSenders,

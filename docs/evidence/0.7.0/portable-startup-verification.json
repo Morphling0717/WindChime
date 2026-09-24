@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "testedAt": "2026-09-13T06:01:40.534Z",
+  "hostNode": "v22.22.3",
+  "os": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64"
+  },
+  "archive": "C:\\Users\\ASUS\\Documents\\ChatGPT\\风铃\\WindChime\\apps\\desktop\\out\\installers\\WindChime-win32-x64-0.7.0.zip",
+  "temporary": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-v070-lQVpFM",
+  "profile": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-v070-lQVpFM\\profile",
+  "processId": 44480,
+  "version": "0.7.0",
+  "electron": "44.3.0",
+  "node": "24.20.0",
+  "packaged": true,
+  "userData": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-v070-lQVpFM\\profile",
+  "exe": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-v070-lQVpFM\\portable\\WindChime.exe",
+  "windows": [
+    {
+      "title": "风铃 · 私人控制台",
+      "visible": false,
+      "url": "file:///C:/Users/ASUS/AppData/Local/Temp/windchime-portable-v070-lQVpFM/portable/resources/app.asar/build/control.html"
+    }
+  ],
+  "preferences": {
+    "sandbox": true,
+    "contextIsolation": true,
+    "nodeIntegration": false
+  },
+  "storagePath": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-portable-v070-lQVpFM\\profile\\Partitions\\windchime-private",
+  "screenshotPath": "C:\\Users\\ASUS\\Documents\\ChatGPT\\风铃\\WindChime\\apps\\desktop\\out\\installers\\portable-startup.png",
+  "checks": [
+    "New portable ZIP extracted into a unique temporary directory; no installer or uninstall executed",
+    "Packaged version 0.7.0 launches its own isolated userData, not an installed application profile",
+    "Exactly one private control window; no automatic display output opened",
+    "Approved brand asset and connection-key interface render from packaged ASAR",
+    "Private renderer sandbox/context isolation enabled; Node integration disabled",
+    "Closing private window retains independent tray process; reopening works",
+    "Fresh profile has no prior connection inputs or encrypted device vault"
+  ],
+  "limitations": [
+    "Does not verify installer execution or uninstall",
+    "Does not verify real OBS or LiveHime window capture"
+  ],
+  "gracefulExit": true,
+  "unhandledRuntimeErrors": false
+}

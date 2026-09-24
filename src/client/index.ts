@@ -9,7 +9,9 @@ import type {
   WindChimeTopicArchiveResponse,
   WindChimePublicTopic,
   WindChimeAdminTopic,
+  WindChimeSettings,
 } from "../core/index.js";
+export * from './live.js';
 import { WindChimeError, toWindChimePublicTopic } from "../core/index.js";
 export type { WindChimeCounts, WindChimeMessageList } from "../core/index.js";
 import type { WindChimeMessageList } from "../core/index.js";
@@ -324,9 +326,9 @@ export function createWindChimeClient(options: WindChimeClientOptions = {}) {
     },
     settings: {
       get: (opts?: Pick<WindChimeRequestOptions, "signal">) =>
-        request<{ enabled: boolean }>("/settings", "GET", undefined, opts),
+        request<WindChimeSettings>("/settings", "GET", undefined, opts),
       set: (enabled: boolean) =>
-        mutate<{ enabled: boolean }>(
+        mutate<WindChimeSettings>(
           ["settings", "topics"],
           "/settings",
           "PUT",

@@ -12,4 +12,20 @@ examples/**/data/
 examples/**/.next/
 
 .windchime-build/
+.windchime-previous-*/
 .validation/
+.work/
+
+# Local credentials, signing material and runtime databases.
+.env
+.env.local
+.env.*.local
+*.enc
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.pfx
+*.p12

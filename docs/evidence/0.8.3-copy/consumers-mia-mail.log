@@ -1,0 +1,4 @@
+Next_Mia: 0.8 six layouts, fixed image allocation, shared state and no automatic output passed.
+0.8.2 HTTP: unrelated deletion preserves output; removed tail, reordered cursor and reapproval never wrap or autoplay.
+0.8.1 HTTP: approval/manual output, handshake conflicts, hide/revoke/edit withdrawal and read-only/topic isolation passed.
+Next_Mia: original session + legacy auth, public DTO/SSR privacy, submission, inbox filters, topic isolation, favorite, archive/restore, review, batches, block/unblock and settings passed.

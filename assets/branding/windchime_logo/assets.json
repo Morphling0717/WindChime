@@ -1,0 +1,774 @@
+[
+  {
+    "file": "01_Glass/WindChime_symbol_glass.png",
+    "name_zh": "琉璃主图形 · 透明底",
+    "purpose": "网站主视觉、海报、较大尺寸展示",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "由选定原稿分离，原生导出尺寸617×1081；非3D源文件",
+    "width": 617,
+    "height": 1081,
+    "alpha": true
+  },
+  {
+    "file": "01_Glass/WindChime_symbol_glass.webp",
+    "name_zh": "琉璃主图形 · WebP",
+    "purpose": "网页加载",
+    "format": "WEBP",
+    "kind": "raster",
+    "note": "与PNG同源，保留透明通道",
+    "width": 617,
+    "height": 1081,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_navy.svg",
+    "name_zh": "同源单色主图形 / navy",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_navy.png",
+    "name_zh": "同源单色主图形 / navy",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 800,
+    "height": 1369,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_navy.pdf",
+    "name_zh": "同源单色主图形 / navy",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_black.svg",
+    "name_zh": "同源单色主图形 / black",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_black.png",
+    "name_zh": "同源单色主图形 / black",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 800,
+    "height": 1369,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_black.pdf",
+    "name_zh": "同源单色主图形 / black",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_white.svg",
+    "name_zh": "同源单色主图形 / white",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_white.png",
+    "name_zh": "同源单色主图形 / white",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 800,
+    "height": 1369,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_mono_white.pdf",
+    "name_zh": "同源单色主图形 / white",
+    "purpose": "印刷、烫印、刻字及单色场景",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_navy.svg",
+    "name_zh": "小尺寸简化图形 / navy",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_navy.png",
+    "name_zh": "小尺寸简化图形 / navy",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 512,
+    "height": 512,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_black.svg",
+    "name_zh": "小尺寸简化图形 / black",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_black.png",
+    "name_zh": "小尺寸简化图形 / black",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 512,
+    "height": 512,
+    "alpha": true
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_white.svg",
+    "name_zh": "小尺寸简化图形 / white",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "04_Monochrome/WindChime_symbol_small_white.png",
+    "name_zh": "小尺寸简化图形 / white",
+    "purpose": "导航栏、浏览器标签、小尺寸图标",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 512,
+    "height": 512,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_color.png",
+    "name_zh": "原稿中英文字标 · 彩色",
+    "purpose": "独立字标、页尾、品牌署名",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 495,
+    "height": 285,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_chinese_color.png",
+    "name_zh": "原稿中文字标 · 彩色",
+    "purpose": "中文标题、中文品牌署名",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 471,
+    "height": 189,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_english_color.png",
+    "name_zh": "原稿英文字标 · 彩色",
+    "purpose": "英文品牌署名",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 355,
+    "height": 58,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_navy.svg",
+    "name_zh": "中英文字标 · 描摹路径 / navy",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_navy.png",
+    "name_zh": "中英文字标 · 描摹路径 / navy",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1000,
+    "height": 576,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_navy.pdf",
+    "name_zh": "中英文字标 · 描摹路径 / navy",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_white.svg",
+    "name_zh": "中英文字标 · 描摹路径 / white",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_white.png",
+    "name_zh": "中英文字标 · 描摹路径 / white",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1000,
+    "height": 576,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_bilingual_white.pdf",
+    "name_zh": "中英文字标 · 描摹路径 / white",
+    "purpose": "独立字标、印刷及深浅背景",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_english_navy.svg",
+    "name_zh": "英文字标 · 描摹路径 / navy",
+    "purpose": "英文导航、项目署名",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_english_navy.png",
+    "name_zh": "英文字标 · 描摹路径 / navy",
+    "purpose": "英文导航、项目署名",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1065,
+    "height": 174,
+    "alpha": true
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_english_white.svg",
+    "name_zh": "英文字标 · 描摹路径 / white",
+    "purpose": "英文导航、项目署名",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "03_Wordmarks/WindChime_wordmark_english_white.png",
+    "name_zh": "英文字标 · 描摹路径 / white",
+    "purpose": "英文导航、项目署名",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1065,
+    "height": 174,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_glass_light.png",
+    "name_zh": "琉璃横版组合 · 浅底用",
+    "purpose": "网站、横向海报、文档页眉",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 640,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_glass_light.webp",
+    "name_zh": "琉璃横版组合 · light WebP",
+    "purpose": "网页加载",
+    "format": "WEBP",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 640,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_glass_light.png",
+    "name_zh": "琉璃竖版组合 · 浅底用",
+    "purpose": "启动页、竖版海报、登录页",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 760,
+    "height": 1340,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_english_light.png",
+    "name_zh": "英文横版组合 · light",
+    "purpose": "英文页面、项目介绍",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1000,
+    "height": 380,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_glass_dark.png",
+    "name_zh": "琉璃横版组合 · 深底用",
+    "purpose": "网站、横向海报、文档页眉",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 640,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_glass_dark.webp",
+    "name_zh": "琉璃横版组合 · dark WebP",
+    "purpose": "网页加载",
+    "format": "WEBP",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 640,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_glass_dark.png",
+    "name_zh": "琉璃竖版组合 · 深底用",
+    "purpose": "启动页、竖版海报、登录页",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 760,
+    "height": 1340,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_english_dark.png",
+    "name_zh": "英文横版组合 · dark",
+    "purpose": "英文页面、项目介绍",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1000,
+    "height": 380,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_black.svg",
+    "name_zh": "单色横版组合 / black",
+    "purpose": "合同、信头、单色印刷",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_black.png",
+    "name_zh": "单色横版组合 / black",
+    "purpose": "合同、信头、单色印刷",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1650,
+    "height": 930,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_black.pdf",
+    "name_zh": "单色横版组合 / black",
+    "purpose": "合同、信头、单色印刷",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_white.svg",
+    "name_zh": "单色横版组合 / white",
+    "purpose": "合同、信头、单色印刷",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_white.png",
+    "name_zh": "单色横版组合 / white",
+    "purpose": "合同、信头、单色印刷",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1650,
+    "height": 930,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_horizontal_mono_white.pdf",
+    "name_zh": "单色横版组合 / white",
+    "purpose": "合同、信头、单色印刷",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_black.svg",
+    "name_zh": "单色竖版组合 / black",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_black.png",
+    "name_zh": "单色竖版组合 / black",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1000,
+    "height": 1361,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_black.pdf",
+    "name_zh": "单色竖版组合 / black",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_white.svg",
+    "name_zh": "单色竖版组合 / white",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_white.png",
+    "name_zh": "单色竖版组合 / white",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 1000,
+    "height": 1361,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_stacked_mono_white.pdf",
+    "name_zh": "单色竖版组合 / white",
+    "purpose": "竖版物料、压印与单色展示",
+    "format": "PDF",
+    "kind": "vector",
+    "note": "矢量PDF；白色版本的白页预览可能不可见"
+  },
+  {
+    "file": "02_Lockups/WindChime_header_navy.svg",
+    "name_zh": "导航栏简化组合 / navy",
+    "purpose": "网站导航栏、邮件页眉",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_header_navy.png",
+    "name_zh": "导航栏简化组合 / navy",
+    "purpose": "网站导航栏、邮件页眉",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 972,
+    "height": 188,
+    "alpha": true
+  },
+  {
+    "file": "02_Lockups/WindChime_header_white.svg",
+    "name_zh": "导航栏简化组合 / white",
+    "purpose": "网站导航栏、邮件页眉",
+    "format": "SVG",
+    "kind": "vector",
+    "note": "路径文件，不含嵌入位图或字体"
+  },
+  {
+    "file": "02_Lockups/WindChime_header_white.png",
+    "name_zh": "导航栏简化组合 / white",
+    "purpose": "网站导航栏、邮件页眉",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "透明底，由矢量导出",
+    "width": 972,
+    "height": 188,
+    "alpha": true
+  },
+  {
+    "file": "05_App_Icons/WindChime_app_light_1024.png",
+    "name_zh": "应用图标 · light · 1024",
+    "purpose": "应用图标母版；方形满版，由应用平台裁切",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1024,
+    "height": 1024,
+    "alpha": false
+  },
+  {
+    "file": "05_App_Icons/WindChime_app_light_512.png",
+    "name_zh": "应用图标 · light · 512",
+    "purpose": "桌面图标、网页应用",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 512,
+    "height": 512,
+    "alpha": false
+  },
+  {
+    "file": "07_Social/WindChime_avatar_light_800.png",
+    "name_zh": "头像 · light",
+    "purpose": "平台头像、圆形裁切安全版",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 800,
+    "height": 800,
+    "alpha": false
+  },
+  {
+    "file": "05_App_Icons/WindChime_app_dark_1024.png",
+    "name_zh": "应用图标 · dark · 1024",
+    "purpose": "应用图标母版；方形满版，由应用平台裁切",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1024,
+    "height": 1024,
+    "alpha": false
+  },
+  {
+    "file": "05_App_Icons/WindChime_app_dark_512.png",
+    "name_zh": "应用图标 · dark · 512",
+    "purpose": "桌面图标、网页应用",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 512,
+    "height": 512,
+    "alpha": false
+  },
+  {
+    "file": "07_Social/WindChime_avatar_dark_800.png",
+    "name_zh": "头像 · dark",
+    "purpose": "平台头像、圆形裁切安全版",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 800,
+    "height": 800,
+    "alpha": false
+  },
+  {
+    "file": "06_Web_Favicons/icon-192.png",
+    "name_zh": "网页应用图标 · 192",
+    "purpose": "网页应用、站点安装图标",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 192,
+    "height": 192,
+    "alpha": false
+  },
+  {
+    "file": "06_Web_Favicons/icon-512.png",
+    "name_zh": "网页应用图标 · 512",
+    "purpose": "网页应用、站点安装图标",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 512,
+    "height": 512,
+    "alpha": false
+  },
+  {
+    "file": "06_Web_Favicons/icon-maskable-512.png",
+    "name_zh": "网页应用可裁切图标",
+    "purpose": "PWA maskable 图标，图形置于中央安全区",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 512,
+    "height": 512,
+    "alpha": false
+  },
+  {
+    "file": "06_Web_Favicons/apple-touch-icon.png",
+    "name_zh": "手机网页收藏图标",
+    "purpose": "手机网页收藏与主屏幕入口",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 180,
+    "height": 180,
+    "alpha": false
+  },
+  {
+    "file": "06_Web_Favicons/favicon.svg",
+    "name_zh": "自适应深浅色网站图标",
+    "purpose": "现代浏览器标签页",
+    "format": "SVG",
+    "kind": "vector",
+    "note": ""
+  },
+  {
+    "file": "06_Web_Favicons/favicon-16.png",
+    "name_zh": "网站图标 · 16px",
+    "purpose": "浏览器标签页与兼容场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 16,
+    "height": 16,
+    "alpha": true
+  },
+  {
+    "file": "06_Web_Favicons/favicon-32.png",
+    "name_zh": "网站图标 · 32px",
+    "purpose": "浏览器标签页与兼容场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 32,
+    "height": 32,
+    "alpha": true
+  },
+  {
+    "file": "06_Web_Favicons/favicon-48.png",
+    "name_zh": "网站图标 · 48px",
+    "purpose": "浏览器标签页与兼容场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 48,
+    "height": 48,
+    "alpha": true
+  },
+  {
+    "file": "06_Web_Favicons/favicon-64.png",
+    "name_zh": "网站图标 · 64px",
+    "purpose": "浏览器标签页与兼容场景",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 64,
+    "height": 64,
+    "alpha": true
+  },
+  {
+    "file": "06_Web_Favicons/favicon.ico",
+    "name_zh": "多尺寸 ICO 网站图标",
+    "purpose": "传统浏览器及兼容入口",
+    "format": "ICO",
+    "kind": "raster",
+    "note": ""
+  },
+  {
+    "file": "06_Web_Favicons/site.webmanifest",
+    "name_zh": "网站图标配置示例",
+    "purpose": "将本文件夹复制到public/brand；按实际部署修改路径",
+    "format": "WEBMANIFEST",
+    "kind": "config",
+    "note": ""
+  },
+  {
+    "file": "07_Social/WindChime_share_light_1200x630.png",
+    "name_zh": "分享封面 · light",
+    "purpose": "网页分享卡片、项目介绍封面",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 630,
+    "alpha": false
+  },
+  {
+    "file": "07_Social/WindChime_share_dark_1200x630.png",
+    "name_zh": "分享封面 · dark",
+    "purpose": "网页分享卡片、项目介绍封面",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1200,
+    "height": 630,
+    "alpha": false
+  },
+  {
+    "file": "07_Social/WindChime_banner_1600x600.png",
+    "name_zh": "横幅封面",
+    "purpose": "项目页横幅、社区主页封面",
+    "format": "PNG",
+    "kind": "raster",
+    "note": "",
+    "width": 1600,
+    "height": 600,
+    "alpha": false
+  },
+  {
+    "file": "09_Source_Reference/Approved_Concept_Reference.png",
+    "name_zh": "选定原稿 · 仅作参考",
+    "purpose": "对照最初选定的第二款，不作为可拆层源文件",
+    "format": "PNG",
+    "kind": "reference",
+    "note": "",
+    "width": 1254,
+    "height": 1254,
+    "alpha": false
+  },
+  {
+    "file": "08_Guidelines/brand-colors.json",
+    "name_zh": "品牌色 JSON",
+    "purpose": "网页、开发端色彩配置",
+    "format": "JSON",
+    "kind": "config",
+    "note": ""
+  },
+  {
+    "file": "08_Guidelines/brand-tokens.css",
+    "name_zh": "品牌色 CSS",
+    "purpose": "网页样式接入",
+    "format": "CSS",
+    "kind": "config",
+    "note": ""
+  },
+  {
+    "file": "08_Guidelines/WindChime_Brand_Guide.pdf",
+    "name_zh": "品牌资产使用说明",
+    "purpose": "文件选择、背景、尺寸、图标、色彩与制作边界",
+    "format": "PDF",
+    "kind": "guide",
+    "note": "5页"
+  },
+  {
+    "file": "README_先读我.md",
+    "name_zh": "先读我",
+    "purpose": "交付说明与快速选用",
+    "format": "MD",
+    "kind": "guide"
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "testedAt": "2026-09-13T05:37:09.229Z",
+  "task": "windchime-web070",
+  "scope": "Real Tabbit browser, two isolated local production builds, synthetic databases only. No production data or deployment.",
+  "sites": [
+    {
+      "origin": "http://127.0.0.1:3031",
+      "topicTitle": "网页验收 Uli",
+      "checks": [
+        "legacy-redirect",
+        "login",
+        "keys-on-mail",
+        "keywords-hidden",
+        "topic-create-ui",
+        "draft-survives-two-polls",
+        "site-key-mint-ui",
+        "server-identity-site-scope",
+        "topic-switch-clears-key",
+        "historical-flagged-readable-when-disabled",
+        "keyword-on-synchronized",
+        "keyword-off-closes-raw-modal-and-restores-inbox",
+        "global-entry-hidden-off",
+        "old-pairing-ui",
+        "legacy-topic-key-cannot-toggle-site-settings",
+        "site-key-revoke-ui-and-identity-401",
+        "logout-clears-key-and-relogin-does-not-restore"
+      ],
+      "checkCount": 17,
+      "screenshot": "uli-mail-web.png"
+    },
+    {
+      "origin": "http://127.0.0.1:3032",
+      "topicTitle": "网页验收 Mia",
+      "checks": [
+        "legacy-redirect",
+        "login",
+        "keys-on-mail",
+        "keywords-hidden",
+        "topic-create-ui",
+        "draft-survives-two-polls",
+        "site-key-mint-ui",
+        "server-identity-site-scope",
+        "topic-switch-clears-key",
+        "historical-flagged-readable-when-disabled",
+        "keyword-on-synchronized",
+        "keyword-off-closes-raw-modal-and-restores-inbox",
+        "global-entry-hidden-off",
+        "old-pairing-ui",
+        "legacy-topic-key-cannot-toggle-site-settings",
+        "site-key-revoke-ui-and-identity-401",
+        "logout-clears-key-and-relogin-does-not-restore"
+      ],
+      "checkCount": 17,
+      "screenshot": "mia-mail-web.png"
+    }
+  ],
+  "pageErrors": [],
+  "notes": [
+    "Both pages reported visible. Draft retention observed across at least two actual topics poll responses, not a fixed-delay-only assertion.",
+    "Site-scope settings PATCH simulated the authorized desktop API operation; web contains no toggle.",
+    "Keyword-disabled historical records preserve isFlagged=true in server data while rendering original text normally.",
+    "Legacy pairing approved through real browser UI retains topic scope and cannot modify global keyword settings (403).",
+    "Site key revocation through browser UI causes control identity 401. Logout and topic switch clear the one-time secret.",
+    "Screenshots inspected visually; no full connection keys visible. Site themes and existing modules retained. Uli existing PWA update banner remains in private website.",
+    "Four confirmation dialogs were expected revoke confirmations and accepted only for synthetic grants.",
+    "No native desktop, capture, installer, or production-browser verification is claimed by this report."
+  ]
+}

@@ -1,0 +1,3 @@
+Next_Mia fresh: both CLI migration runs passed; mailbox, host data, grant scope/hash/expiry/revocation retained
+Next_Mia legacy: both CLI migration runs passed; mailbox, host data, grant scope/hash/expiry/revocation retained
+Next_Mia current: both CLI migration runs passed; mailbox, host data, grant scope/hash/expiry/revocation retained

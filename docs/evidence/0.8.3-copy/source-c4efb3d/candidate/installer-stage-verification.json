@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "version": "0.8.3",
+  "testedAt": "2026-09-23T17:44:51.960Z",
+  "stage": "<user-profile>\\AppData\\Local\\Temp\\windchime-make-sgyz2W",
+  "temporary": "<user-profile>\\AppData\\Local\\Temp\\windchime-full-stage-fixture-RMtZim",
+  "elapsedMs": 12276,
+  "payloadFilesMatched": 75,
+  "engineSha256": "2d82001fc588949f035b05de89f5b77957322193231680915eab9c306531e9b5",
+  "existingSyntheticProgramUnchanged": true,
+  "executedStageOnlyEngine": true,
+  "executedPublicSetup": false,
+  "registeredApplication": false,
+  "executedUninstaller": false,
+  "limitations": [
+    "This verifies full extraction only; Windows registry/shortcut install and uninstall have not been performed."
+  ]
+}

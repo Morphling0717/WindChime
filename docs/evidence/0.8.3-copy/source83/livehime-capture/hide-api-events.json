@@ -1,0 +1,42 @@
+{
+  "sourceInput": ".work/final-display-matrix-083-GjB7HR/capture-events.jsonl",
+  "sourceLogBytesAtCollection": 962566,
+  "sourceLogSha256AtCollection": "4e80c87a62cbf4ebeddf860a8a660597133144d35627e2fcf12236ccb693605f",
+  "lineRange": {
+    "first": 1265,
+    "last": 1266
+  },
+  "originalExcerptSha256": "e7e5d624a60432ec7005b940d5c3ede2644f878ca5046d65bb68c31bd06463ff",
+  "records": [
+    {
+      "originalLine": 1265,
+      "originalLineSha256": "230f86de59efb029fb9c8a97ab9538b5c36271d6d863e3919888c812ff9e9f9c",
+      "type": "request",
+      "at": "2026-09-23T17:01:42.315Z",
+      "atMs": 1790182902315,
+      "phase": "request",
+      "id": 630,
+      "method": "POST",
+      "pathname": "/api/mail/live/control/action",
+      "startedAt": 1790182901970,
+      "mainMonotonicMs": 1651953.6356,
+      "silentlyBlocked": false
+    },
+    {
+      "originalLine": 1266,
+      "originalLineSha256": "53f24cabc0f5698a6ff9c8fdb1153a0abbc05c5f600f44ff2e8cf41e896d7d40",
+      "type": "request",
+      "at": "2026-09-23T17:01:42.315Z",
+      "atMs": 1790182902315,
+      "phase": "response",
+      "id": 630,
+      "method": "POST",
+      "pathname": "/api/mail/live/control/action",
+      "startedAt": 1790182901970,
+      "finishedAt": 1790182901985,
+      "durationMs": 15,
+      "httpStatus": 200
+    }
+  ],
+  "interpretation": "finishedAt is the actual HTTP response completion timestamp; at/atMs is the later event-log collection time and must not replace finishedAt."
+}

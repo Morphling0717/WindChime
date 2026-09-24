@@ -1,0 +1,89 @@
+{
+  "passed": true,
+  "artifactIdentity": {
+    "passed": true,
+    "version": "0.8.3",
+    "releaseDirectory": "<repository>\\.work\\candidates\\uninstall083-c4efb3d",
+    "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+    "buildInfoSha256": "ce2659d006207b15cb0101df755d8f03f52a23463bced06d240c7bbdf42f5924",
+    "packageVerificationSha256": "7773c3a638153f871eccc2f5815eaec89f6860ac387603950cedfac2726f843f",
+    "payloadManifestSha256": "9a526a7e426733072a3e949e2293e8c045fa5b6fdf8789bbfe2928ea2d34c471",
+    "assets": {
+      "WindChime-Setup-0.8.3.exe": {
+        "bytes": 119133184,
+        "sha256": "d9d5dff2fe9bb1c7c9af1f81ada17289d80dba0f2989753a1b3d1d932fc60ef4"
+      },
+      "WindChime-win32-x64-0.8.3.zip": {
+        "bytes": 160660617,
+        "sha256": "8f7b25bddbca1fa32ec618291ab476968c9153016e584dfb93b49f5c12a4127f"
+      }
+    },
+    "runtime": {
+      "WindChime.exe": {
+        "bytes": 246089728,
+        "sha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987"
+      },
+      "resources/app.asar": {
+        "bytes": 3206242,
+        "sha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff"
+      }
+    },
+    "installedRuntimeMatchesCandidate": true,
+    "productStartedDuringVerification": false
+  },
+  "installMarker": {
+    "appId": "org.windchime.desktop",
+    "version": "0.8.3",
+    "encoding": "utf-16le"
+  },
+  "testedAt": "2026-09-23T18:12:42.514Z",
+  "os": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64"
+  },
+  "processId": 58348,
+  "fixture": "<repository>\\.work\\原生安装验收-c4efb3d-20260924",
+  "version": "0.8.3",
+  "electron": "44.3.0",
+  "node": "24.20.0",
+  "packaged": true,
+  "userData": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\profile",
+  "exe": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\WindChime.exe",
+  "windows": [
+    {
+      "title": "风铃 · 私人控制台",
+      "visible": false,
+      "packagedControlPage": true
+    }
+  ],
+  "preferences": {
+    "sandbox": true,
+    "contextIsolation": true,
+    "nodeIntegration": false
+  },
+  "storagePath": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\profile\\Partitions\\windchime-private",
+  "ui": {
+    "hasConnectionUI": true,
+    "hasBrand": true,
+    "allInputsEmpty": true,
+    "hasNode": false,
+    "hasBridge": true
+  },
+  "trayReady": true,
+  "gracefulExit": false,
+  "checks": [
+    "Installed 0.8.3 executable starts from the unique new guided-install target",
+    "Explicit isolated userData; existing personal vault not loaded",
+    "One private window, no automatic display output",
+    "Packaged connection UI and approved logo render",
+    "Sandbox/context isolation enabled; Node integration disabled",
+    "Close retains tray process; reopen works; closed back to tray",
+    "No management vault created in the clean profile"
+  ],
+  "limitations": [
+    "This runtime script does not operate the installer or uninstaller UI",
+    "Real upgrade/interrupted-recovery acceptance is separate"
+  ],
+  "snapshotMeaning": "Installed runtime verification is ready and left in the tray for the pending running-uninstall check. passed refers to listed startup/security/UI checks; gracefulExit=false and no uninstall result is claimed."
+}

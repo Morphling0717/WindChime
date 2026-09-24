@@ -1,0 +1,1042 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-09-23T17:59:14.366Z",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "status": "OBS-window-capture-passed; release-still-pending-native-gates",
+  "passed": true,
+  "commandReportedByRoot": "node .work/run-packaged-capture-083.cjs --exe .work/uninstall083-portable-c4efb3d/WindChime.exe --release-dir .work/candidates/uninstall083-c4efb3d --mode all",
+  "obsVersion": "32.0.1",
+  "obsWebSocketVersion": "5.6.3",
+  "runs": [
+    {
+      "mode": "full",
+      "checkedAt": "2026-09-23T17:53:15.034Z",
+      "checks": 17,
+      "capturedFrameRecords": 34,
+      "distinctSavedCapturePngs": 14,
+      "gracefulExit": true,
+      "interactive": null,
+      "screenshots": [
+        {
+          "name": "00-initial-scene.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "01-initial-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "02-approved-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "03-show-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "04-show-composite.png",
+          "width": 960,
+          "height": 640,
+          "visible": 614400,
+          "transparent": 0
+        },
+        {
+          "name": "05-hidden-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "05-hidden-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "07-closed-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "08-reopened-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "09-reopened-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "12-network-stalled-hide.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "12-network-stalled-hide.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        }
+      ],
+      "timingChecks": [
+        {
+          "label": "Hide clears the captured source within one second",
+          "passed": true,
+          "details": {
+            "responseToBlankMs": 145,
+            "commandToBlankMs": 356
+          }
+        },
+        {
+          "label": "Covered display retains a live receiver after extended occlusion",
+          "passed": true,
+          "details": {
+            "durationMs": 70030
+          }
+        },
+        {
+          "label": "Remote hide clears covered OBS window within one second",
+          "passed": true,
+          "details": {
+            "responseToBlankMs": 573
+          }
+        },
+        {
+          "label": "Emergency hide clears capture before delayed website response",
+          "passed": true,
+          "details": {
+            "commandToBlankMs": 225
+          }
+        }
+      ],
+      "originPublished": false,
+      "assetsMatchCurrentCandidate": true,
+      "rawReportSha256": "1aeba5e4429cfba24aad9f0a05f7acb163b1d56901d769e316e1bf751eda13e2"
+    },
+    {
+      "mode": "faults",
+      "checkedAt": "2026-09-23T17:54:47.514Z",
+      "checks": 21,
+      "capturedFrameRecords": 96,
+      "distinctSavedCapturePngs": 20,
+      "gracefulExit": true,
+      "interactive": null,
+      "screenshots": [
+        {
+          "name": "00-initial-scene.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "01-initial-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "02-approved-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "03-show-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "03-show-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "04-show-composite.png",
+          "width": 960,
+          "height": 640,
+          "visible": 614400,
+          "transparent": 0
+        },
+        {
+          "name": "05-hidden-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "05-hidden-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "06-revoked-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "07-closed-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "08-reopened-source.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "09-reopened-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "10-occluded-hidden.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "11-occluded-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "12-network-stalled-hide.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "12-network-stalled-hide.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "13-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "14-silent-disconnect.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "15-reconnected-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "16-before-frozen-renderer.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "16-before-frozen-renderer.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "16-before-frozen-renderer.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "16-before-frozen-renderer.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "16-before-frozen-renderer.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        },
+        {
+          "name": "17-frozen-renderer-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "18-frozen-recovered-blank.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "19-faults-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "19-faults-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "19-faults-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 0,
+          "transparent": 614400
+        },
+        {
+          "name": "19-faults-final-manual-show.png",
+          "width": 960,
+          "height": 640,
+          "visible": 111816,
+          "transparent": 502584
+        }
+      ],
+      "timingChecks": [
+        {
+          "label": "Hide clears the captured source within one second",
+          "passed": true,
+          "details": {
+            "responseToBlankMs": 160,
+            "commandToBlankMs": 348
+          }
+        },
+        {
+          "label": "Covered display retains a live receiver after extended occlusion",
+          "passed": true,
+          "details": {
+            "durationMs": 10
+          }
+        },
+        {
+          "label": "Remote hide clears covered OBS window within one second",
+          "passed": true,
+          "details": {
+            "responseToBlankMs": 602
+          }
+        },
+        {
+          "label": "Emergency hide clears capture before delayed website response",
+          "passed": true,
+          "details": {
+            "commandToBlankMs": 215
+          }
+        },
+        {
+          "label": "Silent disconnect clears actual capture within three seconds of the last confirmed frame",
+          "passed": true,
+          "details": {
+            "elapsedMs": 2736,
+            "fromLastFrameDispatchMs": 2947
+          }
+        },
+        {
+          "label": "Frozen renderer cannot retain captured pixels beyond lease",
+          "passed": true,
+          "details": {
+            "fromFreezeMs": 2775,
+            "fromLastFrameDispatchMs": 2859
+          }
+        }
+      ],
+      "originPublished": false,
+      "assetsMatchCurrentCandidate": true,
+      "rawReportSha256": "3d8e0fe0371f32b3d27e3c3eecc494dcb444396838d2351a0d5a5a3ce04e26d3"
+    }
+  ],
+  "frameEvidenceSemantics": "Original report screenshots arrays retain every actual capture sample and pixel-count result. Repeated filenames are successive samples; each public PNG contains only the last saved sample of that name. The checkerboard PNG is a fixture background, not an extra capture sample.",
+  "timingInterpretation": "Local responseToBlankMs starts when the desktop hide IPC invocation resolves; its commandToBlankMs (356/348 ms) starts before invocation and includes the round trip. Remote responseToBlankMs starts when the direct management HTTP helper returns. These client timestamps are not independent server HTTP-completion logs. Delayed-website commandToBlankMs starts at local emergency-hide command. Silent disconnect and frozen-renderer acceptance use fromLastFrameDispatchMs (2947 ms and 2859 ms); elapsedMs/fromFreezeMs retain different starts and are not substituted.",
+  "visualReview": [
+    "full/04-show-composite.png",
+    "faults/14-silent-disconnect.png",
+    "faults/17-frozen-renderer-blank.png"
+  ],
+  "visualReviewFindings": "The shown frame contains only synthetic sender/body/image over the fixture background. The final silent-disconnect and frozen-renderer frames have no content. No private controller, error dialog or actual user message appears in those reviewed images.",
+  "realSystemKeysTestedInTheseRuns": false,
+  "liveHimeAcceptanceClaimed": false,
+  "realOsSleepAcceptanceClaimed": false,
+  "nativeInstallOrUninstallAcceptanceClaimed": false,
+  "productionDataUsed": false,
+  "priorReportsReattributed": false
+}

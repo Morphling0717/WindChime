@@ -1,0 +1,224 @@
+{
+  "startedAt": "2026-09-23T15:53:55.245Z",
+  "desktopReviewVersion": "0.8.3",
+  "sharedVersion": "0.8.3",
+  "node": "v20.20.2",
+  "npm": "10.9.8",
+  "platform": "win32",
+  "arch": "x64",
+  "passed": true,
+  "cases": [
+    {
+      "site": "Next_UliUli",
+      "baseCommit": "93e243e6d8463875b3f28146c53bc9a9cc077686",
+      "dependencyChangesTested": true,
+      "reviewBaseMain": "1288e3d508407699a10605bef1ccfe6dea78d26a",
+      "sharedVersion": "0.8.3",
+      "packageSha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865",
+      "isolatedGitWorktree": true,
+      "isolatedDependencies": true,
+      "isolatedDatabase": true,
+      "environmentFilesCopied": false,
+      "steps": [
+        {
+          "name": "migrations",
+          "exitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0
+        },
+        {
+          "name": "routes",
+          "exitCode": 0
+        },
+        {
+          "name": "mail",
+          "exitCode": 0
+        }
+      ],
+      "extraChecks": [
+        {
+          "label": "Original HTTP login issues authenticated HttpOnly session",
+          "passed": true
+        },
+        {
+          "label": "Legacy route redirects only allowed pairing/topic parameters",
+          "passed": true
+        },
+        {
+          "label": "Locally served service worker bypasses private mail, live and API requests (VM)",
+          "passed": true
+        },
+        {
+          "label": "Site key identity comes from server; derived display opens blank",
+          "passed": true
+        },
+        {
+          "label": "Admin Cookie cannot expand a supplied display Bearer into management access",
+          "passed": true
+        },
+        {
+          "label": "Cross-origin Cookie cannot issue management credentials",
+          "passed": true
+        },
+        {
+          "label": "Desktop control key cannot issue new management credentials",
+          "passed": true
+        },
+        {
+          "label": "Live management response is no-store",
+          "passed": true
+        },
+        {
+          "label": "Revoking site key invalidates control and derived display credentials",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "sourceFiles": {
+        "package.json": "deee02f1fdf5cd0033ac3b52c7fe7a3009cd0f79a7923e59246c25918e588353",
+        "package-lock.json": "4963bf4649feb0a75a24d524562dbf2b670e492de6812726b434ae3a9c7f6f0a",
+        "vendor/windchime-embed-0.8.3.tgz": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+      },
+      "isolatedServerStopped": true,
+      "old082ArtifactPreserved": true,
+      "install": {
+        "npmCiPassed": true,
+        "otherDependencyEntriesUnchanged": true
+      }
+    },
+    {
+      "site": "Next_Mia",
+      "baseCommit": "8a3be7589a7bf58c797cfa534b727420cf2bf4b4",
+      "dependencyChangesTested": true,
+      "reviewBaseMain": "d457bf76e1816f7e3f5913a7e62ed5d6f0861783",
+      "sharedVersion": "0.8.3",
+      "packageSha256": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865",
+      "isolatedGitWorktree": true,
+      "isolatedDependencies": true,
+      "isolatedDatabase": true,
+      "environmentFilesCopied": false,
+      "steps": [
+        {
+          "name": "migrations",
+          "exitCode": 0
+        },
+        {
+          "name": "build",
+          "exitCode": 0
+        },
+        {
+          "name": "mail",
+          "exitCode": 0
+        }
+      ],
+      "extraChecks": [
+        {
+          "label": "Original HTTP login issues authenticated HttpOnly session",
+          "passed": true
+        },
+        {
+          "label": "Legacy route redirects only allowed pairing/topic parameters",
+          "passed": true
+        },
+        {
+          "label": "Locally served service worker bypasses private mail, live and API requests (VM)",
+          "passed": true
+        },
+        {
+          "label": "Site key identity comes from server; derived display opens blank",
+          "passed": true
+        },
+        {
+          "label": "Admin Cookie cannot expand a supplied display Bearer into management access",
+          "passed": true
+        },
+        {
+          "label": "Cross-origin Cookie cannot issue management credentials",
+          "passed": true
+        },
+        {
+          "label": "Desktop control key cannot issue new management credentials",
+          "passed": true
+        },
+        {
+          "label": "Live management response is no-store",
+          "passed": true
+        },
+        {
+          "label": "Revoking site key invalidates control and derived display credentials",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "sourceFiles": {
+        "package.json": "88abea874fe8f7f2859f4d5eeeaf33602e3c309620d043b80e676bb28723d77f",
+        "package-lock.json": "fa645f943a822abbcf643b0a8d1b023defd641a0552eb8b9382d2b9224f3f04b",
+        "vendor/windchime-embed-0.8.3.tgz": "c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865"
+      },
+      "isolatedServerStopped": true,
+      "old082ArtifactPreserved": true,
+      "install": {
+        "npmCiPassed": true,
+        "otherDependencyEntriesUnchanged": true
+      }
+    }
+  ],
+  "crossSiteChecks": [
+    {
+      "from": "Next_UliUli",
+      "to": "Next_Mia",
+      "managementBearerDenied": true,
+      "displayBearerDenied": true,
+      "otherSiteCookieDenied": true
+    },
+    {
+      "from": "Next_Mia",
+      "to": "Next_UliUli",
+      "managementBearerDenied": true,
+      "displayBearerDenied": true,
+      "otherSiteCookieDenied": true
+    }
+  ],
+  "limitations": [
+    "Production servers and real databases were not accessed",
+    "HTTP login checks are not a graphical browser interaction test",
+    "Service-worker fetch guard tested in a VM; no browser offline-cache claim"
+  ],
+  "originalTsconfigSha256": "dd75b2ef28fc05eba3dc1cb6feb2eebfb249e976a891fe9255bdb8dd73492d67",
+  "originalWorktreesUnmodified": true,
+  "finishedAt": "2026-09-23T15:55:50.530Z",
+  "schemaVersion": 1,
+  "sharedSourceCommit": "6b53289c6f0a513d8789d099dc882c13119142b5",
+  "evidenceScope": "Exact shared WindChime 0.8.3 tarball; fresh isolated builds, migrations and HTTP tests. No prior result reuse.",
+  "priorResultsReused": false,
+  "productionDeploymentPerformed": false,
+  "commands": [
+    "Node 20.20.2 + npm 10.9.8 ci --no-audit --no-fund in each isolated worktree",
+    "node scripts/test-mail-migrations.cjs: fresh/legacy/current, each twice",
+    "node node_modules/next/dist/bin/next build",
+    "node scripts/verify-build-routes.cjs (UliUli only)",
+    "node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3161|3162",
+    "node scripts/test-mail.mjs",
+    "Fresh authenticated cross-site HTTP and service-worker VM checks"
+  ],
+  "warnings": [
+    "Both builds retain NFT broad-tracing and Edge static-generation warnings.",
+    "Next changed isolated tsconfig includes during build; restored only those isolated files.",
+    "UliUli package-lock-only also normalized unrelated optional WASM lock entries. Preserved all original non-WindChime entries, then npm ci and all subsequent checks passed."
+  ],
+  "environmentPolicy": {
+    "distinctTemporarySQLiteAndMedia": true,
+    "syntheticCredentialsOnly": true,
+    "noProductionEnvironmentFilesCopied": true,
+    "originalNodeModulesNotUsed": true,
+    "originalTsconfigBytesPreserved": true,
+    "loopbackServersStopped": true,
+    "ports": [
+      3161,
+      3162
+    ],
+    "serverLogsPublished": false
+  }
+}

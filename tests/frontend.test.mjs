@@ -13,8 +13,60 @@ import {
   useWindChimeSubmission,
 } from "../dist/react/index.js";
 import { readWindChimePosterConfig } from "../dist/media/index.js";
+import { useWindChimeResource } from "../dist/react/resource.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+test('background polling lets slow requests finish; invalidation and scope changes still discard obsolete reads', async t => {
+  const interval = globalThis.setInterval, clear = globalThis.clearInterval;
+  let tick, value, root, invalidate;
+  const pending = [];
+  globalThis.setInterval = fn => { tick = fn; return 1; };
+  globalThis.clearInterval = () => {};
+  const source = { subscribe(fn) { invalidate = fn; return () => {}; } };
+  function Harness({ scope }) {
+    value = useWindChimeResource(source, 'messages', scope, signal => new Promise(resolve => pending.push({signal, resolve, scope})), { pollIntervalMs: 3000 });
+    return null;
+  }
+  t.after(async () => { await act(async () => root?.unmount()); globalThis.setInterval = interval; globalThis.clearInterval = clear; });
+  await act(async () => { root = create(React.createElement(Harness, {scope:'A'})); });
+  await act(async () => { tick(); tick(); tick(); });
+  assert.equal(pending.length, 1); assert.equal(pending[0].signal.aborted, false);
+  await act(async () => pending[0].resolve('slow response'));
+  assert.equal(value.data, 'slow response'); assert.equal(value.isLoading, false);
+  await act(async () => tick());
+  await act(async () => invalidate(['messages']));
+  assert.equal(pending[1].signal.aborted, true);
+  await act(async () => { pending[1].resolve('before mutation'); pending[2].resolve('after mutation'); });
+  assert.equal(value.data, 'after mutation');
+  await act(async () => tick());
+  await act(async () => root.update(React.createElement(Harness, {scope:'B'})));
+  assert.equal(pending[3].signal.aborted, true);
+  await act(async () => pending[3].resolve('late A'));
+  assert.equal(value.data, null);
+  await act(async () => pending[4].resolve('B'));
+  assert.equal(value.data, 'B');
+});
+
+test('submission keyword hints require the explicit site switch and follow changes without remounting', async t => {
+  let form, tree; const sent = [];
+  function Harness({ enabled }) {
+    form = useWindChimeSubmission({ blockedTerms: ['secret'], blockedTermsEnabled: enabled, rateLimit: false, disableSenderFingerprint: true, onSubmit: async payload => { sent.push(payload); } });
+    return null;
+  }
+  await act(async () => { tree = create(React.createElement(Harness, {})); });
+  t.after(async () => { await act(async () => tree.unmount()); });
+  await act(async () => form.setText('secret while default off'));
+  await act(async () => { assert.equal(await form.submit(), true); });
+  assert.equal(sent.length, 1);
+  await act(async () => tree.update(React.createElement(Harness, { enabled: true })));
+  await act(async () => form.setText('secret while enabled'));
+  await act(async () => { assert.equal(await form.submit(), false); });
+  assert.equal(form.error.code, 'BLOCKED_TERM'); assert.equal(sent.length, 1);
+  await act(async () => tree.update(React.createElement(Harness, { enabled: false })));
+  await act(async () => { assert.equal(await form.submit(), true); });
+  assert.equal(sent.length, 2);
+});
 const counts = { all: 1, unread: 1, favorited: 0, flagged: 0 };
 const row = (id) => ({
   id,

@@ -1,0 +1,1081 @@
+{
+  "probeVersion": 2,
+  "utc": "2026-09-23T18:12:19.7344648Z",
+  "mode": "native",
+  "target": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime",
+  "state": "installed",
+  "candidateVerified": true,
+  "setup": {
+    "bytes": 119133184,
+    "sha256": "d9d5dff2fe9bb1c7c9af1f81ada17289d80dba0f2989753a1b3d1d932fc60ef4"
+  },
+  "manifest": {
+    "bytes": 11612,
+    "sha256": "9a526a7e426733072a3e949e2293e8c045fa5b6fdf8789bbfe2928ea2d34c471"
+  },
+  "payloadVersion": "0.8.3",
+  "payloadFileCount": 75,
+  "payloadFilesPresent": 75,
+  "payloadMatches": true,
+  "payloadChecks": [
+    {
+      "path": "chrome_100_percent.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\chrome_100_percent.pak",
+        "exists": true,
+        "bytes": 719654,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "ab7c4b7b6cb8832a31d44b95ec50ce52294f49422a3bdde4e21968eca2930cbe",
+        "error": null
+      },
+      "expectedSha256": "ab7c4b7b6cb8832a31d44b95ec50ce52294f49422a3bdde4e21968eca2930cbe",
+      "matchesManifest": true
+    },
+    {
+      "path": "chrome_200_percent.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\chrome_200_percent.pak",
+        "exists": true,
+        "bytes": 1269017,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "30fa4a6e27c9ff2fb0f939f01158477e621a67d86e9ecb84cf11b3947db8eb9d",
+        "error": null
+      },
+      "expectedSha256": "30fa4a6e27c9ff2fb0f939f01158477e621a67d86e9ecb84cf11b3947db8eb9d",
+      "matchesManifest": true
+    },
+    {
+      "path": "d3dcompiler_47.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\d3dcompiler_47.dll",
+        "exists": true,
+        "bytes": 4741488,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "a05f99734f7c4822fefc12b367af21fd0976ed6608752fb1e1e80b6ece7ecbbb",
+        "error": null
+      },
+      "expectedSha256": "a05f99734f7c4822fefc12b367af21fd0976ed6608752fb1e1e80b6ece7ecbbb",
+      "matchesManifest": true
+    },
+    {
+      "path": "dxcompiler.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\dxcompiler.dll",
+        "exists": true,
+        "bytes": 25744896,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "b2b5c67bc4a9c92a0ea87000415e7970488d1ca25767518d4cc27b88f18fb6ac",
+        "error": null
+      },
+      "expectedSha256": "b2b5c67bc4a9c92a0ea87000415e7970488d1ca25767518d4cc27b88f18fb6ac",
+      "matchesManifest": true
+    },
+    {
+      "path": "dxil.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\dxil.dll",
+        "exists": true,
+        "bytes": 1509760,
+        "mtime": "2026-09-23T17:39:22.0000000Z",
+        "sha256": "77e039c905030a641e53658a008b74e90635a5ea9b6b79eabd0f2003bdfca59a",
+        "error": null
+      },
+      "expectedSha256": "77e039c905030a641e53658a008b74e90635a5ea9b6b79eabd0f2003bdfca59a",
+      "matchesManifest": true
+    },
+    {
+      "path": "ffmpeg.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\ffmpeg.dll",
+        "exists": true,
+        "bytes": 3113472,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "336587847c4ed3ef1a195d1aaea3d3951c9749a035ffa7951df4c0e02971e4e0",
+        "error": null
+      },
+      "expectedSha256": "336587847c4ed3ef1a195d1aaea3d3951c9749a035ffa7951df4c0e02971e4e0",
+      "matchesManifest": true
+    },
+    {
+      "path": "icudtl.dat",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\icudtl.dat",
+        "exists": true,
+        "bytes": 10876560,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "9f48c7f9c7c94d516a14870707e910ab94d75ae640ff6842c4af53276cd26ebe",
+        "error": null
+      },
+      "expectedSha256": "9f48c7f9c7c94d516a14870707e910ab94d75ae640ff6842c4af53276cd26ebe",
+      "matchesManifest": true
+    },
+    {
+      "path": "LICENSE",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\LICENSE",
+        "exists": true,
+        "bytes": 1096,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d",
+        "error": null
+      },
+      "expectedSha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d",
+      "matchesManifest": true
+    },
+    {
+      "path": "LICENSES.chromium.html",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\LICENSES.chromium.html",
+        "exists": true,
+        "bytes": 20472830,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "7b328b8c7463ac9bfc7dc648c751533517c8441a0b5b21047d6c0b2620e60d70",
+        "error": null
+      },
+      "expectedSha256": "7b328b8c7463ac9bfc7dc648c751533517c8441a0b5b21047d6c0b2620e60d70",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/af.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\af.pak",
+        "exists": true,
+        "bytes": 636155,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "3017b141bd16e24190d810f0748612f0fd4352ca8553002b9a63a7f77f7154f8",
+        "error": null
+      },
+      "expectedSha256": "3017b141bd16e24190d810f0748612f0fd4352ca8553002b9a63a7f77f7154f8",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/am.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\am.pak",
+        "exists": true,
+        "bytes": 1029450,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "67b938d162bc75db067120bb8366b5bafd9a75fa99a0ca9ad4f46b47d1d37634",
+        "error": null
+      },
+      "expectedSha256": "67b938d162bc75db067120bb8366b5bafd9a75fa99a0ca9ad4f46b47d1d37634",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ar.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ar.pak",
+        "exists": true,
+        "bytes": 1130933,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "a6eb037da4ac7930a8661c8bf602deee090fc4409bf4db24db8aab65c89b1d06",
+        "error": null
+      },
+      "expectedSha256": "a6eb037da4ac7930a8661c8bf602deee090fc4409bf4db24db8aab65c89b1d06",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/bg.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\bg.pak",
+        "exists": true,
+        "bytes": 1178203,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "2eb9c74c67e4b13b45a73061fa978738e335bc245da71bab0ea9b205fe91074e",
+        "error": null
+      },
+      "expectedSha256": "2eb9c74c67e4b13b45a73061fa978738e335bc245da71bab0ea9b205fe91074e",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/bn.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\bn.pak",
+        "exists": true,
+        "bytes": 1513545,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "415621a5c0b1546e6e447d43b76414425a8703cc7681d637ec1f283ad0c787e7",
+        "error": null
+      },
+      "expectedSha256": "415621a5c0b1546e6e447d43b76414425a8703cc7681d637ec1f283ad0c787e7",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ca.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ca.pak",
+        "exists": true,
+        "bytes": 716908,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "6f28297c1ccb628f534d65dade167ae559f83eace359acf47e48ff890b9409d5",
+        "error": null
+      },
+      "expectedSha256": "6f28297c1ccb628f534d65dade167ae559f83eace359acf47e48ff890b9409d5",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/cs.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\cs.pak",
+        "exists": true,
+        "bytes": 743351,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "799a789ce531991cb975425730db310f9a8fe74091eee568f3e65fcc7ef0cd57",
+        "error": null
+      },
+      "expectedSha256": "799a789ce531991cb975425730db310f9a8fe74091eee568f3e65fcc7ef0cd57",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/da.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\da.pak",
+        "exists": true,
+        "bytes": 666465,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "9a2cd25537a4818897481ba944981e8aee3d89c7ad37588d02f1deebff3f62d0",
+        "error": null
+      },
+      "expectedSha256": "9a2cd25537a4818897481ba944981e8aee3d89c7ad37588d02f1deebff3f62d0",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/de.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\de.pak",
+        "exists": true,
+        "bytes": 717834,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "fcf63fd89e613a7ef69f16054b97b3493948e5c665aad180a91d3635256fb7d7",
+        "error": null
+      },
+      "expectedSha256": "fcf63fd89e613a7ef69f16054b97b3493948e5c665aad180a91d3635256fb7d7",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/el.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\el.pak",
+        "exists": true,
+        "bytes": 1295538,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "37d2e1ef69fea9bdb1e0902cbc61a458baa9009fc3761029bd1c1882a7a0c9b2",
+        "error": null
+      },
+      "expectedSha256": "37d2e1ef69fea9bdb1e0902cbc61a458baa9009fc3761029bd1c1882a7a0c9b2",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/en-GB.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\en-GB.pak",
+        "exists": true,
+        "bytes": 580030,
+        "mtime": "2026-09-23T17:39:22.0000000Z",
+        "sha256": "01d9200a5daee1770f7147b166d25baa6a8dd72c138c3c526421e656dec789f5",
+        "error": null
+      },
+      "expectedSha256": "01d9200a5daee1770f7147b166d25baa6a8dd72c138c3c526421e656dec789f5",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/en-US.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\en-US.pak",
+        "exists": true,
+        "bytes": 586582,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "23b271e8009bfa14783700cd0712b4ecaa5b8f2ea28a4d81ae1d7e05bc0c96b1",
+        "error": null
+      },
+      "expectedSha256": "23b271e8009bfa14783700cd0712b4ecaa5b8f2ea28a4d81ae1d7e05bc0c96b1",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/es-419.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\es-419.pak",
+        "exists": true,
+        "bytes": 707635,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "6ff6ea0a14da50cacc4b72ab8c8c7b49c8423abb64f6a3a7f1643d8c3c74e6e9",
+        "error": null
+      },
+      "expectedSha256": "6ff6ea0a14da50cacc4b72ab8c8c7b49c8423abb64f6a3a7f1643d8c3c74e6e9",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/es.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\es.pak",
+        "exists": true,
+        "bytes": 703926,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "4578e08033967a5062bfd3b1937e711df84571d444e4940b8ffe5366bce4e778",
+        "error": null
+      },
+      "expectedSha256": "4578e08033967a5062bfd3b1937e711df84571d444e4940b8ffe5366bce4e778",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/et.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\et.pak",
+        "exists": true,
+        "bytes": 642216,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "dd1205eae606f12510e24ce39f301439c98b3293d766ca5839dc292a14d7973c",
+        "error": null
+      },
+      "expectedSha256": "dd1205eae606f12510e24ce39f301439c98b3293d766ca5839dc292a14d7973c",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/fa.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\fa.pak",
+        "exists": true,
+        "bytes": 1063054,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "f3675255feb8b054717be9e92e93289262f35e82f25f2f8de0d3ebf3865715af",
+        "error": null
+      },
+      "expectedSha256": "f3675255feb8b054717be9e92e93289262f35e82f25f2f8de0d3ebf3865715af",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/fi.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\fi.pak",
+        "exists": true,
+        "bytes": 655113,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "1f3123d7fb5c22a95b5250ea17450b665c3c6cd6a6dfd28bbdde15e1bf684a0e",
+        "error": null
+      },
+      "expectedSha256": "1f3123d7fb5c22a95b5250ea17450b665c3c6cd6a6dfd28bbdde15e1bf684a0e",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/fil.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\fil.pak",
+        "exists": true,
+        "bytes": 741385,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "02e2c70d3d85b0deb677a9ae576ae3cf89e80774532cb3315c14f1e8ce64b310",
+        "error": null
+      },
+      "expectedSha256": "02e2c70d3d85b0deb677a9ae576ae3cf89e80774532cb3315c14f1e8ce64b310",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/fr.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\fr.pak",
+        "exists": true,
+        "bytes": 763453,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "4db43f1cfba1ed1d7dd347d58fbab0b8d6d89dd008a3b9d2436d8744e3363453",
+        "error": null
+      },
+      "expectedSha256": "4db43f1cfba1ed1d7dd347d58fbab0b8d6d89dd008a3b9d2436d8744e3363453",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/gu.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\gu.pak",
+        "exists": true,
+        "bytes": 1495625,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "e86e8c240d4b6283abb03c49df9e8899607ef9def6d4933c7a541d63b5835271",
+        "error": null
+      },
+      "expectedSha256": "e86e8c240d4b6283abb03c49df9e8899607ef9def6d4933c7a541d63b5835271",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/he.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\he.pak",
+        "exists": true,
+        "bytes": 928748,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "ddc1f304ab1f4489d19ae2b31e7f8e3ffb47dae439520159e8975422c65e4115",
+        "error": null
+      },
+      "expectedSha256": "ddc1f304ab1f4489d19ae2b31e7f8e3ffb47dae439520159e8975422c65e4115",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/hi.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\hi.pak",
+        "exists": true,
+        "bytes": 1586592,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "10a6f19c1982590e33476427dee8d4293b0707e25dc536d6394b5782ecc3b642",
+        "error": null
+      },
+      "expectedSha256": "10a6f19c1982590e33476427dee8d4293b0707e25dc536d6394b5782ecc3b642",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/hr.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\hr.pak",
+        "exists": true,
+        "bytes": 715279,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "d46c64ae8af3562e37eb80438aa2bee228fafda251d58ba4d0991291f1c72aab",
+        "error": null
+      },
+      "expectedSha256": "d46c64ae8af3562e37eb80438aa2bee228fafda251d58ba4d0991291f1c72aab",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/hu.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\hu.pak",
+        "exists": true,
+        "bytes": 765640,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "0a46fc8d50f74effd1cfe1979e677df3de6fc47e6b551267303d93d57bd83f50",
+        "error": null
+      },
+      "expectedSha256": "0a46fc8d50f74effd1cfe1979e677df3de6fc47e6b551267303d93d57bd83f50",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/id.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\id.pak",
+        "exists": true,
+        "bytes": 635080,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "f567569c42a25bb2dfc5c33e13aac558c0e2a1d5d4b969592bbd0841b36438db",
+        "error": null
+      },
+      "expectedSha256": "f567569c42a25bb2dfc5c33e13aac558c0e2a1d5d4b969592bbd0841b36438db",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/it.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\it.pak",
+        "exists": true,
+        "bytes": 693990,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "899be10e8f46f53d9bbe7cab827fc17b7c2bd7184e31791688016e2ca4df6622",
+        "error": null
+      },
+      "expectedSha256": "899be10e8f46f53d9bbe7cab827fc17b7c2bd7184e31791688016e2ca4df6622",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ja.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ja.pak",
+        "exists": true,
+        "bytes": 842132,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "9370c20a0612f5874dff2b015f31482e167eccf1b3c1d1a2efc1c2e38cefa88e",
+        "error": null
+      },
+      "expectedSha256": "9370c20a0612f5874dff2b015f31482e167eccf1b3c1d1a2efc1c2e38cefa88e",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/kn.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\kn.pak",
+        "exists": true,
+        "bytes": 1720240,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "af5fed2130102ecc0c878059c88faed9d6db2e8b147fb5ae9e15e3fe69706c8a",
+        "error": null
+      },
+      "expectedSha256": "af5fed2130102ecc0c878059c88faed9d6db2e8b147fb5ae9e15e3fe69706c8a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ko.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ko.pak",
+        "exists": true,
+        "bytes": 718709,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "0f5bc49c4d35bfea1563db6eb77a074c65b39b49a916cb35a022ef96340338f2",
+        "error": null
+      },
+      "expectedSha256": "0f5bc49c4d35bfea1563db6eb77a074c65b39b49a916cb35a022ef96340338f2",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/lt.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\lt.pak",
+        "exists": true,
+        "bytes": 777281,
+        "mtime": "2026-09-23T17:39:22.0000000Z",
+        "sha256": "af969f4407c190dd01a426fa1244cb1ec7cdf2909d1c3ba5b87ff662ba567303",
+        "error": null
+      },
+      "expectedSha256": "af969f4407c190dd01a426fa1244cb1ec7cdf2909d1c3ba5b87ff662ba567303",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/lv.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\lv.pak",
+        "exists": true,
+        "bytes": 774751,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "27e20dfa5585161ef8b641f628aefe6c88d9f9590ffedb647e0c9da1cacf219d",
+        "error": null
+      },
+      "expectedSha256": "27e20dfa5585161ef8b641f628aefe6c88d9f9590ffedb647e0c9da1cacf219d",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ml.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ml.pak",
+        "exists": true,
+        "bytes": 1767850,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "b5606265910e45098a88e989202a550531f6d00333c6b112ed4c5cbc07b2ff6a",
+        "error": null
+      },
+      "expectedSha256": "b5606265910e45098a88e989202a550531f6d00333c6b112ed4c5cbc07b2ff6a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/mr.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\mr.pak",
+        "exists": true,
+        "bytes": 1467313,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "8465d4077ed5414cbcb7d9bdb00d85e515a1a069703cdc1d4d67c9d6e5623fb0",
+        "error": null
+      },
+      "expectedSha256": "8465d4077ed5414cbcb7d9bdb00d85e515a1a069703cdc1d4d67c9d6e5623fb0",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ms.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ms.pak",
+        "exists": true,
+        "bytes": 668356,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "af7021a00befa586aa067ae3ccb339079e6f13ee0cab1621836f6abb608b6f2a",
+        "error": null
+      },
+      "expectedSha256": "af7021a00befa586aa067ae3ccb339079e6f13ee0cab1621836f6abb608b6f2a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/nb.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\nb.pak",
+        "exists": true,
+        "bytes": 638121,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "d97a2b0cbe6adc99add2ed3ce0d15d0bb124b778086c466c126634d60ea72608",
+        "error": null
+      },
+      "expectedSha256": "d97a2b0cbe6adc99add2ed3ce0d15d0bb124b778086c466c126634d60ea72608",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/nl.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\nl.pak",
+        "exists": true,
+        "bytes": 664767,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "9d82c384fbb6480c7a6e721c6bcd1f2cd19665d848b056b5a2911504308ba037",
+        "error": null
+      },
+      "expectedSha256": "9d82c384fbb6480c7a6e721c6bcd1f2cd19665d848b056b5a2911504308ba037",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/pl.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\pl.pak",
+        "exists": true,
+        "bytes": 742064,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "8a0969fc743d3e2f5111387d53c0d79e8c1d9f68256ad6553b87fca2bcaa7e6e",
+        "error": null
+      },
+      "expectedSha256": "8a0969fc743d3e2f5111387d53c0d79e8c1d9f68256ad6553b87fca2bcaa7e6e",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/pt-BR.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\pt-BR.pak",
+        "exists": true,
+        "bytes": 697044,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "8272a84e2e6658dc4da17c6bd21995011fbaa6c328efafd24c4ebd4fe2e64916",
+        "error": null
+      },
+      "expectedSha256": "8272a84e2e6658dc4da17c6bd21995011fbaa6c328efafd24c4ebd4fe2e64916",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/pt-PT.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\pt-PT.pak",
+        "exists": true,
+        "bytes": 701056,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "bdfa7264dddf70f936f1785737969559a577b51d1952c820a468c611d18b17ca",
+        "error": null
+      },
+      "expectedSha256": "bdfa7264dddf70f936f1785737969559a577b51d1952c820a468c611d18b17ca",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ro.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ro.pak",
+        "exists": true,
+        "bytes": 728144,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "1e6b5b0dac63a9e951daf523de310f6bd9e5c53e281f37706d41bd35d2a08bb5",
+        "error": null
+      },
+      "expectedSha256": "1e6b5b0dac63a9e951daf523de310f6bd9e5c53e281f37706d41bd35d2a08bb5",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ru.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ru.pak",
+        "exists": true,
+        "bytes": 1200996,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "52a31a7ca057b8c76208620932120927a089502ddfb66c30de4324959f9e0075",
+        "error": null
+      },
+      "expectedSha256": "52a31a7ca057b8c76208620932120927a089502ddfb66c30de4324959f9e0075",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/sk.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\sk.pak",
+        "exists": true,
+        "bytes": 755475,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "a53551e8d251fa01305afe1d0d187144c56bfdffd5d1aa9f96a9350b96c0a252",
+        "error": null
+      },
+      "expectedSha256": "a53551e8d251fa01305afe1d0d187144c56bfdffd5d1aa9f96a9350b96c0a252",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/sl.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\sl.pak",
+        "exists": true,
+        "bytes": 722720,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "e1371c8df577b979e3a515af34b0aaa3d07153c7a5c55d39a9b49a7ffe62d3d2",
+        "error": null
+      },
+      "expectedSha256": "e1371c8df577b979e3a515af34b0aaa3d07153c7a5c55d39a9b49a7ffe62d3d2",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/sr.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\sr.pak",
+        "exists": true,
+        "bytes": 1112919,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "be4ce17afac24dffc1eb36609cb51e766e77097d6656b1008a2a825e59609cc1",
+        "error": null
+      },
+      "expectedSha256": "be4ce17afac24dffc1eb36609cb51e766e77097d6656b1008a2a825e59609cc1",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/sv.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\sv.pak",
+        "exists": true,
+        "bytes": 646537,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "8bdff8855d23c739ece357f653c0a17bb36fe97577a5761912080d057ed341a5",
+        "error": null
+      },
+      "expectedSha256": "8bdff8855d23c739ece357f653c0a17bb36fe97577a5761912080d057ed341a5",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/sw.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\sw.pak",
+        "exists": true,
+        "bytes": 685130,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "312b225a81cc3cc15f13f80c45dd0e0bb3655d31873d2956861207e70c33c1dc",
+        "error": null
+      },
+      "expectedSha256": "312b225a81cc3cc15f13f80c45dd0e0bb3655d31873d2956861207e70c33c1dc",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ta.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ta.pak",
+        "exists": true,
+        "bytes": 1758067,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "91fb1460711df108d8d435a378c8be1d1e80b0886c0158d8c6ae92f35812681b",
+        "error": null
+      },
+      "expectedSha256": "91fb1460711df108d8d435a378c8be1d1e80b0886c0158d8c6ae92f35812681b",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/te.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\te.pak",
+        "exists": true,
+        "bytes": 1629379,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "fc8c2706c5dfd36e7af8e380a240e0f697cc5fe969b512092a2185896512c4af",
+        "error": null
+      },
+      "expectedSha256": "fc8c2706c5dfd36e7af8e380a240e0f697cc5fe969b512092a2185896512c4af",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/th.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\th.pak",
+        "exists": true,
+        "bytes": 1368866,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "c1f4235c31bc05153230b0e55b7aabc9020d7460d5b0a025c386885e1e4bda3c",
+        "error": null
+      },
+      "expectedSha256": "c1f4235c31bc05153230b0e55b7aabc9020d7460d5b0a025c386885e1e4bda3c",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/tr.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\tr.pak",
+        "exists": true,
+        "bytes": 697368,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "ae87bbd88ce0adfc2dc3c460736a7d0513472af62fc856caccc638dedfec9b4a",
+        "error": null
+      },
+      "expectedSha256": "ae87bbd88ce0adfc2dc3c460736a7d0513472af62fc856caccc638dedfec9b4a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/uk.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\uk.pak",
+        "exists": true,
+        "bytes": 1211565,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "a6230520dac708a6235588f5d9e894fcc9b1391e18a70e3220e06ddf80f76688",
+        "error": null
+      },
+      "expectedSha256": "a6230520dac708a6235588f5d9e894fcc9b1391e18a70e3220e06ddf80f76688",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/ur.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\ur.pak",
+        "exists": true,
+        "bytes": 1047994,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "c218e21744df2ff0669a87d497d65d76333073577360d4c662c592de146bf82a",
+        "error": null
+      },
+      "expectedSha256": "c218e21744df2ff0669a87d497d65d76333073577360d4c662c592de146bf82a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/vi.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\vi.pak",
+        "exists": true,
+        "bytes": 830059,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "42f3f0c4f645aedc66c12c74aee7256336a929798d736c56853daec91d44511a",
+        "error": null
+      },
+      "expectedSha256": "42f3f0c4f645aedc66c12c74aee7256336a929798d736c56853daec91d44511a",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/zh-CN.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\zh-CN.pak",
+        "exists": true,
+        "bytes": 592116,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "ba8ac4bf82b50728d907215d1993948457835bf2942a4d7266a3f8af5f51de15",
+        "error": null
+      },
+      "expectedSha256": "ba8ac4bf82b50728d907215d1993948457835bf2942a4d7266a3f8af5f51de15",
+      "matchesManifest": true
+    },
+    {
+      "path": "locales/zh-TW.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\locales\\zh-TW.pak",
+        "exists": true,
+        "bytes": 583860,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "82739378d17ea73e57c8efae31994e0c8818ab2d0d12cb1f6b20d2f340b3229d",
+        "error": null
+      },
+      "expectedSha256": "82739378d17ea73e57c8efae31994e0c8818ab2d0d12cb1f6b20d2f340b3229d",
+      "matchesManifest": true
+    },
+    {
+      "path": "resources.pak",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\resources.pak",
+        "exists": true,
+        "bytes": 12435445,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "3d8c36b2ec7099a27fe00763e5af28319643ba65c1b48b85eb6a7caaae034ba6",
+        "error": null
+      },
+      "expectedSha256": "3d8c36b2ec7099a27fe00763e5af28319643ba65c1b48b85eb6a7caaae034ba6",
+      "matchesManifest": true
+    },
+    {
+      "path": "resources/app.asar",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\resources\\app.asar",
+        "exists": true,
+        "bytes": 3206242,
+        "mtime": "2026-09-23T17:39:30.0000000Z",
+        "sha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff",
+        "error": null
+      },
+      "expectedSha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff",
+      "matchesManifest": true
+    },
+    {
+      "path": "resources/windchime-install.ini",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\resources\\windchime-install.ini",
+        "exists": true,
+        "bytes": 116,
+        "mtime": "2026-09-23T17:39:48.0000000Z",
+        "sha256": "f7c032cef9b0c434c6ae16770b4d614a9a48ba34c4b933c8e878e55447a03f1f",
+        "error": null
+      },
+      "expectedSha256": "f7c032cef9b0c434c6ae16770b4d614a9a48ba34c4b933c8e878e55447a03f1f",
+      "matchesManifest": true
+    },
+    {
+      "path": "snapshot_blob.bin",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\snapshot_blob.bin",
+        "exists": true,
+        "bytes": 368776,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "1176cfa83f9ef458e7ed5b5b255c9289691dbef3ff1e4a073a5c90f9a16e8458",
+        "error": null
+      },
+      "expectedSha256": "1176cfa83f9ef458e7ed5b5b255c9289691dbef3ff1e4a073a5c90f9a16e8458",
+      "matchesManifest": true
+    },
+    {
+      "path": "Uninstall WindChime.exe",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\Uninstall WindChime.exe",
+        "exists": true,
+        "bytes": 70184,
+        "mtime": "2026-09-23T17:39:48.0000000Z",
+        "sha256": "682f2e336fd23e74e51a8d479fdfc82ff6be0616a787c19d068bce7a809e547a",
+        "error": null
+      },
+      "expectedSha256": "682f2e336fd23e74e51a8d479fdfc82ff6be0616a787c19d068bce7a809e547a",
+      "matchesManifest": true
+    },
+    {
+      "path": "v8_context_snapshot.bin",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\v8_context_snapshot.bin",
+        "exists": true,
+        "bytes": 742208,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "d9d3ec18e937ed2fddd02d92e4f0726919769e16f2ea17f962d23e40d5962b7b",
+        "error": null
+      },
+      "expectedSha256": "d9d3ec18e937ed2fddd02d92e4f0726919769e16f2ea17f962d23e40d5962b7b",
+      "matchesManifest": true
+    },
+    {
+      "path": "version",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\version",
+        "exists": true,
+        "bytes": 6,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "a1d640d380c386200a420b590105d25da627723ee42ee1061108f3acde9f25fd",
+        "error": null
+      },
+      "expectedSha256": "a1d640d380c386200a420b590105d25da627723ee42ee1061108f3acde9f25fd",
+      "matchesManifest": true
+    },
+    {
+      "path": "vk_swiftshader_icd.json",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\vk_swiftshader_icd.json",
+        "exists": true,
+        "bytes": 106,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "32d83ff113fef532a9f97e0d2831f8656628ab1c99e9060f0332b1532839afd9",
+        "error": null
+      },
+      "expectedSha256": "32d83ff113fef532a9f97e0d2831f8656628ab1c99e9060f0332b1532839afd9",
+      "matchesManifest": true
+    },
+    {
+      "path": "vk_swiftshader.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\vk_swiftshader.dll",
+        "exists": true,
+        "bytes": 5520384,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "cfb8a533c5da1ade3fd4e66ebd0acf7186bd17fb3cc09d48809a7909c4aaf0f8",
+        "error": null
+      },
+      "expectedSha256": "cfb8a533c5da1ade3fd4e66ebd0acf7186bd17fb3cc09d48809a7909c4aaf0f8",
+      "matchesManifest": true
+    },
+    {
+      "path": "vulkan-1.dll",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\vulkan-1.dll",
+        "exists": true,
+        "bytes": 939008,
+        "mtime": "2026-09-23T17:39:24.0000000Z",
+        "sha256": "c1b383f18c0949f233e949ae197c2ad4c416abe7790894d7e395d73116403b4f",
+        "error": null
+      },
+      "expectedSha256": "c1b383f18c0949f233e949ae197c2ad4c416abe7790894d7e395d73116403b4f",
+      "matchesManifest": true
+    },
+    {
+      "path": "WindChime.exe",
+      "actual": {
+        "path": "<repository>\\.work\\原生安装验收-c4efb3d-20260924\\WindChime\\WindChime.exe",
+        "exists": true,
+        "bytes": 246089728,
+        "mtime": "2026-09-23T17:39:32.0000000Z",
+        "sha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987",
+        "error": null
+      },
+      "expectedSha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987",
+      "matchesManifest": true
+    }
+  ],
+  "markerPath": "resources/windchime-install.ini",
+  "marker": {
+    "AppId": "org.windchime.desktop",
+    "Version": "0.8.3"
+  },
+  "markerMatches": true,
+  "registry": [
+    {
+      "view": "Registry64",
+      "present": true,
+      "targetMatchesExpected": true,
+      "versionMatchesExpected": null,
+      "uninstallCommandMatchesExpected": null,
+      "quietUninstallCommandMatchesExpected": null
+    },
+    {
+      "view": "Registry64",
+      "present": true,
+      "targetMatchesExpected": true,
+      "versionMatchesExpected": true,
+      "uninstallCommandMatchesExpected": true,
+      "quietUninstallCommandMatchesExpected": true
+    },
+    {
+      "view": "Registry64",
+      "present": true,
+      "targetMatchesExpected": false,
+      "versionMatchesExpected": null,
+      "uninstallCommandMatchesExpected": null,
+      "quietUninstallCommandMatchesExpected": null
+    },
+    {
+      "view": "Registry32",
+      "present": true,
+      "targetMatchesExpected": true,
+      "versionMatchesExpected": null,
+      "uninstallCommandMatchesExpected": null,
+      "quietUninstallCommandMatchesExpected": null
+    },
+    {
+      "view": "Registry32",
+      "present": true,
+      "targetMatchesExpected": true,
+      "versionMatchesExpected": true,
+      "uninstallCommandMatchesExpected": true,
+      "quietUninstallCommandMatchesExpected": true
+    },
+    {
+      "view": "Registry32",
+      "present": true,
+      "targetMatchesExpected": false,
+      "versionMatchesExpected": null,
+      "uninstallCommandMatchesExpected": null,
+      "quietUninstallCommandMatchesExpected": null
+    }
+  ],
+  "registryMatches": true,
+  "shortcuts": [
+    {
+      "ordinal": 1,
+      "exists": true,
+      "targetMatchesExpected": true,
+      "workingDirectoryMatchesExpected": true,
+      "descriptionMatchesExpected": true,
+      "error": null
+    },
+    {
+      "ordinal": 2,
+      "exists": true,
+      "targetMatchesExpected": true,
+      "workingDirectoryMatchesExpected": true,
+      "descriptionMatchesExpected": true,
+      "error": null
+    }
+  ],
+  "shortcutsMatch": true,
+  "referenceNativeUtc": "2026-09-23T17:54:23.3025863Z",
+  "protectedFileCount": 5,
+  "protectedFilesUnchanged": true,
+  "squirrelRegistryUnchanged": true,
+  "originalPreserved": true,
+  "installedMetadataAndPayloadVerified": true,
+  "registryModified": false,
+  "probeStartedInstallerOrUninstaller": false
+}

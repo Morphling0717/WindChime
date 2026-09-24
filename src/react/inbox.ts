@@ -131,6 +131,7 @@ export function useWindChimeInbox(
     ...selection,
     items,
     counts: resource.data?.counts ?? emptyCounts,
+    blockedTermsEnabled: resource.data?.blockedTermsEnabled ?? true,
     filter,
     setFilter,
     pending: mutation.pending,

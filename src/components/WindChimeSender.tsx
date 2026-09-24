@@ -11,6 +11,8 @@ import {
 import type { WindChimeSenderProps, WindChimeTheme } from "../types.js";
 import "../styles/windchime.css";
 import { useWindChimeSubmission } from "../react/submission.js";
+import { useWindChimeAttachments } from "../react/attachments.js";
+import { WindChimeAttachmentInput } from "./WindChimeAttachments.js";
 import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
@@ -105,6 +107,9 @@ export function WindChimeSender({
   successMessage = "你的心意已随风传达啦！",
   rateLimit = { max: 3, windowMs: 60_000, storageKey: "windchime:rl" },
   onSubmit,
+  enableImages = false,
+  topicSlug = "default",
+  liveBaseUrl,
   successAudioSrc,
   enableSwayAnimation = true,
   theme,
@@ -118,10 +123,12 @@ export function WindChimeSender({
   linkMaxLength = 500,
   turnstileSiteKey,
   blockedTerms,
+  blockedTermsEnabled = false,
   blockedTermsMessage = "内容包含不允许的词，请修改后再试。",
   disableSenderFingerprint = false,
   senderFingerprintKey = "windchime:fp",
 }: WindChimeSenderProps) {
+  const attachments = useWindChimeAttachments(topicSlug, liveBaseUrl);
   const th = useMemo(() => mergeTheme(theme), [theme]);
   const baseId = useId();
   const messageId = `${baseId}-message`;
@@ -129,7 +136,11 @@ export function WindChimeSender({
   const linkId = `${baseId}-link`;
 
   const form = useWindChimeSubmission({
-    onSubmit,
+    topicSlug,
+    onSubmit: async (payload) => {
+      await onSubmit(enableImages ? await attachments.attach(payload) : payload);
+      attachments.clear();
+    },
     enabled: status !== "paused",
     requireTurnstile: Boolean(turnstileSiteKey),
     rateLimit,
@@ -137,6 +148,7 @@ export function WindChimeSender({
     nicknameMaxLength,
     linkMaxLength,
     blockedTerms,
+    blockedTermsEnabled,
     disableSenderFingerprint,
     senderFingerprintKey,
   });
@@ -304,6 +316,7 @@ export function WindChimeSender({
           <div className={th.counter}>
             {len} / {maxLength}
           </div>
+          {enableImages && <WindChimeAttachmentInput files={attachments.files} onChange={attachments.setFiles} disabled={paused || sending} />}
 
           {turnstileSiteKey ? (
             <TurnstileWidget

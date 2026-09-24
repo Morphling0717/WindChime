@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "dockerOrSshExecuted": false,
+  "checks": [
+    "Exact reviewed proxy accepted",
+    "Changed proxy image rejected",
+    "Changed proxy mount permissions rejected",
+    "Changed proxy PIDs rejected",
+    "Dedicated proxy data mount rejected even readonly",
+    "Only current production writable FD accepted",
+    "Reviewed proxy actual writable FD still rejected",
+    "Reused production PID rejected",
+    "Stopped production with zero writable FDs accepted",
+    "Any host writable FD after stop rejected",
+    "Unknown writable-overlap container rejected without open FD",
+    "Synthetic proc scan detects writable inode and excludes readonly FD",
+    "Data directory inspection denied fails closed",
+    "Docker comm containing spaces parsed correctly"
+  ],
+  "helperSha256": "139387cacd78cdba4214bd955bd559346d0e1491b831efdc33fa451f2119543b"
+}

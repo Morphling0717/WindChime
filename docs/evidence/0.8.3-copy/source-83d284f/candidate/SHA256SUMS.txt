@@ -1,0 +1,3 @@
+2eadfa26fc5ef36dad7b1c73141a8ad0e52da8ca77a19c45bb60c716cbab297f  WindChime-Setup-0.8.3.exe
+f3b63a79606ce6ebc2797293442a6b7d9460ef9b002b1d545bbda4331365cf9c  WindChime-win32-x64-0.8.3.zip
+c1207a59e8a3d5f9fe9e4e9a6c1895250569f2985add9b08c9737d8170a8f865  windchime-embed-0.8.3.tgz

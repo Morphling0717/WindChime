@@ -1,0 +1,139 @@
+{
+  "recordedAt": "2026-09-23T15:22:27.300Z",
+  "status": "built-pending-native",
+  "releaseGatePassed": false,
+  "sourceCommit": "47b03b240df2495e4ca8e05692676a5babcbc76d",
+  "sourceTree": "4768841c4ce0e0ee97f5447cc5ca8776e2bdec05",
+  "versions": {
+    "desktop": "0.8.3",
+    "shared": "0.8.2"
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "platform": "win32",
+    "arch": "x64",
+    "npm": "10.9.8",
+    "isolatedWorktree": true,
+    "isolatedDependencies": true,
+    "sourceWorktreeClean": true
+  },
+  "assets": [
+    {
+      "name": "WindChime-Setup-0.8.3.exe",
+      "bytes": 119137280,
+      "sha256": "ddc60b16d000ec45c3ba9be0ada6351fd37165ab77f09f660079b529d6d4339a"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.3.zip",
+      "bytes": 160662213,
+      "sha256": "a1179f6e635f3c6c5cb8d838bb5e46e21e560fd918652d08c32dede6f47f91c0"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 188,
+      "sha256": "6ac7dd3197b2e5f10416fa03830766efaa0efa717defc2f774a66be49d2042f3"
+    }
+  ],
+  "sourceTests": {
+    "log": "desktop-tests-final.log",
+    "report": "desktop-tests-final.json",
+    "passed": 145,
+    "failed": 0,
+    "skipped": 0
+  },
+  "packageVerification": {
+    "passed": true,
+    "report": "package-verification.json",
+    "originalReportSha256": "57399249f218652f00fc0c9ca328bfbd084bfd3b3c8ce715fe1f94f740a9068d"
+  },
+  "stageVerification": {
+    "passed": true,
+    "report": "installer-stage-verification.json",
+    "payloadFilesMatched": 75,
+    "executedPublicSetup": false,
+    "registeredApplication": false
+  },
+  "originalCandidate": {
+    "sourceCommit": "005312e7270f391f6ac526ebe7e33ca4ac8af1fc",
+    "status": "superseded-do-not-publish",
+    "originalFilesRetained": true
+  },
+  "pending": [
+    "Native magnetic-tile topmost rerun after observed failure",
+    "Final EXE clean install, upgrade, rollback and tray uninstall",
+    "Final ZIP independent startup",
+    "Final OBS and LiveHime real window captures and timing",
+    "Real OS hotkeys, high DPI, sleep resume and native visual matrix"
+  ],
+  "stopReason": "Foreground computer-use was stopped by a physical Escape signal; no alternative input or process control used to bypass it.",
+  "mergesPerformed": false,
+  "releaseCreated": false,
+  "production": {
+    "uliuliSharedVersion": "0.8.1",
+    "uliuliUpdated": false,
+    "freeBytesAtReadOnlyCheck": 8302587904,
+    "requiredFreeBytes": 8589934592,
+    "miaDeployed": false
+  },
+  "reportsArePathSanitized": true,
+  "ci": {
+    "conclusion": "success",
+    "headSha": "47b03b240df2495e4ca8e05692676a5babcbc76d",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "databaseId": 107245551852,
+        "name": "desktop-windows",
+        "status": "completed",
+        "url": "https://github.com/Morphling0717/WindChime/actions/runs/35879957505/job/107245551852"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 107245552222,
+        "name": "verify (24)",
+        "status": "completed",
+        "url": "https://github.com/Morphling0717/WindChime/actions/runs/35879957505/job/107245552222"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 107245552590,
+        "name": "verify (20)",
+        "status": "completed",
+        "url": "https://github.com/Morphling0717/WindChime/actions/runs/35879957505/job/107245552590"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/Morphling0717/WindChime/actions/runs/35879957505"
+  },
+  "draftPullRequests": [
+    {
+      "url": "https://github.com/Morphling0717/WindChime/pull/1",
+      "base": "main",
+      "draft": true,
+      "autoMerge": false
+    },
+    {
+      "url": "https://github.com/Morphling0717/Next_UliUli/pull/1",
+      "base": "main",
+      "draft": true,
+      "autoMerge": false
+    },
+    {
+      "url": "https://github.com/Morphling0717/Next_Mia/pull/1",
+      "base": "main",
+      "draft": true,
+      "autoMerge": false
+    }
+  ],
+  "preparatoryAttempts": [
+    {
+      "command": "verify-package.cjs without stage argument",
+      "result": "Rejected with usage before verification; corrected invocation and retained original log"
+    },
+    {
+      "command": "verify-package.cjs before preparing isolated Electron dist",
+      "result": "Missing original LICENSE comparison fixture; installed locked Electron archive with node node_modules/electron/install.js, then reran verification successfully. No product source or artifacts changed."
+    }
+  ],
+  "originalSourcePathsSanitizedInPublicPackageReports": true
+}

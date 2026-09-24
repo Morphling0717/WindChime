@@ -34,7 +34,9 @@ async function fixture(
     filename = join(dir, "test.sqlite");
   if (legacy) await rawDb(filename, legacy);
   const storage = createWindChimeSqlite({ filename });
+  const extraStorages = [];
   t.after(async () => {
+    await Promise.all(extraStorages.map((item) => item.close()));
     await storage.close();
     await rm(dir, { recursive: true, force: true });
   });
@@ -72,7 +74,7 @@ async function fixture(
     });
   const call = (path, method = "GET", payload, admin = true, ip) =>
     handlers[method](request(path, method, payload, admin, ip));
-  return { dir, filename, storage, service, request, call, handlers };
+  return { dir, filename, storage, service, request, call, handlers, trackStorage: (item) => { extraStorages.push(item); return item; } };
 }
 const earlierSchema = `
 CREATE TABLE host_users(id TEXT PRIMARY KEY,password_hash TEXT);INSERT INTO host_users VALUES('admin','keep-me');
@@ -96,7 +98,7 @@ test("new database initializes default and independent migration record; service
   assert.equal((await f.service.getSettings()).enabled, true);
   assert.equal(
     (await f.storage.all("SELECT * FROM windchime_migrations")).length,
-    1,
+    4,
   );
   assert.ok(hostReadyCalls >= 3);
   assert.equal(
@@ -119,7 +121,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   assert.equal(old.is_favorited, 1);
   assert.equal(old.created_at, "2024-01-02T03:04:05Z");
   assert.equal(old.text, "keep text");
-  assert.deepEqual(await f.service.getSettings(), { enabled: false });
+  assert.deepEqual(await f.service.getSettings(), { enabled: false, blockedTermsEnabled: false });
   assert.deepEqual(await f.service.getBlockedTerms(), ["secret"]);
   assert.deepEqual(await f.storage.get("SELECT * FROM host_users"), {
     id: "admin",
@@ -143,7 +145,7 @@ test("pre-topic schema migrates before indices, preserves old data/settings/hash
   await second.ready;
   assert.equal(
     (await second.all("SELECT * FROM windchime_migrations")).length,
-    1,
+    4,
   );
   assert.equal(
     (await second.all("SELECT * FROM mail_rate_limit_hits")).length,
@@ -343,6 +345,7 @@ test("message lifecycle, review redaction, consistent counts, topic isolation, a
   const f = await fixture(t);
   const topic = await f.service.createTopic({ slug: "event", title: "Event" });
   await f.service.setBlockedTerms([" Secret ", "secret"]);
+  await f.service.setBlockedTermsEnabled(true);
   for (const payload of [
     { text: "normal" },
     {
@@ -450,6 +453,7 @@ test("archive markReadFirst addresses the requested topic atomically and leaves 
   const a = await f.service.createTopic({ slug: "a", title: "A" }),
     b = await f.service.createTopic({ slug: "b", title: "B" });
   await f.service.setBlockedTerms(["review"]);
+  await f.service.setBlockedTermsEnabled(true);
   for (const [index, payload] of [
     { text: "normal A", topicSlug: "a" },
     { text: "review A", topicSlug: "a" },
@@ -589,7 +593,7 @@ test("transactions roll back failed archive, block and purge without partial wri
 test("concurrent submissions enforce exact durable limits across eight independent connections", async (t) => {
   const f = await fixture(t);
   const others = Array.from({ length: 7 }, () =>
-    createWindChimeSqlite({ filename: f.filename }),
+    f.trackStorage(createWindChimeSqlite({ filename: f.filename })),
   );
   t.after(async () => {
     await Promise.all(others.map((storage) => storage.close()));
@@ -786,7 +790,7 @@ test("eight independent connections can initialize the same brand new schema con
   );
   assert.equal(
     (await connections[7].all("SELECT id FROM windchime_migrations")).length,
-    1,
+    4,
   );
 });
 
@@ -973,6 +977,7 @@ test("explicitly empty legacy salt preserves stored sender identity while missin
 test("blocklist preserves normal previews but never reveals new, legacy or untraceable flagged originals", async (t) => {
   const f = await fixture(t);
   await f.service.setBlockedTerms(["secret"]);
+  await f.service.setBlockedTermsEnabled(true);
   await f.service.submitMessage(
     { text: "secret original", senderFingerprint: "flagged" },
     f.request("/messages", "POST", undefined, false),

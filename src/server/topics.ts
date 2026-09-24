@@ -13,6 +13,7 @@ import type {
   WindChimeStorage,
 } from "../sqlite/index.js";
 import { boolInput, fail, objectInput, timeRange } from "./validation.js";
+import { readBlockedTermsEnabled } from "./keyword-settings.js";
 export type TopicRow = {
   id: string;
   slug: string;
@@ -80,8 +81,9 @@ export async function resolveTopic(
   return rowToTopic(row, now);
 }
 export async function topicCounts(db: WindChimeSqlExecutor, topicId: string) {
+  const enabled = await readBlockedTermsEnabled(db);
   const row = await db.get<{ unread: number; flagged: number }>(
-    "SELECT COALESCE(SUM(CASE WHEN is_read=0 AND is_flagged=0 THEN 1 ELSE 0 END),0) AS unread, COALESCE(SUM(is_flagged),0) AS flagged FROM mail_messages WHERE topic_id=? AND deleted_at IS NULL",
+    `SELECT COALESCE(SUM(CASE WHEN is_read=0 ${enabled ? "AND is_flagged=0" : ""} THEN 1 ELSE 0 END),0) AS unread, ${enabled ? "COALESCE(SUM(is_flagged),0)" : "0"} AS flagged FROM mail_messages WHERE topic_id=? AND deleted_at IS NULL`,
     [topicId],
   );
   return {
@@ -223,7 +225,7 @@ export function createTopicOperations(
       if (current.isDefault) fail("DEFAULT_NOT_ARCHIVABLE", "默认主题不可归档");
       if (options.markReadFirst)
         await db.run(
-          "UPDATE mail_messages SET is_read=1 WHERE topic_id=? AND deleted_at IS NULL AND is_flagged=0",
+          `UPDATE mail_messages SET is_read=1 WHERE topic_id=? AND deleted_at IS NULL ${await readBlockedTermsEnabled(db) ? "AND is_flagged=0" : ""}`,
           [current.id],
         );
       const counts = await topicCounts(db, current.id);

@@ -1,0 +1,80 @@
+﻿file,name_zh,purpose,format,kind,width,height,alpha,note
+01_Glass/WindChime_symbol_glass.png,琉璃主图形 · 透明底,网站主视觉、海报、较大尺寸展示,PNG,raster,617,1081,True,由选定原稿分离，原生导出尺寸617×1081；非3D源文件
+01_Glass/WindChime_symbol_glass.webp,琉璃主图形 · WebP,网页加载,WEBP,raster,617,1081,True,与PNG同源，保留透明通道
+04_Monochrome/WindChime_symbol_mono_navy.svg,同源单色主图形 / navy,印刷、烫印、刻字及单色场景,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_mono_navy.png,同源单色主图形 / navy,印刷、烫印、刻字及单色场景,PNG,raster,800,1369,True,透明底，由矢量导出
+04_Monochrome/WindChime_symbol_mono_navy.pdf,同源单色主图形 / navy,印刷、烫印、刻字及单色场景,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+04_Monochrome/WindChime_symbol_mono_black.svg,同源单色主图形 / black,印刷、烫印、刻字及单色场景,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_mono_black.png,同源单色主图形 / black,印刷、烫印、刻字及单色场景,PNG,raster,800,1369,True,透明底，由矢量导出
+04_Monochrome/WindChime_symbol_mono_black.pdf,同源单色主图形 / black,印刷、烫印、刻字及单色场景,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+04_Monochrome/WindChime_symbol_mono_white.svg,同源单色主图形 / white,印刷、烫印、刻字及单色场景,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_mono_white.png,同源单色主图形 / white,印刷、烫印、刻字及单色场景,PNG,raster,800,1369,True,透明底，由矢量导出
+04_Monochrome/WindChime_symbol_mono_white.pdf,同源单色主图形 / white,印刷、烫印、刻字及单色场景,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+04_Monochrome/WindChime_symbol_small_navy.svg,小尺寸简化图形 / navy,导航栏、浏览器标签、小尺寸图标,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_small_navy.png,小尺寸简化图形 / navy,导航栏、浏览器标签、小尺寸图标,PNG,raster,512,512,True,透明底，由矢量导出
+04_Monochrome/WindChime_symbol_small_black.svg,小尺寸简化图形 / black,导航栏、浏览器标签、小尺寸图标,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_small_black.png,小尺寸简化图形 / black,导航栏、浏览器标签、小尺寸图标,PNG,raster,512,512,True,透明底，由矢量导出
+04_Monochrome/WindChime_symbol_small_white.svg,小尺寸简化图形 / white,导航栏、浏览器标签、小尺寸图标,SVG,vector,,,,路径文件，不含嵌入位图或字体
+04_Monochrome/WindChime_symbol_small_white.png,小尺寸简化图形 / white,导航栏、浏览器标签、小尺寸图标,PNG,raster,512,512,True,透明底，由矢量导出
+03_Wordmarks/WindChime_wordmark_color.png,原稿中英文字标 · 彩色,独立字标、页尾、品牌署名,PNG,raster,495,285,True,
+03_Wordmarks/WindChime_wordmark_chinese_color.png,原稿中文字标 · 彩色,中文标题、中文品牌署名,PNG,raster,471,189,True,
+03_Wordmarks/WindChime_wordmark_english_color.png,原稿英文字标 · 彩色,英文品牌署名,PNG,raster,355,58,True,
+03_Wordmarks/WindChime_wordmark_bilingual_navy.svg,中英文字标 · 描摹路径 / navy,独立字标、印刷及深浅背景,SVG,vector,,,,路径文件，不含嵌入位图或字体
+03_Wordmarks/WindChime_wordmark_bilingual_navy.png,中英文字标 · 描摹路径 / navy,独立字标、印刷及深浅背景,PNG,raster,1000,576,True,透明底，由矢量导出
+03_Wordmarks/WindChime_wordmark_bilingual_navy.pdf,中英文字标 · 描摹路径 / navy,独立字标、印刷及深浅背景,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+03_Wordmarks/WindChime_wordmark_bilingual_white.svg,中英文字标 · 描摹路径 / white,独立字标、印刷及深浅背景,SVG,vector,,,,路径文件，不含嵌入位图或字体
+03_Wordmarks/WindChime_wordmark_bilingual_white.png,中英文字标 · 描摹路径 / white,独立字标、印刷及深浅背景,PNG,raster,1000,576,True,透明底，由矢量导出
+03_Wordmarks/WindChime_wordmark_bilingual_white.pdf,中英文字标 · 描摹路径 / white,独立字标、印刷及深浅背景,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+03_Wordmarks/WindChime_wordmark_english_navy.svg,英文字标 · 描摹路径 / navy,英文导航、项目署名,SVG,vector,,,,路径文件，不含嵌入位图或字体
+03_Wordmarks/WindChime_wordmark_english_navy.png,英文字标 · 描摹路径 / navy,英文导航、项目署名,PNG,raster,1065,174,True,透明底，由矢量导出
+03_Wordmarks/WindChime_wordmark_english_white.svg,英文字标 · 描摹路径 / white,英文导航、项目署名,SVG,vector,,,,路径文件，不含嵌入位图或字体
+03_Wordmarks/WindChime_wordmark_english_white.png,英文字标 · 描摹路径 / white,英文导航、项目署名,PNG,raster,1065,174,True,透明底，由矢量导出
+02_Lockups/WindChime_horizontal_glass_light.png,琉璃横版组合 · 浅底用,网站、横向海报、文档页眉,PNG,raster,1200,640,True,
+02_Lockups/WindChime_horizontal_glass_light.webp,琉璃横版组合 · light WebP,网页加载,WEBP,raster,1200,640,True,
+02_Lockups/WindChime_stacked_glass_light.png,琉璃竖版组合 · 浅底用,启动页、竖版海报、登录页,PNG,raster,760,1340,True,
+02_Lockups/WindChime_horizontal_english_light.png,英文横版组合 · light,英文页面、项目介绍,PNG,raster,1000,380,True,
+02_Lockups/WindChime_horizontal_glass_dark.png,琉璃横版组合 · 深底用,网站、横向海报、文档页眉,PNG,raster,1200,640,True,
+02_Lockups/WindChime_horizontal_glass_dark.webp,琉璃横版组合 · dark WebP,网页加载,WEBP,raster,1200,640,True,
+02_Lockups/WindChime_stacked_glass_dark.png,琉璃竖版组合 · 深底用,启动页、竖版海报、登录页,PNG,raster,760,1340,True,
+02_Lockups/WindChime_horizontal_english_dark.png,英文横版组合 · dark,英文页面、项目介绍,PNG,raster,1000,380,True,
+02_Lockups/WindChime_horizontal_mono_black.svg,单色横版组合 / black,合同、信头、单色印刷,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_horizontal_mono_black.png,单色横版组合 / black,合同、信头、单色印刷,PNG,raster,1650,930,True,透明底，由矢量导出
+02_Lockups/WindChime_horizontal_mono_black.pdf,单色横版组合 / black,合同、信头、单色印刷,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+02_Lockups/WindChime_horizontal_mono_white.svg,单色横版组合 / white,合同、信头、单色印刷,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_horizontal_mono_white.png,单色横版组合 / white,合同、信头、单色印刷,PNG,raster,1650,930,True,透明底，由矢量导出
+02_Lockups/WindChime_horizontal_mono_white.pdf,单色横版组合 / white,合同、信头、单色印刷,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+02_Lockups/WindChime_stacked_mono_black.svg,单色竖版组合 / black,竖版物料、压印与单色展示,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_stacked_mono_black.png,单色竖版组合 / black,竖版物料、压印与单色展示,PNG,raster,1000,1361,True,透明底，由矢量导出
+02_Lockups/WindChime_stacked_mono_black.pdf,单色竖版组合 / black,竖版物料、压印与单色展示,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+02_Lockups/WindChime_stacked_mono_white.svg,单色竖版组合 / white,竖版物料、压印与单色展示,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_stacked_mono_white.png,单色竖版组合 / white,竖版物料、压印与单色展示,PNG,raster,1000,1361,True,透明底，由矢量导出
+02_Lockups/WindChime_stacked_mono_white.pdf,单色竖版组合 / white,竖版物料、压印与单色展示,PDF,vector,,,,矢量PDF；白色版本的白页预览可能不可见
+02_Lockups/WindChime_header_navy.svg,导航栏简化组合 / navy,网站导航栏、邮件页眉,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_header_navy.png,导航栏简化组合 / navy,网站导航栏、邮件页眉,PNG,raster,972,188,True,透明底，由矢量导出
+02_Lockups/WindChime_header_white.svg,导航栏简化组合 / white,网站导航栏、邮件页眉,SVG,vector,,,,路径文件，不含嵌入位图或字体
+02_Lockups/WindChime_header_white.png,导航栏简化组合 / white,网站导航栏、邮件页眉,PNG,raster,972,188,True,透明底，由矢量导出
+05_App_Icons/WindChime_app_light_1024.png,应用图标 · light · 1024,应用图标母版；方形满版，由应用平台裁切,PNG,raster,1024,1024,False,
+05_App_Icons/WindChime_app_light_512.png,应用图标 · light · 512,桌面图标、网页应用,PNG,raster,512,512,False,
+07_Social/WindChime_avatar_light_800.png,头像 · light,平台头像、圆形裁切安全版,PNG,raster,800,800,False,
+05_App_Icons/WindChime_app_dark_1024.png,应用图标 · dark · 1024,应用图标母版；方形满版，由应用平台裁切,PNG,raster,1024,1024,False,
+05_App_Icons/WindChime_app_dark_512.png,应用图标 · dark · 512,桌面图标、网页应用,PNG,raster,512,512,False,
+07_Social/WindChime_avatar_dark_800.png,头像 · dark,平台头像、圆形裁切安全版,PNG,raster,800,800,False,
+06_Web_Favicons/icon-192.png,网页应用图标 · 192,网页应用、站点安装图标,PNG,raster,192,192,False,
+06_Web_Favicons/icon-512.png,网页应用图标 · 512,网页应用、站点安装图标,PNG,raster,512,512,False,
+06_Web_Favicons/icon-maskable-512.png,网页应用可裁切图标,PWA maskable 图标，图形置于中央安全区,PNG,raster,512,512,False,
+06_Web_Favicons/apple-touch-icon.png,手机网页收藏图标,手机网页收藏与主屏幕入口,PNG,raster,180,180,False,
+06_Web_Favicons/favicon.svg,自适应深浅色网站图标,现代浏览器标签页,SVG,vector,,,,
+06_Web_Favicons/favicon-16.png,网站图标 · 16px,浏览器标签页与兼容场景,PNG,raster,16,16,True,
+06_Web_Favicons/favicon-32.png,网站图标 · 32px,浏览器标签页与兼容场景,PNG,raster,32,32,True,
+06_Web_Favicons/favicon-48.png,网站图标 · 48px,浏览器标签页与兼容场景,PNG,raster,48,48,True,
+06_Web_Favicons/favicon-64.png,网站图标 · 64px,浏览器标签页与兼容场景,PNG,raster,64,64,True,
+06_Web_Favicons/favicon.ico,多尺寸 ICO 网站图标,传统浏览器及兼容入口,ICO,raster,,,,
+06_Web_Favicons/site.webmanifest,网站图标配置示例,将本文件夹复制到public/brand；按实际部署修改路径,WEBMANIFEST,config,,,,
+07_Social/WindChime_share_light_1200x630.png,分享封面 · light,网页分享卡片、项目介绍封面,PNG,raster,1200,630,False,
+07_Social/WindChime_share_dark_1200x630.png,分享封面 · dark,网页分享卡片、项目介绍封面,PNG,raster,1200,630,False,
+07_Social/WindChime_banner_1600x600.png,横幅封面,项目页横幅、社区主页封面,PNG,raster,1600,600,False,
+09_Source_Reference/Approved_Concept_Reference.png,选定原稿 · 仅作参考,对照最初选定的第二款，不作为可拆层源文件,PNG,reference,1254,1254,False,
+08_Guidelines/brand-colors.json,品牌色 JSON,网页、开发端色彩配置,JSON,config,,,,
+08_Guidelines/brand-tokens.css,品牌色 CSS,网页样式接入,CSS,config,,,,
+08_Guidelines/WindChime_Brand_Guide.pdf,品牌资产使用说明,文件选择、背景、尺寸、图标、色彩与制作边界,PDF,guide,,,,5页
+README_先读我.md,先读我,交付说明与快速选用,MD,guide,,,,

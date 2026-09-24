@@ -1,0 +1,1176 @@
+
+> @windchime/embed@0.8.1 test
+> npm run build && node --test tests/*.test.mjs
+
+
+> @windchime/embed@0.8.1 build
+> node scripts/build.mjs
+
+TAP version 13
+# Subtest: new database initializes default and independent migration record; service waits for host readiness
+ok 1 - new database initializes default and independent migration record; service waits for host readiness
+  ---
+  duration_ms: 39.8099
+  type: 'test'
+  ...
+# Subtest: pre-topic schema migrates before indices, preserves old data/settings/hash and does not touch host login
+ok 2 - pre-topic schema migrates before indices, preserves old data/settings/hash and does not touch host login
+  ---
+  duration_ms: 86.0984
+  type: 'test'
+  ...
+# Subtest: UliUli current schema round-trips all topic/message state across restart
+ok 3 - UliUli current schema round-trips all topic/message state across restart
+  ---
+  duration_ms: 110.2227
+  type: 'test'
+  ...
+# Subtest: Mia current schema round-trips all topic/message state across restart
+ok 4 - Mia current schema round-trips all topic/message state across restart
+  ---
+  duration_ms: 98.5375
+  type: 'test'
+  ...
+# Subtest: failed legacy migration rolls back DDL and its migration marker
+ok 5 - failed legacy migration rolls back DDL and its migration marker
+  ---
+  duration_ms: 22.916
+  type: 'test'
+  ...
+# Subtest: sender identity and proxy precedence exactly preserve both host algorithms
+ok 6 - sender identity and proxy precedence exactly preserve both host algorithms
+  ---
+  duration_ms: 16.2513
+  type: 'test'
+  ...
+# Subtest: public API and SSR DTO never serialize notes, counts, hashes, or submitted text; all management methods require login
+ok 7 - public API and SSR DTO never serialize notes, counts, hashes, or submitted text; all management methods require login
+  ---
+  duration_ms: 35.2463
+  type: 'test'
+  ...
+# Subtest: message lifecycle, review redaction, consistent counts, topic isolation, and strict inputs
+ok 8 - message lifecycle, review redaction, consistent counts, topic isolation, and strict inputs
+  ---
+  duration_ms: 47.0023
+  type: 'test'
+  ...
+# Subtest: archive markReadFirst addresses the requested topic atomically and leaves flagged items unread; restore and purge retain scope
+ok 9 - archive markReadFirst addresses the requested topic atomically and leaves flagged items unread; restore and purge retain scope
+  ---
+  duration_ms: 34.7079
+  type: 'test'
+  ...
+# Subtest: block removes history across topics, dropped submissions are indistinguishable, unblock allows new mail
+ok 10 - block removes history across topics, dropped submissions are indistinguishable, unblock allows new mail
+  ---
+  duration_ms: 28.4393
+  type: 'test'
+  ...
+# Subtest: transactions roll back failed archive, block and purge without partial writes; operations recover afterwards
+ok 11 - transactions roll back failed archive, block and purge without partial writes; operations recover afterwards
+  ---
+  duration_ms: 26.7883
+  type: 'test'
+  ...
+# Subtest: concurrent submissions enforce exact durable limits across eight independent connections
+ok 12 - concurrent submissions enforce exact durable limits across eight independent connections
+  ---
+  duration_ms: 379.6173
+  type: 'test'
+  ...
+# Subtest: time windows, disabled topics, required Turnstile and verifier failures enforce server decisions
+ok 13 - time windows, disabled topics, required Turnstile and verifier failures enforce server decisions
+  ---
+  duration_ms: 81.8139
+  type: 'test'
+  ...
+# Subtest: shared submission normalization validates text and safe HTTP URLs identically for server and hooks
+ok 14 - shared submission normalization validates text and safe HTTP URLs identically for server and hooks
+  ---
+  duration_ms: 0.4057
+  type: 'test'
+  ...
+# Subtest: Mia JSON rate-limit state migrates once without changing login or original rate tables
+ok 15 - Mia JSON rate-limit state migrates once without changing login or original rate tables
+  ---
+  duration_ms: 36.3482
+  type: 'test'
+  ...
+# Subtest: eight independent connections can initialize the same brand new schema concurrently without duplicate default or migration
+ok 16 - eight independent connections can initialize the same brand new schema concurrently without duplicate default or migration
+  ---
+  duration_ms: 218.6158
+  type: 'test'
+  ...
+# Subtest: explicit public topic view remains public for logged-in admins; explicit admin view requires authorization
+ok 17 - explicit public topic view remains public for logged-in admins; explicit admin view requires authorization
+  ---
+  duration_ms: 16.0406
+  type: 'test'
+  ...
+# Subtest: legacy JSON password authenticates before credential stripping; header/body candidate behavior and public validation stay intact
+ok 18 - legacy JSON password authenticates before credential stripping; header/body candidate behavior and public validation stay intact
+  ---
+  duration_ms: 28.676
+  type: 'test'
+  ...
+# Subtest: explicitly empty legacy salt preserves stored sender identity while missing salt is rejected
+ok 19 - explicitly empty legacy salt preserves stored sender identity while missing salt is rejected
+  ---
+  duration_ms: 16.7878
+  type: 'test'
+  ...
+# Subtest: blocklist preserves normal previews but never reveals new, legacy or untraceable flagged originals
+ok 20 - blocklist preserves normal previews but never reveals new, legacy or untraceable flagged originals
+  ---
+  duration_ms: 27.1723
+  type: 'test'
+  ...
+# Subtest: initial connection blank; explicit active snapshot appears; error blanks and rejoins without replay
+ok 21 - initial connection blank; explicit active snapshot appears; error blanks and rejoins without replay
+  ---
+  duration_ms: 5.1277
+  type: 'test'
+  ...
+# Subtest: expired lease blanks within watchdog; stale delayed response cannot restore it
+ok 22 - expired lease blanks within watchdog; stale delayed response cannot restore it
+  ---
+  duration_ms: 86.6235
+  type: 'test'
+  ...
+# Subtest: hide cancels delayed image decode and it cannot flash after revocation
+ok 23 - hide cancels delayed image decode and it cannot flash after revocation
+  ---
+  duration_ms: 2.323
+  type: 'test'
+  ...
+# Subtest: out-of-order revision or different epoch fails closed
+ok 24 - out-of-order revision or different epoch fails closed
+  ---
+  duration_ms: 1.5955
+  type: 'test'
+  ...
+# (node:82780) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: suspend reset and restarted receiver begin blank while approvals remain server-side
+ok 25 - suspend reset and restarted receiver begin blank while approvals remain server-side
+  ---
+  duration_ms: 1.3828
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses default cadence and stop cancels further requests
+ok 26 - scheduled polling uses default cadence and stop cancels further requests
+  ---
+  duration_ms: 2.2703
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses desktop cadence and stop cancels further requests
+ok 27 - scheduled polling uses desktop cadence and stop cancels further requests
+  ---
+  duration_ms: 1.6722
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses lower bound cadence and stop cancels further requests
+ok 28 - scheduled polling uses lower bound cadence and stop cancels further requests
+  ---
+  duration_ms: 0.7993
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses upper bound cadence and stop cancels further requests
+ok 29 - scheduled polling uses upper bound cadence and stop cancels further requests
+  ---
+  duration_ms: 1.326
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses NaN cadence and stop cancels further requests
+ok 30 - scheduled polling uses NaN cadence and stop cancels further requests
+  ---
+  duration_ms: 1.1598
+  type: 'test'
+  ...
+# Subtest: scheduled polling uses Infinity cadence and stop cancels further requests
+ok 31 - scheduled polling uses Infinity cadence and stop cancels further requests
+  ---
+  duration_ms: 1.1561
+  type: 'test'
+  ...
+# Subtest: faster polling does not overlap a slow request or replay a late response after reset
+ok 32 - faster polling does not overlap a slow request or replay a late response after reset
+  ---
+  duration_ms: 0.9993
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: default local controls omit platform and unconfigured links while keeping device and output controls
+ok 33 - default local controls omit platform and unconfigured links while keeping device and output controls
+  ---
+  duration_ms: 41.877
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: explicit platform opt-in keeps binding and configured desktop link callbacks operational
+ok 34 - explicit platform opt-in keeps binding and configured desktop link callbacks operational
+  ---
+  duration_ms: 11.3199
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: configured ordinary display URL issues a scoped display link without enabling platform controls
+ok 35 - configured ordinary display URL issues a scoped display link without enabling platform controls
+  ---
+  duration_ms: 18.2219
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: dirty notification covers unsaved review and appearance without exposing disabled keyword markers
+ok 36 - dirty notification covers unsaved review and appearance without exposing disabled keyword markers
+  ---
+  duration_ms: 1251.444
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: remote appearance updates cannot overwrite an unsaved local appearance
+ok 37 - remote appearance updates cannot overwrite an unsaved local appearance
+  ---
+  duration_ms: 1161.4569
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: own save adopts URL and whitespace normalization without a false remote conflict
+ok 38 - own save adopts URL and whitespace normalization without a false remote conflict
+  ---
+  duration_ms: 50.4174
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: typing while own save is pending preserves new local input and advances the saved basis
+ok 39 - typing while own save is pending preserves new local input and advances the saved basis
+  ---
+  duration_ms: 56.0342
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late own save response preserves a real newer remote edit
+ok 40 - late own save response preserves a real newer remote edit
+  ---
+  duration_ms: 1160.0615
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late own save response preserves a real newer remote edit already acknowledged locally
+ok 41 - late own save response preserves a real newer remote edit already acknowledged locally
+  ---
+  duration_ms: 1156.0723
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: remote edit retains private local draft and requires explicit version choice before save or approve
+ok 42 - remote edit retains private local draft and requires explicit version choice before save or approve
+  ---
+  duration_ms: 1155.6522
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# (node:61276) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: replacing display client cannot render even one frame from the previous mailbox
+ok 43 - replacing display client cannot render even one frame from the previous mailbox
+  ---
+  duration_ms: 1109.946
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: display forwards the polling interval and removes the previous timer when it changes
+ok 44 - display forwards the polling interval and removes the previous timer when it changes
+  ---
+  duration_ms: 2.1412
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: older sites allow private theme previews but never receive new appearance fields
+ok 45 - older sites allow private theme previews but never receive new appearance fields
+  ---
+  duration_ms: 15.0616
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: sites with original themes but without fixed image support cannot receive new layout or media settings
+ok 46 - sites with original themes but without fixed image support cannot receive new layout or media settings
+  ---
+  duration_ms: 15.01
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: appearance presets keep the selected layout and text metrics private until explicitly applied
+ok 47 - appearance presets keep the selected layout and text metrics private until explicitly applied
+  ---
+  duration_ms: 17.425
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: vertical layouts offer explicit recommended sizes and keep theme, image allocation and other edits independent
+ok 48 - vertical layouts offer explicit recommended sizes and keep theme, image allocation and other edits independent
+  ---
+  duration_ms: 40.2534
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: appearance preview falls back to window resize when ResizeObserver is unavailable
+ok 49 - appearance preview falls back to window resize when ResizeObserver is unavailable
+  ---
+  duration_ms: 6.2301
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: appearance preview scales its widest card while long content stays inside the fixed display viewport
+ok 50 - appearance preview scales its widest card while long content stays inside the fixed display viewport
+  ---
+  duration_ms: 15.9689
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: display width and height can be replaced from empty inputs without changing the saved viewport
+ok 51 - display width and height can be replaced from empty inputs without changing the saved viewport
+  ---
+  duration_ms: 14.4162
+  type: 'test'
+  ...
+# Subtest: incomplete out-of-range viewport edits cannot make preview geometry diverge from the audience card
+ok 52 - incomplete out-of-range viewport edits cannot make preview geometry diverge from the audience card
+  ---
+  duration_ms: 14.0215
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: named connection key is reusable, scoped, shown only in memory and copied explicitly
+ok 53 - named connection key is reusable, scoped, shown only in memory and copied explicitly
+  ---
+  duration_ms: 79.4315
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: empty names and unsupported servers create no grants
+ok 54 - empty names and unsupported servers create no grants
+  ---
+  duration_ms: 22.831
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: client changes cannot commit a previous connection key
+ok 55 - client changes cannot commit a previous connection key
+  ---
+  duration_ms: 38.5202
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: topic changes cannot commit a previous connection key
+ok 56 - topic changes cannot commit a previous connection key
+  ---
+  duration_ms: 39.1579
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: authority changes cannot commit a previous connection key
+ok 57 - authority changes cannot commit a previous connection key
+  ---
+  duration_ms: 37.8112
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late generation cannot populate another client
+ok 58 - late generation cannot populate another client
+  ---
+  duration_ms: 37.4958
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late generation cannot populate another topic
+ok 59 - late generation cannot populate another topic
+  ---
+  duration_ms: 23.5367
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late capability response cannot create a grant for an abandoned client
+ok 60 - late capability response cannot create a grant for an abandoned client
+  ---
+  duration_ms: 33.5833
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: revoking the generated grant removes the visible key and describes shared-device invalidation
+ok 61 - revoking the generated grant removes the visible key and describes shared-device invalidation
+  ---
+  duration_ms: 15.08
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: an older initial grant list cannot clear a newly created connection key
+ok 62 - an older initial grant list cannot clear a newly created connection key
+  ---
+  duration_ms: 14.9708
+  type: 'test'
+  ...
+# Subtest: legacy pairing is collapsed by default and opens for an incoming device code
+ok 63 - legacy pairing is collapsed by default and opens for an incoming device code
+  ---
+  duration_ms: 14.8265
+  type: 'test'
+  ...
+# Subtest: control client exposes typed identity/capability routes without adding them to the display client
+ok 64 - control client exposes typed identity/capability routes without adding them to the display client
+  ---
+  duration_ms: 1.0798
+  type: 'test'
+  ...
+# Subtest: connection key codec round-trips UTF-8 without Node Buffer and normalizes origins
+ok 65 - connection key codec round-trips UTF-8 without Node Buffer and normalizes origins
+  ---
+  duration_ms: 2.0563
+  type: 'test'
+  ...
+# Subtest: connection origins permit HTTPS and explicit loopback HTTP, without paths or credentials
+ok 66 - connection origins permit HTTPS and explicit loopback HTTP, without paths or credentials
+  ---
+  duration_ms: 1.7713
+  type: 'test'
+  ...
+# Subtest: connection keys reject display credentials, unknown fields and invalid identifiers
+ok 67 - connection keys reject display credentials, unknown fields and invalid identifiers
+  ---
+  duration_ms: 1.4776
+  type: 'test'
+  ...
+# Subtest: connection key parser bounds input and rejects malformed base64, JSON and UTF-8 with safe errors
+ok 68 - connection key parser bounds input and rejects malformed base64, JSON and UTF-8 with safe errors
+  ---
+  duration_ms: 0.327
+  type: 'test'
+  ...
+# Subtest: capabilities advertise reusable connection keys without changing protocol version
+ok 69 - capabilities advertise reusable connection keys without changing protocol version
+  ---
+  duration_ms: 56.3037
+  type: 'test'
+  ...
+# Subtest: control identity returns only server-derived grant metadata, including non-default topics
+ok 70 - control identity returns only server-derived grant metadata, including non-default topics
+  ---
+  duration_ms: 32.7654
+  type: 'test'
+  ...
+# Subtest: identity refuses cookie authority, display tokens, malformed tokens, query scope and mutations
+ok 71 - identity refuses cookie authority, display tokens, malformed tokens, query scope and mutations
+  ---
+  duration_ms: 34.5593
+  type: 'test'
+  ...
+# Subtest: the same pasted connection key remains reusable without issuing more grants or changing broadcast state
+ok 72 - the same pasted connection key remains reusable without issuing more grants or changing broadcast state
+  ---
+  duration_ms: 35.183
+  type: 'test'
+  ...
+# Subtest: identity distinguishes unknown, expired and revoked keys without weakening existing authorization
+ok 73 - identity distinguishes unknown, expired and revoked keys without weakening existing authorization
+  ---
+  duration_ms: 34.3818
+  type: 'test'
+  ...
+# Subtest: revoking a shared key stops every derived display while another key and its display remain usable
+ok 74 - revoking a shared key stops every derived display while another key and its display remain usable
+  ---
+  duration_ms: 71.2828
+  type: 'test'
+  ...
+# Subtest: parent key expiry stops a longer-lived child display and identity, without expiring another key
+ok 75 - parent key expiry stops a longer-lived child display and identity, without expiring another key
+  ---
+  duration_ms: 28.3029
+  type: 'test'
+  ...
+# Subtest: a connection key cannot cross websites or topics or create further control credentials
+ok 76 - a connection key cannot cross websites or topics or create further control credentials
+  ---
+  duration_ms: 41.2936
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: transport tile mounts no inbox, editor or credential UI and uses normal explicit next/hide actions
+ok 77 - transport tile mounts no inbox, editor or credential UI and uses normal explicit next/hide actions
+  ---
+  duration_ms: 27.4446
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: queue tile renders approved queue only and review navigation delegates to private host
+ok 78 - queue tile renders approved queue only and review navigation delegates to private host
+  ---
+  duration_ms: 7.9663
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: host-owned review selection remains unchanged when another window cannot discard the dirty draft
+ok 79 - host-owned review selection remains unchanged when another window cannot discard the dirty draft
+  ---
+  duration_ms: 22.9651
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: review tile receives selected message without requiring its own inbox and keeps approval explicit
+ok 80 - review tile receives selected message without requiring its own inbox and keeps approval explicit
+  ---
+  duration_ms: 13.3347
+  type: 'test'
+  ...
+# Subtest: native emergency hide remains usable before a new tile has received any server state
+ok 81 - native emergency hide remains usable before a new tile has received any server state
+  ---
+  duration_ms: 2.8963
+  type: 'test'
+  ...
+# Subtest: local artifact synchronization preserves installed nested dependencies and host manifest/lock/React
+ok 82 - local artifact synchronization preserves installed nested dependencies and host manifest/lock/React
+  ---
+  duration_ms: 45.3187
+  type: 'test'
+  ...
+# Subtest: a failed artifact staging copy preserves the last installed package
+ok 83 - a failed artifact staging copy preserves the last installed package
+  ---
+  duration_ms: 21.7289
+  type: 'test'
+  ...
+# Subtest: example login and mutation origin checks work with container ports/proxy Host and reject cross-site requests
+ok 84 - example login and mutation origin checks work with container ports/proxy Host and reject cross-site requests
+  ---
+  duration_ms: 67.0003
+  type: 'test'
+  ...
+# Subtest: build output promotion replaces complete artifacts and preserves existing output for a missing stage
+ok 85 - build output promotion replaces complete artifacts and preserves existing output for a missing stage
+  ---
+  duration_ms: 24.8704
+  type: 'test'
+  ...
+# Subtest: OverlayFS EXDEV backs up the complete old output before replacing it
+ok 86 - OverlayFS EXDEV backs up the complete old output before replacing it
+  ---
+  duration_ms: 48.8425
+  type: 'test'
+  ...
+# Subtest: an incomplete EXDEV backup never removes or changes the old output
+ok 87 - an incomplete EXDEV backup never removes or changes the old output
+  ---
+  duration_ms: 9.212
+  type: 'test'
+  ...
+# Subtest: a partial removal after an EXDEV backup restores all old files and retains recovery materials
+ok 88 - a partial removal after an EXDEV backup restores all old files and retains recovery materials
+  ---
+  duration_ms: 28.6596
+  type: 'test'
+  ...
+# Subtest: failed promotion restores renamed output and keeps a complete recovery copy
+ok 89 - failed promotion restores renamed output and keeps a complete recovery copy
+  ---
+  duration_ms: 18.7402
+  type: 'test'
+  ...
+# Subtest: recovery falls back to copying on EXDEV without consuming its backup
+ok 90 - recovery falls back to copying on EXDEV without consuming its backup
+  ---
+  duration_ms: 31.0005
+  type: 'test'
+  ...
+# Subtest: a failed recovery copy retains the full backup and reports its location
+ok 91 - a failed recovery copy retains the full backup and reports its location
+  ---
+  duration_ms: 16.3653
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: theme selection preserves composition and text metrics without mutating the supplied appearance
+ok 92 - theme selection preserves composition and text metrics without mutating the supplied appearance
+  ---
+  duration_ms: 2.1145
+  type: 'test'
+  ...
+# Subtest: layout resolution retains all six compositions and maps every historical layout to stack
+ok 93 - layout resolution retains all six compositions and maps every historical layout to stack
+  ---
+  duration_ms: 0.5066
+  type: 'test'
+  ...
+# Subtest: pure/stack renders the approved content and ordered media with escaped text and inert links
+ok 94 - pure/stack renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 10.8447
+  type: 'test'
+  ...
+# Subtest: pure/split renders the approved content and ordered media with escaped text and inert links
+ok 95 - pure/split renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.9237
+  type: 'test'
+  ...
+# Subtest: pure/banner renders the approved content and ordered media with escaped text and inert links
+ok 96 - pure/banner renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.7414
+  type: 'test'
+  ...
+# Subtest: pure/sidebar renders the approved content and ordered media with escaped text and inert links
+ok 97 - pure/sidebar renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 2.2028
+  type: 'test'
+  ...
+# Subtest: pure/portrait renders the approved content and ordered media with escaped text and inert links
+ok 98 - pure/portrait renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 2.0944
+  type: 'test'
+  ...
+# Subtest: pure/focus renders the approved content and ordered media with escaped text and inert links
+ok 99 - pure/focus renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.9854
+  type: 'test'
+  ...
+# Subtest: uliuli/stack renders the approved content and ordered media with escaped text and inert links
+ok 100 - uliuli/stack renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 2.6445
+  type: 'test'
+  ...
+# Subtest: uliuli/split renders the approved content and ordered media with escaped text and inert links
+ok 101 - uliuli/split renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 2.0908
+  type: 'test'
+  ...
+# Subtest: uliuli/banner renders the approved content and ordered media with escaped text and inert links
+ok 102 - uliuli/banner renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.8727
+  type: 'test'
+  ...
+# Subtest: uliuli/sidebar renders the approved content and ordered media with escaped text and inert links
+ok 103 - uliuli/sidebar renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.688
+  type: 'test'
+  ...
+# Subtest: uliuli/portrait renders the approved content and ordered media with escaped text and inert links
+ok 104 - uliuli/portrait renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.6017
+  type: 'test'
+  ...
+# Subtest: uliuli/focus renders the approved content and ordered media with escaped text and inert links
+ok 105 - uliuli/focus renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.8127
+  type: 'test'
+  ...
+# Subtest: mia/stack renders the approved content and ordered media with escaped text and inert links
+ok 106 - mia/stack renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.6594
+  type: 'test'
+  ...
+# Subtest: mia/split renders the approved content and ordered media with escaped text and inert links
+ok 107 - mia/split renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.625
+  type: 'test'
+  ...
+# Subtest: mia/banner renders the approved content and ordered media with escaped text and inert links
+ok 108 - mia/banner renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.622
+  type: 'test'
+  ...
+# Subtest: mia/sidebar renders the approved content and ordered media with escaped text and inert links
+ok 109 - mia/sidebar renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.8028
+  type: 'test'
+  ...
+# Subtest: mia/portrait renders the approved content and ordered media with escaped text and inert links
+ok 110 - mia/portrait renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 2.3417
+  type: 'test'
+  ...
+# Subtest: mia/focus renders the approved content and ordered media with escaped text and inert links
+ok 111 - mia/focus renders the approved content and ordered media with escaped text and inert links
+  ---
+  duration_ms: 1.6077
+  type: 'test'
+  ...
+# Subtest: historical appearance objects without theme or new metrics still render as undecorated stacked letters
+ok 112 - historical appearance objects without theme or new metrics still render as undecorated stacked letters
+  ---
+  duration_ms: 2.2813
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: every layout keeps image files outside the scrolling viewport while retaining all caption text in order
+ok 113 - every layout keeps image files outside the scrolling viewport while retaining all caption text in order
+  ---
+  duration_ms: 23.9878
+  type: 'test'
+  ...
+# Subtest: fixed viewport and loop settings persist, default old data safely and reject malformed values atomically
+ok 114 - fixed viewport and loop settings persist, default old data safely and reject malformed values atomically
+  ---
+  duration_ms: 243.5481
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: long letters pause at both ends, scroll at the configured speed, then loop only the current mounted content
+ok 115 - long letters pause at both ends, scroll at the configured speed, then loop only the current mounted content
+  ---
+  duration_ms: 1.6913
+  type: 'test'
+  ...
+# Subtest: short content and explicitly disabled loops stay at the top
+ok 116 - short content and explicitly disabled loops stay at the top
+  ---
+  duration_ms: 0.2968
+  type: 'test'
+  ...
+# Subtest: new image dimensions, resized viewport and suspended frames restart at the top
+ok 117 - new image dimensions, resized viewport and suspended frames restart at the top
+  ---
+  duration_ms: 0.2845
+  type: 'test'
+  ...
+# Subtest: hide or replacement cancellation prevents even an already-queued old callback from repainting
+ok 118 - hide or replacement cancellation prevents even an already-queued old callback from repainting
+  ---
+  duration_ms: 0.6172
+  type: 'test'
+  ...
+# Subtest: equal fresh polling objects do not restart scrolling, but new appearance replaces the scrolling subtree
+ok 119 - equal fresh polling objects do not restart scrolling, but new appearance replaces the scrolling subtree
+  ---
+  duration_ms: 19.031
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: submission keyword hints require the explicit site switch and follow changes without remounting
+ok 120 - submission keyword hints require the explicit site switch and follow changes without remounting
+  ---
+  duration_ms: 18.1419
+  type: 'test'
+  ...
+# Subtest: headless entries import in Node without CSS, browser globals, or sqlite
+ok 121 - headless entries import in Node without CSS, browser globals, or sqlite
+  ---
+  duration_ms: 1.1036
+  type: 'test'
+  ...
+# Subtest: client keeps topic scope, auth, server errors, and atomic archive options
+ok 122 - client keeps topic scope, auth, server errors, and atomic archive options
+  ---
+  duration_ms: 23.8359
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: inbox switching scopes rejects late responses even when transport ignores abort
+ok 123 - inbox switching scopes rejects late responses even when transport ignores abort
+  ---
+  duration_ms: 10.9965
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: disabled resources clear private data before a later re-enable
+ok 124 - disabled resources clear private data before a later re-enable
+  ---
+  duration_ms: 3.9035
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: one client mutation refreshes all mounted inbox scopes; errors retain data and mutationError
+ok 125 - one client mutation refreshes all mounted inbox scopes; errors retain data and mutationError
+  ---
+  duration_ms: 4.137
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: moderation raw detail never follows a topic switch
+ok 126 - moderation raw detail never follows a topic switch
+  ---
+  duration_ms: 5.4698
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: submission guards double sends and retains draft on failure, without UI side effects
+ok 127 - submission guards double sends and retains draft on failure, without UI side effects
+  ---
+  duration_ms: 1.6999
+  type: 'test'
+  ...
+# Subtest: CSV exports safely and storage ignores malformed configuration
+ok 128 - CSV exports safely and storage ignores malformed configuration
+  ---
+  duration_ms: 0.8176
+  type: 'test'
+  ...
+# Subtest: public topic APIs strip private fields and endpoint overrides retain query configuration
+ok 129 - public topic APIs strip private fields and endpoint overrides retain query configuration
+  ---
+  duration_ms: 0.728
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: a completed batch cannot clear another scope selection or leave pending stuck after returning
+ok 130 - a completed batch cannot clear another scope selection or leave pending stuck after returning
+  ---
+  duration_ms: 4.8843
+  type: 'test'
+  ...
+# Subtest: an old submission cannot clear a new draft after leaving and returning to its topic
+ok 131 - an old submission cannot clear a new draft after leaving and returning to its topic
+  ---
+  duration_ms: 1.7726
+  type: 'test'
+  ...
+# Subtest: stored or environment word lists never enable matching; future submissions follow the explicit switch
+ok 132 - stored or environment word lists never enable matching; future submissions follow the explicit switch
+  ---
+  duration_ms: 75.674
+  type: 'test'
+  ...
+# Subtest: disabled filter returns historical originals, ordinary counts and selections without modifying stored flags
+ok 133 - disabled filter returns historical originals, ordinary counts and selections without modifying stored flags
+  ---
+  duration_ms: 42.6566
+  type: 'test'
+  ...
+# Subtest: mark read and archive includes historical flagged originals only when the filter is disabled
+ok 134 - mark read and archive includes historical flagged originals only when the filter is disabled
+  ---
+  duration_ms: 32.17
+  type: 'test'
+  ...
+# Subtest: keyword switch is persisted across service restarts and never grants or revokes broadcast approval
+ok 135 - keyword switch is persisted across service restarts and never grants or revokes broadcast approval
+  ---
+  duration_ms: 37.9206
+  type: 'test'
+  ...
+# Subtest: appearance theme and layout patches are independent, persist across restart, and reach display frames
+ok 136 - appearance theme and layout patches are independent, persist across restart, and reach display frames
+  ---
+  duration_ms: 111.6108
+  type: 'test'
+  ...
+# Subtest: appearance rejects CSS injection, unknown fields, invalid enums, nonfinite values and out-of-range numbers atomically
+ok 137 - appearance rejects CSS injection, unknown fields, invalid enums, nonfinite values and out-of-range numbers atomically
+  ---
+  duration_ms: 119.5359
+  type: 'test'
+  ...
+# Subtest: historical empty and legacy appearances gain defaults on read without rewriting saved appearance or mail
+ok 138 - historical empty and legacy appearances gain defaults on read without rewriting saved appearance or mail
+  ---
+  duration_ms: 42.6623
+  type: 'test'
+  ...
+# Subtest: style edits cannot approve, start playing, revoke or withdraw messages
+ok 139 - style edits cannot approve, start playing, revoke or withdraw messages
+  ---
+  duration_ms: 63.7077
+  type: 'test'
+  ...
+# Subtest: new/unflagged/read/favorited mail never broadcasts; approval queues without playing; display DTO has no private fields
+ok 140 - new/unflagged/read/favorited mail never broadcasts; approval queues without playing; display DTO has no private fields
+  ---
+  duration_ms: 30.6703
+  type: 'test'
+  ...
+# Subtest: manual next/order/hide/end retain all approved messages, no auto-loop, revoked current is synchronously withdrawn
+ok 141 - manual next/order/hide/end retain all approved messages, no auto-loop, revoked current is synchronously withdrawn
+  ---
+  duration_ms: 70.3486
+  type: 'test'
+  ...
+# Subtest: draft/source changes require re-review, old preview revisions and queued late show commands are rejected
+ok 142 - draft/source changes require re-review, old preview revisions and queued late show commands are rejected
+  ---
+  duration_ms: 59.3226
+  type: 'test'
+  ...
+# Subtest: receiver open/reload/reconnect and server epoch restart never restore current; queue and approval survive
+ok 143 - receiver open/reload/reconnect and server epoch restart never restore current; queue and approval survive
+  ---
+  duration_ms: 34.7048
+  type: 'test'
+  ...
+# Subtest: a new display handshake invalidates delayed show commands without hiding a healthy existing receiver
+ok 144 - a new display handshake invalidates delayed show commands without hiding a healthy existing receiver
+  ---
+  duration_ms: 35.5798
+  type: 'test'
+  ...
+# Subtest: real Node process exit/restart preserves review/order but starts a blank output epoch
+ok 145 - real Node process exit/restart preserves review/order but starts a blank output epoch
+  ---
+  duration_ms: 245.2672
+  type: 'test'
+  ...
+# Subtest: display cannot access controls/legacy inbox, credentials are topic/site scoped, expired grants fail closed
+ok 146 - display cannot access controls/legacy inbox, credentials are topic/site scoped, expired grants fail closed
+  ---
+  duration_ms: 40.027
+  type: 'test'
+  ...
+# Subtest: old delete/batch/block/archive/purge paths invalidate broadcast through database triggers
+ok 147 - old delete/batch/block/archive/purge paths invalidate broadcast through database triggers
+  ---
+  duration_ms: 134.1429
+  type: 'test'
+  ...
+# Subtest: idempotent retry never replays an old show after hide; transactional failure preserves previous approval
+ok 148 - idempotent retry never replays an old show after hide; transactional failure preserves previous approval
+  ---
+  duration_ms: 29.8421
+  type: 'test'
+  ...
+# Subtest: anonymous normalized image receipts are topic-bound/one-use; only current snapshot assets are readable
+ok 149 - anonymous normalized image receipts are topic-bound/one-use; only current snapshot assets are readable
+  ---
+  duration_ms: 53.9679
+  type: 'test'
+  ...
+# Subtest: batch upload spends Turnstile once, rejects SVG and oversized decoded images, receipt bypass cannot be forged
+ok 150 - batch upload spends Turnstile once, rejects SVG and oversized decoded images, receipt bypass cannot be forged
+  ---
+  duration_ms: 101.2594
+  type: 'test'
+  ...
+# Subtest: private moderator replacement images preserve original submission and require a new approved draft
+ok 151 - private moderator replacement images preserve original submission and require a new approved draft
+  ---
+  duration_ms: 56.9127
+  type: 'test'
+  ...
+# Subtest: device pairing requires host approval and PKCE; redemption once; control cannot issue broader grants
+ok 152 - device pairing requires host approval and PKCE; redemption once; control cannot issue broader grants
+  ---
+  duration_ms: 20.4666
+  type: 'test'
+  ...
+# Subtest: allowlisted gateway origins cannot use ambient administrator cookies on GET or writes
+ok 153 - allowlisted gateway origins cannot use ambient administrator cookies on GET or writes
+  ---
+  duration_ms: 18.9187
+  type: 'test'
+  ...
+# Subtest: revoking or expiring a desktop control grant invalidates its derived display credentials
+ok 154 - revoking or expiring a desktop control grant invalidates its derived display credentials
+  ---
+  duration_ms: 31.2819
+  type: 'test'
+  ...
+# Subtest: competing commands from two control clients use optimistic revision and preserve database restart state
+ok 155 - competing commands from two control clients use optimistic revision and preserve database restart state
+  ---
+  duration_ms: 41.1348
+  type: 'test'
+  ...
+# Subtest: gateway cryptographic scope, proof replay, independent expiring platform lease, renewal and revocation
+ok 156 - gateway cryptographic scope, proof replay, independent expiring platform lease, renewal and revocation
+  ---
+  duration_ms: 45.8438
+  type: 'test'
+  ...
+# Subtest: site grants are explicit, cookie-admin issued, nullable in identity and reusable for future topics
+ok 157 - site grants are explicit, cookie-admin issued, nullable in identity and reusable for future topics
+  ---
+  duration_ms: 78.1797
+  type: 'test'
+  ...
+# Subtest: site topic discovery includes new, scheduled and ended activities while old keys only see their topic
+ok 158 - site topic discovery includes new, scheduled and ended activities while old keys only see their topic
+  ---
+  duration_ms: 42.5784
+  type: 'test'
+  ...
+# Subtest: scoped inbox mutation reuses legacy rules and cannot cross topics, even with conflicting body/query scope
+ok 159 - scoped inbox mutation reuses legacy rules and cannot cross topics, even with conflicting body/query scope
+  ---
+  duration_ms: 52.6368
+  type: 'test'
+  ...
+# Subtest: site-only sender blocking removes its messages across topics; topic keys cannot perform global operations
+ok 160 - site-only sender blocking removes its messages across topics; topic keys cannot perform global operations
+  ---
+  duration_ms: 37.7687
+  type: 'test'
+  ...
+# Subtest: keyword switch is default off and only site Bearer settings PATCH can change it
+ok 161 - keyword switch is default off and only site Bearer settings PATCH can change it
+  ---
+  duration_ms: 38.3806
+  type: 'test'
+  ...
+# Subtest: a revoked site control parent invalidates display children in multiple topics without revoking other site keys
+ok 162 - a revoked site control parent invalidates display children in multiple topics without revoking other site keys
+  ---
+  duration_ms: 66.9695
+  type: 'test'
+  ...
+# Subtest: archive, restore and purge retain service constraints and cannot delete a site grant anchored outside topics
+ok 163 - archive, restore and purge retain service constraints and cannot delete a site grant anchored outside topics
+  ---
+  duration_ms: 47.2463
+  type: 'test'
+  ...
+# Subtest: management and share endpoints reject display authority and never include private content in share data
+ok 164 - management and share endpoints reject display authority and never include private content in share data
+  ---
+  duration_ms: 40.2141
+  type: 'test'
+  ...
+# Subtest: typed management client uses topic scopes and site grant creation without broadening display client
+ok 165 - typed management client uses topic scopes and site grant creation without broadening display client
+  ---
+  duration_ms: 22.3733
+  type: 'test'
+  ...
+# Subtest: ambiguous scopes and encoded paths cannot redirect a topic key to another mailbox
+ok 166 - ambiguous scopes and encoded paths cannot redirect a topic key to another mailbox
+  ---
+  duration_ms: 25.7193
+  type: 'test'
+  ...
+# Subtest: Bearer authority takes precedence over admin cookies and cannot mint or approve management credentials
+ok 167 - Bearer authority takes precedence over admin cookies and cannot mint or approve management credentials
+  ---
+  duration_ms: 23.7788
+  type: 'test'
+  ...
+# Subtest: unsupported HTTP methods never apply settings, grants, blocklist or topic mutations
+ok 168 - unsupported HTTP methods never apply settings, grants, blocklist or topic mutations
+  ---
+  duration_ms: 25.1525
+  type: 'test'
+  ...
+# Subtest: parent expiry invalidates otherwise-live multi-topic output while independent grants retain authority
+ok 169 - parent expiry invalidates otherwise-live multi-topic output while independent grants retain authority
+  ---
+  duration_ms: 48.2853
+  type: 'test'
+  ...
+# Subtest: topic keys cannot revoke site or other topic grants and revocation does not depend on an active topic
+ok 170 - topic keys cannot revoke site or other topic grants and revocation does not depend on an active topic
+  ---
+  duration_ms: 38.6503
+  type: 'test'
+  ...
+# Subtest: 0.6 grant migration preserves hashes, IDs, revocation triggers and old topic scope across repeated startup
+ok 171 - 0.6 grant migration preserves hashes, IDs, revocation triggers and old topic scope across repeated startup
+  ---
+  duration_ms: 41.3476
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: site key is named, reusable, copied only on demand and requires current desktop
+ok 172 - site key is named, reusable, copied only on demand and requires current desktop
+  ---
+  duration_ms: 50.5731
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: topic change never commits a previous full key
+ok 173 - topic change never commits a previous full key
+  ---
+  duration_ms: 9.3642
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: client change never commits a previous full key
+ok 174 - client change never commits a previous full key
+  ---
+  duration_ms: 8.6205
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late site mint is discarded after topic
+ok 175 - late site mint is discarded after topic
+  ---
+  duration_ms: 8.1908
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late site mint is discarded after client
+ok 176 - late site mint is discarded after client
+  ---
+  duration_ms: 5.6352
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: late site mint is discarded after unmount
+ok 177 - late site mint is discarded after unmount
+  ---
+  duration_ms: 4.1079
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: unsupported server and unauthorized mint keep errors private and expose no key
+ok 178 - unsupported server and unauthorized mint keep errors private and expose no key
+  ---
+  duration_ms: 5.8024
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: revocation lists site and legacy scopes and removes only the chosen secret
+ok 179 - revocation lists site and legacy scopes and removes only the chosen secret
+  ---
+  duration_ms: 6.1104
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: old initial grant response cannot clear a newly minted key
+ok 180 - old initial grant response cannot clear a newly minted key
+  ---
+  duration_ms: 4.3311
+  type: 'test'
+  ...
+# react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+# Subtest: focus and visibility synchronize grants while hidden pages do not refresh
+ok 181 - focus and visibility synchronize grants while hidden pages do not refresh
+  ---
+  duration_ms: 3.6392
+  type: 'test'
+  ...
+# Subtest: legacy pairing remains restricted to the selected topic
+ok 182 - legacy pairing remains restricted to the selected topic
+  ---
+  duration_ms: 4.1791
+  type: 'test'
+  ...
+1..182
+# tests 182
+# suites 0
+# pass 182
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7487.9532

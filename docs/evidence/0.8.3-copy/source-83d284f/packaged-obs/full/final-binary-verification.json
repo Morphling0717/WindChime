@@ -1,0 +1,114 @@
+{
+  "passed": true,
+  "version": "0.8.3",
+  "mode": "full",
+  "finalBinary": {
+    "version": "0.8.3",
+    "exe": {
+      "bytes": 246089728,
+      "sha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987"
+    },
+    "asar": {
+      "bytes": 3206242,
+      "sha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff"
+    },
+    "zip": {
+      "bytes": 160660617,
+      "sha256": "f3b63a79606ce6ebc2797293442a6b7d9460ef9b002b1d545bbda4331365cf9c"
+    },
+    "buildInfo": {
+      "bytes": 503,
+      "sha256": "bac1d4663e9ea011a7f6649426da04c5ec6fc7bec81637d00ee4c7e8bf394207"
+    },
+    "zipName": "WindChime-win32-x64-0.8.3.zip",
+    "allRuntimeBytesMatchFinalBuild": true
+  },
+  "packaged": true,
+  "profileIsolated": true,
+  "realBridgeKeyImport": true,
+  "gracefulExit": true,
+  "checks": [
+    {
+      "label": "OBS initially has no active outputs",
+      "passed": true
+    },
+    {
+      "label": "Synthetic connection imported through the packaged private bridge",
+      "passed": true
+    },
+    {
+      "label": "Unreviewed window captures blank",
+      "passed": true
+    },
+    {
+      "label": "Approval alone stays blank in window capture",
+      "passed": true
+    },
+    {
+      "label": "Manual show reaches real OBS window capture",
+      "passed": true
+    },
+    {
+      "label": "Window capture preserves transparent background",
+      "passed": true
+    },
+    {
+      "label": "Hide clears the captured source within one second",
+      "passed": true,
+      "details": {
+        "responseToBlankMs": 146,
+        "commandToBlankMs": 365
+      }
+    },
+    {
+      "label": "Revocation clears captured window",
+      "passed": true
+    },
+    {
+      "label": "Closing output never captures private controller",
+      "passed": true
+    },
+    {
+      "label": "Reopened display stays blank",
+      "passed": true
+    },
+    {
+      "label": "Reopened window is captured after new manual show",
+      "passed": true
+    },
+    {
+      "label": "Covered display retains a live receiver after extended occlusion",
+      "passed": true,
+      "details": {
+        "durationMs": 70031
+      }
+    },
+    {
+      "label": "Remote hide clears covered OBS window within one second",
+      "passed": true,
+      "details": {
+        "responseToBlankMs": 576
+      }
+    },
+    {
+      "label": "Emergency hide clears capture before delayed website response",
+      "passed": true,
+      "details": {
+        "commandToBlankMs": 212
+      }
+    },
+    {
+      "label": "Pending hide paints blank without opening a new receiver",
+      "passed": true
+    },
+    {
+      "label": "No Bilibili or gateway traffic",
+      "passed": true
+    },
+    {
+      "label": "No output started during capture",
+      "passed": true
+    }
+  ],
+  "interactive": null
+}

@@ -1,0 +1,318 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-09-23T17:35:32Z",
+  "databaseId": 35896654423,
+  "event": "pull_request",
+  "headSha": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "jobs": [
+    {
+      "completedAt": "2026-09-23T17:36:41Z",
+      "conclusion": "success",
+      "databaseId": 107302144228,
+      "name": "desktop-windows",
+      "startedAt": "2026-09-23T17:35:34Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-23T17:35:36Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-23T17:35:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-23T17:35:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:00Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-23T17:35:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:08Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 4,
+          "startedAt": "2026-09-23T17:36:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:16Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 5,
+          "startedAt": "2026-09-23T17:36:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:18Z",
+          "conclusion": "success",
+          "name": "Prepare the pinned NSIS compiler for real installer regression tests",
+          "number": 6,
+          "startedAt": "2026-09-23T17:36:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:37Z",
+          "conclusion": "success",
+          "name": "Run the complete desktop and Windows installer test suite",
+          "number": 7,
+          "startedAt": "2026-09-23T17:36:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:37Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 13,
+          "startedAt": "2026-09-23T17:36:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:39Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 14,
+          "startedAt": "2026-09-23T17:36:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:39Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "startedAt": "2026-09-23T17:36:39Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Morphling0717/WindChime/actions/runs/35896654423/job/107302144228"
+    },
+    {
+      "completedAt": "2026-09-23T17:37:15Z",
+      "conclusion": "success",
+      "databaseId": 107302144573,
+      "name": "verify (20)",
+      "startedAt": "2026-09-23T17:35:34Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-23T17:35:36Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-23T17:35:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:40Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-23T17:35:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:48Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-23T17:35:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:55Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 4,
+          "startedAt": "2026-09-23T17:35:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:08Z",
+          "conclusion": "success",
+          "name": "Run npm test",
+          "number": 5,
+          "startedAt": "2026-09-23T17:35:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:27Z",
+          "conclusion": "success",
+          "name": "Run npm run pack:check",
+          "number": 6,
+          "startedAt": "2026-09-23T17:36:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:40Z",
+          "conclusion": "success",
+          "name": "Run npm ci --install-links",
+          "number": 7,
+          "startedAt": "2026-09-23T17:36:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:37:11Z",
+          "conclusion": "success",
+          "name": "Run npm run setup && npm run db:init && npm run typecheck && npm run build",
+          "number": 8,
+          "startedAt": "2026-09-23T17:36:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:37:11Z",
+          "conclusion": "skipped",
+          "name": "Run docker build -f examples/next-sqlite/Dockerfile -t windchime-example .",
+          "number": 9,
+          "startedAt": "2026-09-23T17:37:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:37:11Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 17,
+          "startedAt": "2026-09-23T17:37:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:37:12Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 18,
+          "startedAt": "2026-09-23T17:37:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:37:12Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-23T17:37:12Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Morphling0717/WindChime/actions/runs/35896654423/job/107302144573"
+    },
+    {
+      "completedAt": "2026-09-23T17:40:09Z",
+      "conclusion": "success",
+      "databaseId": 107302144614,
+      "name": "verify (24)",
+      "startedAt": "2026-09-23T17:35:34Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-23T17:35:36Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-23T17:35:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:40Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-23T17:35:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:45Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-23T17:35:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:35:58Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 4,
+          "startedAt": "2026-09-23T17:35:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:13Z",
+          "conclusion": "success",
+          "name": "Run npm test",
+          "number": 5,
+          "startedAt": "2026-09-23T17:35:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:24Z",
+          "conclusion": "success",
+          "name": "Run npm run pack:check",
+          "number": 6,
+          "startedAt": "2026-09-23T17:36:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:34Z",
+          "conclusion": "success",
+          "name": "Run npm ci --install-links",
+          "number": 7,
+          "startedAt": "2026-09-23T17:36:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:36:56Z",
+          "conclusion": "success",
+          "name": "Run npm run setup && npm run db:init && npm run typecheck && npm run build",
+          "number": 8,
+          "startedAt": "2026-09-23T17:36:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:40:07Z",
+          "conclusion": "success",
+          "name": "Run docker build -f examples/next-sqlite/Dockerfile -t windchime-example .",
+          "number": 9,
+          "startedAt": "2026-09-23T17:36:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:40:07Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 17,
+          "startedAt": "2026-09-23T17:40:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:40:07Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 18,
+          "startedAt": "2026-09-23T17:40:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-23T17:40:07Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-23T17:40:07Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Morphling0717/WindChime/actions/runs/35896654423/job/107302144614"
+    }
+  ],
+  "status": "completed",
+  "updatedAt": "2026-09-23T17:40:10Z",
+  "url": "https://github.com/Morphling0717/WindChime/actions/runs/35896654423",
+  "workflowName": "package-and-example"
+}

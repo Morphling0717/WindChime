@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-23T18:18:01.987Z",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "installedSuccessfully": true,
+  "nativeUninstallPassed": false,
+  "upgradePassed": false,
+  "originalUserUninstallCauseResolved": false,
+  "setupSha256": "d9d5dff2fe9bb1c7c9af1f81ada17289d80dba0f2989753a1b3d1d932fc60ef4",
+  "rootReportedActions": [
+    "User manually removed the two earlier isolated test shortcuts; original application and older 6b temporary installation files were retained.",
+    "Main verification thread launched Setup through Explorer, used the glass wizard and selected a new Chinese-path target with both shortcut options checked.",
+    "Main verification thread requested the user manually run the newly installed uninstaller to test the running/tray prompt. The historic Computer Use refusal was not bypassed."
+  ],
+  "beforeInstallNativeUtc": "2026-09-23T18:04:59.9910825Z",
+  "afterInstallNativeUtc": "2026-09-23T18:12:19.7344648Z",
+  "probeCorrection": {
+    "firstProbeWrongRelativePath": "windchime-install.ini",
+    "actualRelativePath": "resources/windchime-install.ini",
+    "oldProbeSha256": "4bfbf0cbff478cfe7045a21b8f82febc31daf594f5fdf93f9435ac9bbb9a6ac2",
+    "correctedProbeSha256": "2f264732ce06f8cc8568b9ec8708cb74415e70426aaa93193f0e74801700a78c",
+    "firstFailurePreserved": true,
+    "diagnosis": "The collector verified both probe sources. V1 read the wrong relative marker path even though payload, registry and shortcuts already matched. V2 reads the actual path and still strictly checks AppId/Version. This is a test-probe error, not an installer product defect."
+  },
+  "runtimeAtCollection": {
+    "testedAt": "2026-09-23T18:12:42.514Z",
+    "trayReady": true,
+    "gracefulExit": false
+  },
+  "privateWizardScreenshotsPublished": false,
+  "collectorOperatedNativeUi": false,
+  "collectorModifiedUserFiles": false,
+  "noCommitOrPushByCollector": true
+}

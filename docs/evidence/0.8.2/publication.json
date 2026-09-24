@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-09-23T13:27:18.935Z",
+  "phase": "public",
+  "passed": true,
+  "releaseId": 394678238,
+  "url": "https://github.com/Morphling0717/WindChime/releases/tag/v0.8.2",
+  "tag": "v0.8.2",
+  "targetCommit": "9ed1cf31e29a4e71f0fa3ac90b98f9b0b452861b",
+  "isDraft": false,
+  "isPrerelease": true,
+  "stableLatest": "v0.8.1",
+  "publishedAt": "2026-09-23T13:18:53Z",
+  "assets": [
+    {
+      "name": "WindChime-Setup-0.8.2.exe",
+      "id": 583809020,
+      "bytes": 119135744,
+      "localSha256": "d63a238c328daeac6c91a4847eea44120efae0967f049d8dd340749c377441ed",
+      "githubDigest": "sha256:d63a238c328daeac6c91a4847eea44120efae0967f049d8dd340749c377441ed",
+      "url": "https://github.com/Morphling0717/WindChime/releases/download/v0.8.2/WindChime-Setup-0.8.2.exe",
+      "matched": true
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.2.zip",
+      "id": 583809003,
+      "bytes": 160661681,
+      "localSha256": "5a88d5364afcf019b2a235498098f4f0526d82af3ba17095ac2ad396f2199459",
+      "githubDigest": "sha256:5a88d5364afcf019b2a235498098f4f0526d82af3ba17095ac2ad396f2199459",
+      "url": "https://github.com/Morphling0717/WindChime/releases/download/v0.8.2/WindChime-win32-x64-0.8.2.zip",
+      "matched": true
+    },
+    {
+      "name": "windchime-embed-0.8.2.tgz",
+      "id": 583809006,
+      "bytes": 20800500,
+      "localSha256": "53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "githubDigest": "sha256:53ecc86171136ec4c4881f5db5841f5c87c284d3f600939852588e5b81bd846d",
+      "url": "https://github.com/Morphling0717/WindChime/releases/download/v0.8.2/windchime-embed-0.8.2.tgz",
+      "matched": true
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "id": 583809004,
+      "bytes": 280,
+      "localSha256": "a68fd78f871a748b46491dffd6531da3cb0967e3cd6ac2059648448b9774f405",
+      "githubDigest": "sha256:a68fd78f871a748b46491dffd6531da3cb0967e3cd6ac2059648448b9774f405",
+      "url": "https://github.com/Morphling0717/WindChime/releases/download/v0.8.2/SHA256SUMS.txt",
+      "matched": true
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "startedAt": "2026-09-23T15:14:13.0195731Z",
+  "completedAt": "2026-09-23T15:14:31.9765383Z",
+  "command": "npm test",
+  "workingDirectory": "apps/desktop",
+  "startGitHead": "47b03b240df2495e4ca8e05692676a5babcbc76d",
+  "endGitHead": "47b03b240df2495e4ca8e05692676a5babcbc76d",
+  "testedWorkingTreeIncludesRuntimePatch": false,
+  "runtimeSourceStatusAtStart": [],
+  "sourceSnapshot": {
+    "apps/desktop/main.cjs": "dab74dd04334a9c3ed329b40e9770adb5b29c791eeea938f53ff0e390b30116e",
+    "apps/desktop/tests/lifecycle.test.cjs": "90ac0285664e651f8ee6c514cbbb2712978d773f449b92da0d316046e6794441"
+  },
+  "sourceSnapshotAfter": {
+    "apps/desktop/main.cjs": "dab74dd04334a9c3ed329b40e9770adb5b29c791eeea938f53ff0e390b30116e",
+    "apps/desktop/tests/lifecycle.test.cjs": "90ac0285664e651f8ee6c514cbbb2712978d773f449b92da0d316046e6794441"
+  },
+  "sourceUnchangedDuringRun": true,
+  "versions": {
+    "desktop": "0.8.3",
+    "node": "v22.22.3",
+    "npm": "10.9.8"
+  },
+  "platform": "win32",
+  "arch": "x64",
+  "exitCode": 0,
+  "tests": 145,
+  "passed": 145,
+  "failed": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "durationMs": 16481.6325,
+  "buildPassed": true,
+  "fullSuite": true,
+  "realElectronStarted": false,
+  "foregroundInterfaceStarted": false,
+  "personalInstallationTouched": false,
+  "prefinal143EvidencePreserved": true,
+  "fixtures": "Temporary .NET/Unicode COM and silent NSIS fixtures plus mocked Electron lifecycle/security. No product installer, Electron UI, user installation or personal shortcuts were launched or modified.",
+  "log": "desktop-tests-final.log",
+  "validationStage": "Frozen desktop source: full build and unit/fixture suite",
+  "finalReleaseAcceptance": false,
+  "limitations": [
+    "Native installer, installed runtime, tray uninstall, packaged capture, real keyboard hotkeys and native tile topmost acceptance remain separate and pending.",
+    "Foreground testing remains paused after the user Escape stop. This report does not replace native release acceptance."
+  ]
+}

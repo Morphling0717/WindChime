@@ -53,6 +53,10 @@ export type WindChimeSenderProps = {
   pausedMessage?: string;
   rateLimit?: WindChimeRateLimit | false;
   onSubmit: (payload: WindChimeSubmitPayload) => Promise<void>;
+  /** Optional private image upload; requires the host's /api/mail/live endpoint. */
+  enableImages?: boolean;
+  topicSlug?: string;
+  liveBaseUrl?: string;
   successAudioSrc?: string;
   enableSwayAnimation?: boolean;
   theme?: WindChimeTheme;
@@ -68,6 +72,8 @@ export type WindChimeSenderProps = {
   turnstileSiteKey?: string;
   /** 命中任一子串（不区分大小写）时阻止提交并提示 */
   blockedTerms?: string[];
+  /** Explicit opt-in from the site's settings; defaults to false. */
+  blockedTermsEnabled?: boolean;
   /** 命中 blockedTerms 时的提示文案 */
   blockedTermsMessage?: string;
   /** 关闭匿名发送者指纹生成；默认开启 */

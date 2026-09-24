@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58",
+  "artifact": {
+    "name": "windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz",
+    "sha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+    "bytes": 54912376
+  },
+  "startedAt": "2026-09-23T17:48:31.588Z",
+  "node": "v20.20.2",
+  "npm": "10.9.8",
+  "sites": [
+    {
+      "site": "Next_UliUli",
+      "baseCommit": "c0956f7f58ca40246dda5d7853120ed55e6ab917",
+      "isolatedWorktree": true,
+      "environmentFilesCopied": false,
+      "oldTarballPreserved": true,
+      "checksumEntriesAdded": [
+        "windchime-embed-0.8.1.tgz",
+        "windchime-embed-0.8.2.tgz",
+        "windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz",
+        "windchime-embed-0.8.3.tgz"
+      ],
+      "steps": [
+        {
+          "name": "lock",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "site": "Next_Mia",
+      "baseCommit": "09d08bcaad32ee2223fed143f3c8c1f43fdbe872",
+      "isolatedWorktree": true,
+      "environmentFilesCopied": false,
+      "oldTarballPreserved": true,
+      "checksumEntriesAdded": [
+        "windchime-embed-0.3.0.tgz",
+        "windchime-embed-0.3.1.tgz",
+        "windchime-embed-0.4.0.tgz",
+        "windchime-embed-0.8.1.tgz",
+        "windchime-embed-0.8.2.tgz",
+        "windchime-embed-0.8.3-c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58.tgz",
+        "windchime-embed-0.8.3.tgz"
+      ],
+      "steps": [
+        {
+          "name": "lock",
+          "passed": true
+        }
+      ],
+      "unrelatedLockEntriesUnchanged": true
+    }
+  ],
+  "passed": false,
+  "error": "Expected values to be strictly deep-equal:\n+ actual - expected ... Lines skipped\n\n  [\n    '',\n...\n    'node_modules/@tailwindcss/oxide-linux-x64-musl',\n    'node_modules/@tailwindcss/oxide-wasm32-wasi',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/core',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/runtime',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/wasi-threads',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@napi-rs/wasm-runtime',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@tybys/wasm-util',\n+   'node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/tslib',\n    'node_modules/@tailwindcss/oxide-win32-arm64-msvc',\n...\n    'node_modules/zod',\n    'node_modules/zod-validation-error'\n  ]",
+  "originalWorktreesUnmodified": true,
+  "finishedAt": "2026-09-23T17:48:36.140Z"
+}

@@ -1,0 +1,100 @@
+{
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: inbox is initially topmost\n\nfalse !== true\n\n    at run (<workspace>\\apps\\desktop\\scripts\\tiles-smoke.cjs:202:12)",
+  "checks": [],
+  "requests": [
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/capabilities",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/identity",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/topics",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/topics/default",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/settings",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/messages",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/topics",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/settings",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/grants",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/state",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/state",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/topics/default",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "site": "Alpha",
+      "route": "/api/mail/live/control/state",
+      "method": "GET"
+    }
+  ],
+  "windows": [
+    {
+      "title": "WindChime Private · 来信列表",
+      "visible": true,
+      "text": "风铃 · 私人磁贴\n来信列表\n已置顶\n×\nAlpha 合成站点\n常规信箱\n控制已连接\n0 个展示端就绪\n观众画面为空白\n来信审核\n2 封\n全部\n未审核\n已批准\n已拒绝\nAlpha 合成来信 0-1\n未审核\nAlpha_0_1 原投稿仅供私人审阅。\n2026/9/23 22:52:26\nAlpha 合成来信 0-0\n未审核\nAlpha_0_0 原投稿仅供私人审阅。\n2026/9/23 22:52:26\n私人操作 · 采集请选 WindChime Display",
+      "visibilityState": "visible"
+    },
+    {
+      "title": "风铃 · 私人控制台",
+      "visible": true,
+      "text": "风铃桌面控制台\nPRIVATE SPACE\n结束展示\n你的创作空间\n收件箱\n直播工作台\n话题管理\n投稿分享\n设置与外观\n网站连接\n观众只看到展示窗口\n采集 WindChime Display\n每一封，都由你决定\n当前网站\n选择网站连接\nAlpha 合成站点\n127.0.0.1:61819\n当前话题\n选择话题\n常规信箱\nAlpha 活动话题\n全部话题 · 新活动自动同步\nYOUR PRIVATE STUDIO\n今天，也有值得倾听的声音\n\n私下审阅，从容安排。准备好了，再交给观众。\n\n一键隐藏\n\n信箱已连接。打开展示窗口后，仍需手动上屏。\n\n常规信箱\n打开独立展示窗口\n控制已连接\n0 个展示端就绪\n观众画面为空白\n悬浮磁贴\n将常用模块固定在手边\n来信列表 ↗\n审阅与预览 ↗\n待播顺序 ↗\n快捷播控 ↗\n展示外观 ↗\n来信审核\n2 封\n全部\n未审核\n已批准\n已拒绝\nAlpha 合成来信 0-1\n未审核\nAlpha_0_1 原投稿仅供私人审阅。\n2026/9/23 22:52:26\nAlpha 合成来信 0-0\n未审核\nAlpha_0_0 原投稿仅供私人审阅。\n2026/9/23 22:52:26\n审阅与预览\n此区域仅主播可见\n\n选择左侧一封来信，审阅最终展示内容。\n\n待播顺序\n0 封已批准\n\n拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。\n\n下一封 →\n打开独立展示窗口\n\n批准后的信件会出现在这里，等待你点击上屏。\n\nWINDCHIME\n风过有声，来信有回响。",
+      "visibilityState": "visible"
+    }
+  ],
+  "consoleErrors": [],
+  "profile": "<temp>\\windchime-tiles-i6SkRh"
+}

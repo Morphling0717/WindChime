@@ -1,0 +1,14 @@
+{
+  "brand": "风铃 WindChime",
+  "colors": {
+    "ink": "#263A58",
+    "ice": "#79B9EE",
+    "mist": "#E4F2FC",
+    "lilac": "#C6BDF2",
+    "paper": "#F6F9FD",
+    "midnight": "#111C2D",
+    "white": "#FFFFFF"
+  },
+  "color_space": "sRGB",
+  "note": "屏幕用色定义；印刷颜色须由输出方按纸张和ICC条件打样确认。"
+}

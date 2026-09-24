@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "version": "0.8.3",
+  "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+  "collectedAt": "2026-09-23T16:39:47.771Z",
+  "passed": true,
+  "verificationKind": "Real operating-system key events reported by the root agent, corroborated by archived fixture state and root read-only native document observations",
+  "observationProvenance": {
+    "observer": "root agent",
+    "collector": "copy_audit agent",
+    "channel": "Explicit root task handoff containing tool name, key input, target, UTC times and subsequent read-only UI observations",
+    "keyTool": "sky.press_key",
+    "target": {
+      "application": "actual private WindChime window",
+      "nativeWindowId": 1118576
+    },
+    "screenshotEvidenceUsed": false,
+    "reasonScreenshotsExcluded": "The computer-use screenshot exposed an unrelated Codex background instead of a trustworthy native display image; no such screenshots are copied or used as proof"
+  },
+  "packagedIdentity": {
+    "sourceCommit": "83d284f2dfa00cc7d9ca94d932717979aff163f6",
+    "assets": {
+      "WindChime-Setup-0.8.3.exe": {
+        "bytes": 119133184,
+        "sha256": "2eadfa26fc5ef36dad7b1c73141a8ad0e52da8ca77a19c45bb60c716cbab297f"
+      },
+      "WindChime-win32-x64-0.8.3.zip": {
+        "bytes": 160660617,
+        "sha256": "f3b63a79606ce6ebc2797293442a6b7d9460ef9b002b1d545bbda4331365cf9c"
+      }
+    },
+    "runtime": {
+      "WindChime.exe": {
+        "bytes": 246089728,
+        "sha256": "9fe566330366bfd92cd24f74e34ab66914c6fa359d014f6917a0551352507987"
+      },
+      "resources/app.asar": {
+        "bytes": 3206242,
+        "sha256": "528a092fbe10d5ea5f0dae7bea759b5967092a4ea243e9463e66fa2e964264ff"
+      }
+    },
+    "verifiedAgainstFinalCandidate": true
+  },
+  "fixtureIdentitySource": {
+    "input": ".work/final-display-matrix-083-GjB7HR/results/render-matrix-report.json",
+    "originalBytes": 45603,
+    "originalSha256": "461e21921533d76bd329bb6575440ac9a9f50a96c5a1e3feadd207663ded3e46",
+    "scriptReportedRealKeysPressed": false,
+    "note": "Only artifact identity is taken from this renderer report. Its own realKeysPressed flag is not changed or used to assert the external tool sent keys."
+  },
+  "realOsKeysPressed": true,
+  "checks": [
+    {
+      "name": "next",
+      "passed": true,
+      "keys": "Control_L+Alt_L+Next",
+      "configuredShortcut": "CommandOrControl+Alt+PageDown",
+      "rootReportedKeyEventAt": "2026-09-23T16:35:27.274Z",
+      "rootReportedImmediateStatusAt": "2026-09-23T16:35:27.485Z",
+      "archivedStatusUpdatedAt": "2026-09-23T16:35:41.582Z",
+      "archivedStatus": {
+        "name": "real-next-key-status.json",
+        "sha256": "49219021204daa41ae0ee5d185b497a97483d2ce43f537b52aef547f5b1c620f"
+      },
+      "resultingMessageId": "35261d84-22a9-42b6-b7b0-5a5a561ac4f2",
+      "expectedMessageId": "35261d84-22a9-42b6-b7b0-5a5a561ac4f2",
+      "rootReportedReadOnlyNativeDocumentText": "合成投稿人二\n第二封合成来信 · 真实快捷键验收"
+    },
+    {
+      "name": "hide",
+      "passed": true,
+      "keys": "Control_L+Shift_L+h",
+      "configuredShortcut": "Ctrl+Shift+H",
+      "rootReportedKeyEventAt": "2026-09-23T16:35:52.883Z",
+      "rootReportedImmediateStatusAt": "2026-09-23T16:35:53.056Z",
+      "archivedStatusUpdatedAt": "2026-09-23T16:36:04.244Z",
+      "archivedStatus": {
+        "name": "real-hide-key-status.json",
+        "sha256": "d02681e20f73d190ae6bb61795dabac27bc63c09724817e981dbdae16f9316a6"
+      },
+      "resultingMessageId": null,
+      "resultingSnapshot": null,
+      "rootReportedReadOnlyNativeDocumentObservation": "Display root contains no letter text"
+    }
+  ],
+  "limitations": [
+    "The collector did not itself send the keys or observe the native UI; those facts are attributed to the root agent tool observations.",
+    "Archived status snapshots were saved after the immediate observations and have later updatedAt timestamps. They corroborate resulting state; they are not millisecond response-time measurements.",
+    "Keys targeted the actual private WindChime window. This is not a test of key behavior while an unrelated full-screen game has focus.",
+    "No computer-use screenshot or software-capture timing is claimed by this report; OBS evidence remains separate.",
+    "Earlier full/faults OBS reports correctly retain hotkeysActuallyPressed=false because no OS keys were sent in those runs.",
+    "No LiveHime or installer/uninstaller acceptance is inferred."
+  ]
+}

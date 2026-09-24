@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-19T18:01:10.041Z",
+  "version": "0.8.0",
+  "passed": true,
+  "archive": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\windchime-make-p92PC6\\WindChime-win32-x64\\resources\\app.asar",
+  "entryCount": 20,
+  "runtimeAllowlist": true,
+  "noCredentialLiterals": true,
+  "matchedFiles": [
+    "main.cjs",
+    "security.cjs",
+    "workspace.cjs",
+    "preload-control.cjs",
+    "preload-display.cjs",
+    "build/control.js",
+    "build/control.css",
+    "build/control.html",
+    "build/display.js",
+    "build/display.html",
+    "build/connection-key.cjs",
+    "build/icon.ico",
+    "build/icon.png",
+    "build/tray.png",
+    "build/brand-header.svg",
+    "build/brand-symbol.svg",
+    "build/installer-loading.gif",
+    "build/installer-preview.png"
+  ],
+  "installerArtwork": {
+    "entry": "background.gif",
+    "bytes": 1631200,
+    "sha256": "F7B4A67ADFA2ADCBC4D21F1257F7747FB11A04BB6C39C1007BD29881D99DE183",
+    "matchesBuild": true
+  },
+  "checksumManifest": "SHA256SUMS.txt",
+  "releasesVerified": true,
+  "hashes": [
+    {
+      "name": "WindChime-Setup.exe",
+      "bytes": 157397504,
+      "sha256": "C013D1EC369439AA1B0655A7EA44CFD631DFCB8B7AC0C31D0077743B7379AF86"
+    },
+    {
+      "name": "WindChime-win32-x64-0.8.0.zip",
+      "bytes": 160182789,
+      "sha256": "A49BCAD4799759DF819577D5437EED3313184C6CA30D9D36CC87E283CB6B60CD"
+    },
+    {
+      "name": "RELEASES",
+      "bytes": 80,
+      "sha256": "95C9861597DAD2364F7C9BF83B157479A778C30631782ED48E6A329447E9218C"
+    },
+    {
+      "name": "WindChime-0.8.0-full.nupkg",
+      "bytes": 154934108,
+      "sha256": "10875B28FC89930711A0BC8B572C027674548B07D9F9D8FC9B7D03371AB00316",
+      "sha1": "C131545836524AB6A6D879493D9F0C9833841995"
+    }
+  ],
+  "executedInstaller": false
+}

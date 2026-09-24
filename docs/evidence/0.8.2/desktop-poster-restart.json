@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "electron": "44.3.0",
+  "independentProcess": true,
+  "checks": [
+    "title/signature/avatar restored by shared poster configuration in second Electron process",
+    "default website values do not overwrite saved poster preferences",
+    "PNG actually written after restart",
+    "restart opens only private controller; no display opened"
+  ],
+  "savedPath": "C:\\Users\\ASUS\\Documents\\ChatGPT\\风铃\\WindChime\\apps\\desktop\\out\\management-smoke\\poster-after-process-restart.png",
+  "bytes": 409881
+}

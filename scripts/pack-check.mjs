@@ -7,14 +7,19 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const temporary = await mkdtemp(path.join(os.tmpdir(), "windchime-package-"));
 try {
   function run(command, args, cwd = temporary, capture = false) {
-    const result = spawnSync(command, args, {
+    // npm.cmd is not directly executable with shell:false on Windows. Reuse
+    // npm's current CLI through Node; argument arrays remain shell-free.
+    const npmCli = command === "npm" ? process.env.npm_execpath : undefined;
+    if (command === "npm" && process.platform === "win32" && !npmCli)
+      throw new Error("On Windows invoke this check with npm run pack:check");
+    const result = spawnSync(npmCli ? process.execPath : command, npmCli ? [npmCli, ...args] : args, {
       cwd,
       encoding: "utf8",
       stdio: capture ? "pipe" : "inherit",
       env: process.env,
     });
     if (result.status !== 0)
-      throw new Error(`${command} failed: ${result.stderr || result.status}`);
+      throw new Error(`${command} failed: ${result.error?.message || result.stderr || result.status}`);
     return result.stdout;
   }
   run(process.execPath, ["scripts/build.mjs"], root);
@@ -57,7 +62,7 @@ try {
 import assert from 'node:assert/strict';
 import { createWindChimeSqlite } from '@windchime/embed/sqlite';
 import { createWindChimeService } from '@windchime/embed/server';
-for (const entry of ['core','client','react','server','sqlite','next','media']) await import('@windchime/embed/'+entry);
+for (const entry of ['core','client','react','server','sqlite','next','media','broadcast']) await import('@windchime/embed/'+entry);
 const storage = createWindChimeSqlite({filename: ${JSON.stringify(path.join(temporary, "fresh.db"))}});
 try {
   await storage.ready;
@@ -105,5 +110,6 @@ export function Page() { const inbox=useWindChimeInbox(client); const form=useWi
     `Verified ${installed.name}@${installed.version}; tarball ${artifact.filename}; isolated installation passed`,
   );
 } finally {
+  if (!path.resolve(temporary).startsWith(path.resolve(os.tmpdir()) + path.sep + "windchime-package-")) throw new Error("Unsafe temporary cleanup path");
   await rm(temporary, { recursive: true, force: true });
 }

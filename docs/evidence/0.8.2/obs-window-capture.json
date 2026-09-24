@@ -1,0 +1,331 @@
+{
+  "date": "2026-09-19T22:30:26.091Z",
+  "site": "http://127.0.0.1:49683",
+  "checks": [
+    {
+      "label": "OBS initially has no active outputs",
+      "passed": true
+    },
+    {
+      "label": "Unreviewed window captures blank",
+      "passed": true
+    },
+    {
+      "label": "Approval alone stays blank in window capture",
+      "passed": true
+    },
+    {
+      "label": "Manual show reaches real OBS window capture",
+      "passed": true
+    },
+    {
+      "label": "Window capture preserves transparent background",
+      "passed": true
+    },
+    {
+      "label": "Hide clears the captured source",
+      "passed": true,
+      "details": {
+        "responseToBlankMs": 136,
+        "commandToBlankMs": 365
+      }
+    },
+    {
+      "label": "Revocation clears captured window",
+      "passed": true
+    },
+    {
+      "label": "Closing output never captures private controller",
+      "passed": true
+    },
+    {
+      "label": "Reopened display stays blank",
+      "passed": true
+    },
+    {
+      "label": "Reopened window is captured after new manual show",
+      "passed": true
+    },
+    {
+      "label": "Covered display retains a live receiver after extended occlusion",
+      "passed": true,
+      "details": {
+        "durationMs": 70021
+      }
+    },
+    {
+      "label": "Remote hide clears covered OBS window within one second",
+      "passed": true,
+      "details": {
+        "responseToBlankMs": 591
+      }
+    },
+    {
+      "label": "Emergency hide clears capture before delayed website response",
+      "passed": true,
+      "details": {
+        "commandToBlankMs": 226
+      }
+    },
+    {
+      "label": "Pending hide paints blank without opening a new receiver",
+      "passed": true
+    },
+    {
+      "label": "No Bilibili or gateway traffic",
+      "passed": true
+    },
+    {
+      "label": "No output started during capture",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "00-initial-scene.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "01-initial-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "02-approved-blank.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "03-show-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "03-show-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "04-show-composite.png",
+      "width": 960,
+      "height": 640,
+      "visible": 614400,
+      "transparent": 0
+    },
+    {
+      "name": "05-hidden-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "05-hidden-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "06-revoked-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "06-revoked-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "06-revoked-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "06-revoked-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "07-closed-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "08-reopened-source.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "09-reopened-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "10-occluded-hidden.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "11-occluded-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "11-occluded-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "11-occluded-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "11-occluded-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "11-occluded-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "12-network-stalled-hide.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    },
+    {
+      "name": "12-network-stalled-hide.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 0,
+      "transparent": 614400
+    },
+    {
+      "name": "13-final-manual-show.png",
+      "width": 960,
+      "height": 640,
+      "visible": 111816,
+      "transparent": 502584
+    }
+  ],
+  "platformRequests": 0,
+  "obsVersion": "32.0.1",
+  "obsWebSocketVersion": "5.6.3",
+  "topicId": "8d25a335-c4a6-42a4-9828-b38bfcb37956",
+  "captureTitle": "WindChime Display · acceptance window-b743fcdb",
+  "selectedWindow": "[electron.exe]: WindChime Display · acceptance window-b743fcdb",
+  "result": "passed",
+  "fixtureGrantsRevoked": true
+}

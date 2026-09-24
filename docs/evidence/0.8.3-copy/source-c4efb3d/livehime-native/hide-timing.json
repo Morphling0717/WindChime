@@ -1,0 +1,30 @@
+{
+  "command": {
+    "type": "command-result",
+    "at": "2026-09-24T00:24:39.893Z",
+    "atMs": 1790209479893,
+    "id": "native-hide-c4-1",
+    "action": "hide",
+    "startedAt": 1790209479657,
+    "finishedAt": 1790209479893,
+    "durationMs": 236,
+    "passed": true
+  },
+  "httpResponse": {
+    "type": "request",
+    "at": "2026-09-24T00:24:39.897Z",
+    "atMs": 1790209479897,
+    "phase": "response",
+    "id": 156,
+    "method": "POST",
+    "pathname": "/api/mail/live/control/action",
+    "startedAt": 1790209479661,
+    "finishedAt": 1790209479678,
+    "durationMs": 17,
+    "httpStatus": 200
+  },
+  "screenshotCallAt": 1790209479928,
+  "screenshotReturnedAt": 1790209480407,
+  "httpResponseToBlankUpperBoundMs": 729,
+  "rootObservedNativeBlank": true
+}

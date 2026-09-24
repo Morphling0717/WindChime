@@ -2,7 +2,25 @@
 
 风铃是面向 Next.js 的独立匿名信箱库。投稿、信件管理、审核、话题、归档和屏蔽规则由库维护；网站拥有页面 HTML、布局、样式、文案、图标、动画、数据库路径和管理员登录。
 
-**0.5.0 为待发布版本。** 当前不要求 npm registry 已有该版本；可以从本仓库构建 `.tgz` 安装。源码与 ESM 产物均按职责分文件。默认 UI 是可选入口，完全不使用它也能使用全部功能。
+**桌面和共享库当前均为 0.8.3 候选版，尚未完成成品验收。** 桌面、安装向导和共享组件已删除宣传口号与装饰性副标题，使用功能名称和必要操作说明。玻璃界面、Logo、主题、审核规则及用户内容保持不变。两站已固定同一个 0.8.3 共享包；更新源码或桌面不会自动部署网站。
+
+本轮使用重新构建的安装包、便携 ZIP 和共享 TGZ。旧候选的测试证据保留，但不替代新候选的安装、升级、卸载、磁贴和 OBS／直播姬采集验收。当前进度见 [0.8.3 验收记录](docs/RELEASE-083.md)。
+
+正式最新版仍为 **0.8.1**，[0.8.2 仍是预发行版](https://github.com/Morphling0717/WindChime/releases/tag/v0.8.2)。**2026-09-23 的 0.8.2 安装 EXE 隔离首次安装实测失败，事务已回滚，暂请使用该版便携 ZIP。** 0.8.3 候选修复不会覆盖已发布的 0.8.2 标签或资产；原失败记录保留在 [0.8.2 验收记录](docs/RELEASE-082.md)。
+
+[0.8.3 验收记录](docs/RELEASE-083.md) · [0.8.2 验收记录](docs/RELEASE-082.md) · [0.8.1 发行记录](docs/RELEASE-081.md) · [连接密钥](docs/CONNECTION-KEYS.md) · [桌面运行与打包](apps/desktop/README.md) · [开源许可](docs/LICENSES.md) · [排版与主题](docs/DISPLAY-DESIGNS.md) · [私人磁贴与热键](docs/FLOATING-TILES.md) · [迁移说明](docs/MIGRATION.md)
+
+## Windows 桌面与直播采集
+
+在网站 `/mail` 生成密钥，复制到本地桌面导入。选择网站和话题，私下审信、批准和手动上屏，再让直播姬或 OBS 采集 **WindChime Display** 独立窗口。网页保留原信箱管理；审核和待播规则由网站服务器执行，桌面需要连接网站。旧 `/mail/live` 会跳回 `/mail`。
+
+新站点密钥自生成起有效 30 天，可重复导入及供多台电脑共用。撤销后这些连接及派生展示授权一起失效。旧密钥和浏览器配对仍仅授权原话题；需要管理所有活动时，在网页生成新站点密钥，升级不会悄悄扩大旧权限。
+
+网站至少需要部署 0.7.0 才能支持全站密钥，需要部署 0.8.0 才能保存新排版和外观配置；0.8.1 的展示重连保护、0.8.2 的队列与失效修复都需要对应网站共享包。只更新安装包或仓库依赖不会升级线上服务。两站已完成 0.8.3 本地构建、重复迁移与接口验证。2026-09-24 只读复查，UliUli 生产仍为 0.8.1，约剩 7.72 GiB，未达到 8 GiB 构建门槛，因此未开始新版备份、构建或切换。Mia 本轮不部署，详情见[本版记录](docs/RELEASE-083.md)。
+
+在 `apps/desktop` 执行 `npm ci`、`npm start` 可开发运行，执行 `npm run make` 制作 Windows 安装程序和 ZIP。具体产物及操作见[桌面 README](apps/desktop/README.md)，当前候选的实际通过项和待验证范围见 [0.8.3 验收记录](docs/RELEASE-083.md)。网站共享依赖升级至 0.8.3，不新增 API、授权范围或数据库迁移。
+
+这个流程不依赖 B 站官方启动、平台密钥、项目 ID、H5 或上架审核。`apps/live-gateway` 的普通浏览器展示、H5 和平台生命周期适配继续保留为可选模块；已有平台项目与私有配置无需更改。旧平台联调报告记录当时的工作范围，不构成本地桌面交付的前置条件。
 
 ## 从可运行示例开始
 
@@ -25,21 +43,23 @@ npm run dev
 
 ## 安装到已有网站
 
-未公开发布时，在风铃目录执行 `npm pack`，在网站目录安装生成的包：
+已公开的 [0.8.2 预发行版](https://github.com/Morphling0717/WindChime/releases/tag/v0.8.2) 可下载该版共享包并核对同页 `SHA256SUMS.txt`。要验证本地 0.8.3 候选，在当前风铃源码目录执行 `npm pack`，再安装生成的包：
 
 ```bash
-npm install /你的路径/WindChime/windchime-embed-0.5.0.tgz sqlite3@6.0.1
+npm install /你的路径/WindChime/windchime-embed-0.8.3.tgz sqlite3@6.0.1
+# 需要粉丝图片和主播替换图片时
+npm install sharp@0.35.4
 # 需要二维码和海报时
 npm install qrcode
 ```
 
-正式发布后可替换为 `npm install --save-exact @windchime/embed@0.5.0`。提交网站的 package.json 与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
+本次使用发行压缩包，不代表已发布到 npm registry。提交网站的 package.json、版本固定的 vendor 压缩包与 lockfile；不要把临时本地联调路径作为部署依赖。已有 Next.js 项目中合并以下配置，保留自己的其他选项：
 
 ```ts
 // next.config.ts
 const nextConfig = {
   transpilePackages: ["@windchime/embed"],
-  serverExternalPackages: ["sqlite3"],
+  serverExternalPackages: ["sqlite3", "sharp"],
 };
 export default nextConfig;
 ```
@@ -165,13 +185,13 @@ export function Compose({ topicSlug = "default" }) {
 }
 ```
 
-这段代码无需 CSS 或默认组件。昵称、链接、Turnstile 的完整例子见 [Sender.tsx](examples/next-sqlite/app/Sender.tsx)。错误提供 `code/status/retryAfterMs`，网站可按 code 显示自己的文案。`submit()` 捕获错误并返回 false；管理写入方法则继续抛出错误，需要 catch。Hooks 不弹确认框、不导航、不播放音效。成功动画与音效在网站收到 `submit()` 的 true 结果后执行。
+这段代码无需 CSS 或默认组件。昵称、链接、Turnstile 的完整例子见 [Sender.tsx](examples/next-sqlite/app/(site)/Sender.tsx)。错误提供 `code/status/retryAfterMs`，网站可按 code 显示自己的文案。`submit()` 捕获错误并返回 false；管理写入方法则继续抛出错误，需要 catch。Hooks 不弹确认框、不导航、不播放音效。成功动画与音效在网站收到 `submit()` 的 true 结果后执行。
 
 ### 自己编写管理界面
 
 用同一个稳定 client 实例调用 `useWindChimeInbox(client, {topicId})`、`useWindChimeTopics(client)`、`useWindChimeReview`、`useWindChimeBlocklist`、`useWindChimeBlockedTerms`、`useWindChimeSettings`。数据更新会通知同一 client 实例下的相关 Hooks 重新加载；过期请求不会覆盖新话题。`useWindChimeTopics` 默认读取管理数据，公开页面使用 `{mode:"public"}`，或直接调用 `client.topics.listPublic()`。不同标签页或客户端实例之间需要主动刷新或配置轮询。
 
-完整 [管理页面](examples/next-sqlite/app/admin/page.tsx) 提供登录、筛选、选择、已读/收藏、批量操作、审核、屏蔽、话题编辑/归档/恢复/永久删除、CSV 和海报。所有确认、HTML 与文案都由这个页面定义，业务不复制到示例里。
+完整 [管理页面](examples/next-sqlite/app/(site)/admin/page.tsx) 提供登录、筛选、选择、已读/收藏、批量操作、审核、屏蔽、话题编辑/归档/恢复/永久删除、CSV 和海报。所有确认、HTML 与文案都由这个页面定义，业务不复制到示例里。
 
 待审核信件列表中正文为空、昵称和链接为 null；管理员显式调用详情后才能展开信件原文。公开 SSR 使用 `service.listPublicTopics()` 和 `service.getPublicTopic(idOrSlug)`，不要把内部 `getTopicById` 的管理员对象传入 Client Component。
 

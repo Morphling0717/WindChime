@@ -1,0 +1,19 @@
+{
+  "passed": false,
+  "status": "cancelled",
+  "startedAtUtc": "2026-09-20T04:32:47.995133+08:00",
+  "finishedAtUtc": "2026-09-20T04:40:36.007667+08:00",
+  "targetHead": "e1dba96ea040a17b7b53bda0cb1c9b24e66eaa38",
+  "startFreeMiB": 5120,
+  "abortFreeMiB": 1280,
+  "pollSeconds": 2,
+  "samples": 235,
+  "lowestFreeBytes": 1272832000,
+  "finalFreeBytes": 1444519936,
+  "abortReason": "disk-reserve",
+  "sigintSent": true,
+  "childReturnCode": -2,
+  "processGroupExited": true,
+  "dockerCancellationInLog": true,
+  "productionIdentityUnchanged": true
+}

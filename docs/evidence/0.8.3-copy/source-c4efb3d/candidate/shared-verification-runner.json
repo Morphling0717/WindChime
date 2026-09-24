@@ -1,0 +1,6 @@
+{
+  "name": "verify-shared.cjs",
+  "sha256": "7f7b178247a3976f4b5d8c5f5cfb47346a0cc368b3c7de11b862a891040aeaeb",
+  "basedOn": ".work/qc-consumers-shared083-6b53289/package-check.cjs",
+  "sourceCommit": "c4efb3dd2d7dab7fa432bc29350f0b3ed74b6a58"
+}
