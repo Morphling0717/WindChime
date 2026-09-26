@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "recordedAtUtc": "2026-09-26T17:15:44.772265+00:00",
+  "origin": "https://uliuli.cn",
+  "sharedVersion": "0.8.3",
+  "targetHead": "0aa155fddcf21acf12a7f9f240315dce8cf24b3d",
+  "imageId": "sha256:021a637beda677dc2b3feece5903bde46b8742563488c90fe3d869bd071d5d99",
+  "acceptedPackageSha256": "a79abe42607b314f932f32618722528079842b59588e01cabf883936f8ae28f3",
+  "previousSharedVersion": "0.8.1",
+  "miaDeployed": false,
+  "build": {
+    "passed": true,
+    "elapsedSeconds": 523.7,
+    "publicFiles": 200,
+    "publicChanges": []
+  },
+  "buildMonitor": {
+    "passed": true,
+    "startedAtUtc": "2026-09-24T01:31:14.366766+00:00",
+    "finishedAtUtc": "2026-09-24T01:40:04.378194+00:00",
+    "startFreeMiB": 8192,
+    "abortFreeMiB": 1280,
+    "pollSeconds": 2,
+    "samples": 266,
+    "lowestFreeBytes": 4292411392,
+    "sigintSent": false,
+    "productionIdentityUnchanged": true
+  },
+  "migration": {
+    "passed": true,
+    "runs": 2,
+    "originalColumnContentsPreserved": true,
+    "existingTableCount": 34,
+    "grantScopesAndFilterChoicePreserved": true
+  },
+  "management": {
+    "passed": true,
+    "httpRequests": 286,
+    "assertionsPassed": 388,
+    "elapsedSeconds": 7.36,
+    "productionDatabaseTouched": false
+  },
+  "rollback": {
+    "passed": true,
+    "oldControlAndDisplayHttpPassed": true,
+    "initialOutputBlank": true,
+    "approvalRetained": true,
+    "httpRequests": 36,
+    "productionDatabaseUntouched": true
+  },
+  "cutover": {
+    "passed": true,
+    "allOriginalColumnsPreserved": true,
+    "existingTableCount": 34,
+    "environmentPreserved": true,
+    "mountsPreserved": true,
+    "mainUnchanged": true,
+    "resourcesVerified": 200,
+    "downtimeToVerificationSeconds": 7.6
+  },
+  "public": {
+    "passed": true,
+    "origin": "https://uliuli.cn",
+    "checks": [
+      {
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "path": "/api/mail/live/capabilities",
+        "status": 200
+      },
+      {
+        "path": "/mail",
+        "status": 200
+      },
+      {
+        "path": "/",
+        "status": 200
+      },
+      {
+        "path": "/app",
+        "status": 200
+      },
+      {
+        "path": "/api/mail/live/control/identity",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/topics",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/messages",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/settings",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/blocklist",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/blocked-terms",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/grants",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/share",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/control/state?topicId=default",
+        "status": 401
+      },
+      {
+        "path": "/api/mail/live/display/frame?receiverId=probe",
+        "status": 401
+      },
+      {
+        "path": "/mail/live",
+        "status": 307
+      }
+    ],
+    "resourcesVerified": 200
+  },
+  "outsideServerChecks": [
+    {
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "path": "/api/mail/live/capabilities",
+      "status": 200,
+      "features": {
+        "connectionKeys": true,
+        "siteControl": true,
+        "mailManagement": true,
+        "keywordFilterToggle": true,
+        "images": true,
+        "displayThemes": true
+      }
+    },
+    {
+      "path": "/mail",
+      "status": 200
+    },
+    {
+      "path": "/",
+      "status": 200
+    }
+  ],
+  "runtime": {
+    "passed": true,
+    "atUtc": "2026-09-26T17:15:44.772265+00:00",
+    "runtimeVersion": "0.8.3",
+    "targetHead": "0aa155fddcf21acf12a7f9f240315dce8cf24b3d",
+    "imageId": "sha256:021a637beda677dc2b3feece5903bde46b8742563488c90fe3d869bd071d5d99",
+    "containerRunning": true,
+    "containerStartedAt": "2026-09-24T01:43:08.025185084Z",
+    "productionEnvironmentPreserved": true,
+    "productionMountsPreserved": true,
+    "publicResourcesPreserved": true,
+    "privateBackupsPresent": true,
+    "backupDirectoryPrivate": true,
+    "serverLocalMainPreserved": true,
+    "diskFreeBytes": 5469343744
+  },
+  "originalWorktreesPreserved": true,
+  "offlineToolValidation": {
+    "passed": true,
+    "atUtc": "2026-09-24T01:29:40.200886+00:00",
+    "testCounts": {
+      "writerGuard": 21,
+      "buildMonitor": 14,
+      "toolContract": 6,
+      "prepareDryContract": 6,
+      "migrationRollbackScenarios": 5
+    },
+    "toolsSha256": {
+      "v083-deploy.py": "bcd2e5908903fdf6ae80477faad2fe1d37ececc00a1d46f35fc2d0e9111da7f7",
+      "v083-build-monitor.py": "a69cb3058cbc8e89873d6fdebb7a8686bb3f1079417c094689ba579a9ad5a6e0",
+      "v083-clone-management.py": "63c1e65649dd33d20ec065e57a4bbaef00f301f647b80bc963069b6dfeab56c0",
+      "v083-prepare-runner.cjs": "e8454cfa06f64c4552cf9d3b7a0c23becb4eed38539ee2bb23cfab0112fd8e42"
+    }
+  },
+  "privateReportManifest": [
+    {
+      "name": "prepared-result.json",
+      "sha256": "7d792ab167e5a845c4c5478a5a5d18c92d5713f16f81e1bb3d8f33c9dc174b10"
+    },
+    {
+      "name": "build-monitor-result.json",
+      "sha256": "1dca2983caa054ecb36890f2e7f5f59ae8cac6fa7e953e600e33993fb8f1d573"
+    },
+    {
+      "name": "build-result.json",
+      "sha256": "45a9bd8719aa91d568ad5b6d4f2f3d3d6f9289d018df741faf975f711086c02f"
+    },
+    {
+      "name": "clone-migration-result.json",
+      "sha256": "2d1887a3d7fa5b23ae96995978e6bd15c9407f7c0c5405a8dc2994547ea515d2"
+    },
+    {
+      "name": "compose-preflight-result.json",
+      "sha256": "cc21854ed4c8326810cb33cc66c847c286584de3ab7ca9feb4290c85db6bdd20"
+    },
+    {
+      "name": "clone-http-result.json",
+      "sha256": "4b2ee2e34085ba855bac4ea92f32e4444999d2ad03e00a51a83e681f07c11979"
+    },
+    {
+      "name": "clone-management-result.json",
+      "sha256": "e7ffca21151ffe9caed694b9958706b8b6dbe28fa79f7f823dbb06b7a05ae26f"
+    },
+    {
+      "name": "rollback-compatibility-result.json",
+      "sha256": "2c060d394e4fd793d8c2ab7719d289e69d2207618635fd9d737c070f3500a957"
+    },
+    {
+      "name": "writer-preflight-result.json",
+      "sha256": "5a1662bfcf29fa480fe1d9409ed2f46263396b169218f521238612ba2f315891"
+    },
+    {
+      "name": "cutover-result.json",
+      "sha256": "c87ad69c49f0bda5b771ec0924e42961546bd0472b9fbe4c3fee3c828ed742ff"
+    },
+    {
+      "name": "public-result.json",
+      "sha256": "97d50735fb19ed8d02e6c32ba3288a69410556044d291d5737bc7e70649856aa"
+    }
+  ],
+  "evidenceBoundary": "Authenticated writes used the isolated database copy. Production checks used read-only health, route, authorization, resource and runtime guards. Raw databases, credentials, private resource paths and original record counts are excluded."
+}
