@@ -103,3 +103,20 @@ test('invalid decoded dimensions never produce zero-sized or NaN preview images'
   assert.equal(f.card.props.snapshot.assets.length, 0); assert.equal(f.approve.props.disabled, true);
   assert.deepEqual(f.closed, ['broken']); assert.equal(f.created.length, 0);
 });
+
+test('removing a broken image from the draft unblocks previewing healthy images even while it remains in source', async t => {
+  const f = await fixture(t, {
+    ids: ['healthy', 'broken'],
+    decode: async (bytes, bitmap) => {
+      if (bytes.fixtureName === 'broken') throw new Error('corrupted file');
+      return bitmap('healthy', 800, 600);
+    },
+  });
+  assert.equal(f.card.props.snapshot.assets.length, 0);
+  assert.equal(f.approve.props.disabled, true);
+  const removeBroken = f.card.parent.parent.parent.findAllByType('button').find(b => b.props['aria-label'] === '移除图片 2');
+  assert(removeBroken, 'remove button for broken draft asset exists');
+  await act(async () => { removeBroken.props.onClick(); await flush(); });
+  assert.equal(f.card.props.snapshot.assets.length, 1);
+  assert.equal(f.card.props.snapshot.assets[0].id, 'healthy');
+});

@@ -77,6 +77,8 @@ export function useWindChimeSettings(
     mutationError: mutation.mutationError,
     setEnabled: (enabled: boolean) =>
       mutation.run(() => client.settings.set(enabled)),
+    setBlockedTermsEnabled: (blockedTermsEnabled: boolean) =>
+      mutation.run(() => client.settings.setBlockedTermsEnabled(blockedTermsEnabled)),
   };
 }
 export function useWindChimeBlockedTerms(

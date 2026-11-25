@@ -211,7 +211,7 @@ export function createWindChimeLiveRouteHandlers(options: WindChimeLiveRouteOpti
         if (resource === "settings" && segments.length === 1) {
           siteOnly();
           if (req.method === "GET") return json(await service.getSettings());
-          if (req.method === "PATCH") {siteOnly(true);onlyFields(payload,["blockedTermsEnabled"]);await service.setBlockedTermsEnabled(boolInput(payload.blockedTermsEnabled,"blockedTermsEnabled"));return json(await service.getSettings());}
+          if (req.method === "PATCH") {siteOnly();onlyFields(payload,["blockedTermsEnabled"]);await service.setBlockedTermsEnabled(boolInput(payload.blockedTermsEnabled,"blockedTermsEnabled"));return json(await service.getSettings());}
           if (req.method === "PUT") {onlyFields(payload,["enabled"]);return json(await service.updateSettings({enabled:boolInput(payload.enabled,"enabled")}));}
         }
         if (resource === "blocked-terms" && segments.length === 1) {

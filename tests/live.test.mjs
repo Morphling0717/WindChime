@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, stat, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, randomUUID, generateKeyPairSync, sign } from "node:crypto";
@@ -398,4 +398,51 @@ test("gateway cryptographic scope, proof replay, independent expiring platform l
   assert.equal((await f.call("gateway/exchange","POST",{proof:jwt("display",{topicId:"other"})},null)).status,403);
   assert.equal((await f.call("control/bind?topicId=default","DELETE")).status,200);
   assert.equal((await f.call(path,"GET",undefined,grant.token,{"x-windchime-platform-lease":jwt("lease")})).status,401);
+});
+
+test("listMessages and getMessage expose source assets with flagged redaction, and delete/block/cleanup reclaim assets and orphan files",async(t)=>{
+  const f=await fixture(t),mediaDir=join(f.directory,"media");
+  await f.service.setBlockedTerms(["secret"]);
+  await f.service.setBlockedTermsEnabled(true);
+  const png=await sharp({create:{width:8,height:6,channels:4,background:"green"}}).png().toBuffer();
+  const up1=await f.service.broadcast.upload(new Request("https://site.test",{headers:{"x-real-ip":"10.1.0.1"}}),"default",[png],mediaDir,null);
+  const up2=await f.service.broadcast.upload(new Request("https://site.test",{headers:{"x-real-ip":"10.1.0.2"}}),"default",[png],mediaDir,null);
+  const up3=await f.service.broadcast.upload(new Request("https://site.test",{headers:{"x-real-ip":"10.1.0.3"}}),"default",[png],mediaDir,null);
+  const idNormal=await f.submit("hello with pic","default",{attachments:up1.attachments.map(({id,receipt})=>({id,receipt}))});
+  const idFlagged=await f.submit("secret with pic","default",{senderFingerprint:"flagged-fp",attachments:up2.attachments.map(({id,receipt})=>({id,receipt}))});
+  const idBatch=await f.submit("batch delete pic","default",{attachments:up3.attachments.map(({id,receipt})=>({id,receipt}))});
+
+  const normalList=await f.service.listMessages({topicId:"default"});
+  const normalItem=normalList.items.find((m)=>m.id===idNormal);
+  assert.equal(normalItem.assetCount,1);
+  assert.equal(normalItem.assets.length,1);
+  assert.equal(normalItem.assets[0].id,up1.attachments[0].id);
+
+  const flaggedList=await f.service.listMessages({topicId:"default",filter:"flagged"});
+  assert.equal(flaggedList.items.length,1);
+  assert.deepEqual(flaggedList.items[0].assets,[]);
+  assert.equal(flaggedList.items[0].assetCount,1);
+
+  const flaggedDetail=await f.service.getMessage(idFlagged,"default");
+  assert.equal(flaggedDetail.assetCount,1);
+  assert.equal(flaggedDetail.assets.length,1);
+  assert.equal(flaggedDetail.assets[0].id,up2.attachments[0].id);
+
+  await f.service.deleteMessage(idNormal,"default");
+  assert.equal(await f.storage.get("SELECT id FROM mail_live_assets WHERE id=?",[up1.attachments[0].id]),undefined);
+
+  await f.service.batchMessages({action:"delete",ids:[idBatch]},"default");
+  assert.equal(await f.storage.get("SELECT id FROM mail_live_assets WHERE id=?",[up3.attachments[0].id]),undefined);
+
+  await f.service.blockSender(idFlagged,"default");
+  assert.equal(await f.storage.get("SELECT id FROM mail_live_assets WHERE id=?",[up2.attachments[0].id]),undefined);
+
+  const oldDate=new Date(f.now()-86400001);
+  for(const asset of [up1.attachments[0],up2.attachments[0],up3.attachments[0]]){
+    await utimes(join(mediaDir,asset.id+".webp"),oldDate,oldDate);
+  }
+  await f.service.broadcast.cleanupMedia(mediaDir);
+  for(const asset of [up1.attachments[0],up2.attachments[0],up3.attachments[0]]){
+    await assert.rejects(stat(join(mediaDir,asset.id+".webp")));
+  }
 });

@@ -30,6 +30,8 @@ export type WindChimeSubmissionOptions = {
   blockedTerms?: string[];
   /** Use the site's public settings value; opt-in matching is off by default. */
   blockedTermsEnabled?: boolean;
+  /** Called only when a Turnstile token has actually been consumed/invalidated (not on local validation errors). */
+  onTurnstileReset?: () => void;
 };
 function readStamps(key: string): number[] {
   try {
@@ -138,6 +140,7 @@ export function useWindChimeSubmission(options: WindChimeSubmissionOptions) {
   async function submit(): Promise<boolean> {
     if (busy.current) return false;
     const generation = revision.current;
+    let dispatched = false;
     setError(null);
     setSuccess(false);
     try {
@@ -205,6 +208,7 @@ export function useWindChimeSubmission(options: WindChimeSubmissionOptions) {
       );
       const send = options.onSubmit ?? options.client?.messages.submit;
       if (!send) throw new WindChimeClientError("SUBMIT_HANDLER_REQUIRED");
+      dispatched = true;
       await send(payload);
       if (rateLimit) {
         try {
@@ -230,6 +234,7 @@ export function useWindChimeSubmission(options: WindChimeSubmissionOptions) {
         setNickname("");
         setLinkRaw("");
         setTurnstileToken(null);
+        options.onTurnstileReset?.();
         setSuccess(true);
       }
       return true;
@@ -241,7 +246,10 @@ export function useWindChimeSubmission(options: WindChimeSubmissionOptions) {
         revision.current === generation
       ) {
         setError(failure);
-        setTurnstileToken(null);
+        if (dispatched || failure.code.startsWith("TURNSTILE_")) {
+          setTurnstileToken(null);
+          options.onTurnstileReset?.();
+        }
         if (failure.retryAfterMs) {
           const now = Date.now();
           setClock(now);

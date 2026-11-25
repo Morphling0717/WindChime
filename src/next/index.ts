@@ -193,6 +193,15 @@ export function createWindChimeRouteHandlers(options: WindChimeRouteOptions) {
             }),
           );
         }
+        if (method === "PATCH") {
+          const raw = await body(req, true);
+          onlyFields(raw, ["blockedTermsEnabled"]);
+          return json(
+            await service.setBlockedTermsEnabled(
+              boolInput(raw.blockedTermsEnabled, "blockedTermsEnabled"),
+            ),
+          );
+        }
       }
       if (resource === "blocked-terms" && parts.length === 1) {
         if (method === "GET")

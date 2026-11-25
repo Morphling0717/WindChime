@@ -80,12 +80,16 @@ test('site-only sender blocking removes its messages across topics; topic keys c
   assert.equal((await f.service.listMessages({topicId:topic.id})).items.length,0,'unblocking does not restore deleted mail');
 });
 
-test('keyword switch is default off and only site Bearer settings PATCH can change it',async t=>{
+test('keyword switch is default off and allows site Bearer or same-origin cookie admin PATCH only',async t=>{
   const f=await fixture(t),site=await f.grant(),old=await f.grant('control','topic','default'),display=await f.grant('display','topic','default');
   assert.equal((await(await f.call('control/settings',site.token)).json()).blockedTermsEnabled,false);
-  for(const authority of ['admin',old.token,display.token,undefined])assert.equal((await f.call('control/settings',authority,'PATCH',{blockedTermsEnabled:true})).status,authority==='admin'||authority===old.token?403:401);
+  for(const authority of [old.token,display.token,undefined])assert.equal((await f.call('control/settings',authority,'PATCH',{blockedTermsEnabled:true})).status,authority===old.token?403:401);
   assert.equal((await f.call('control/settings',site.token,'PUT',{blockedTermsEnabled:true})).status,400);
   assert.equal((await f.call('control/settings',site.token,'PATCH',{blockedTermsEnabled:true,enabled:false})).status,400);
+  assert.equal((await f.call('control/settings','admin','PATCH',{blockedTermsEnabled:true})).status,200);
+  assert.equal((await f.service.getSettings()).blockedTermsEnabled,true);
+  assert.equal((await f.call('control/settings','admin','PATCH',{blockedTermsEnabled:false})).status,200);
+  assert.equal((await f.service.getSettings()).blockedTermsEnabled,false);
   assert.equal((await f.call('control/settings',site.token,'PATCH',{blockedTermsEnabled:true})).status,200);
   assert.equal((await f.call('control/blocked-terms',site.token,'PUT',{terms:['blocked']})).status,200);
   await f.submit('default','blocked');assert.equal((await f.service.listMessages({filter:'flagged'})).items.length,1);
@@ -164,7 +168,7 @@ test('Bearer authority takes precedence over admin cookies and cannot mint or ap
     assert.equal((await f.call('devices/approve',token,'POST',{userCode:'unused',topicId:'default'},adminCookie)).status,403);
   }
   assert.equal((await f.call('control/settings',old.token,'PATCH',{blockedTermsEnabled:true},adminCookie)).status,403);
-  assert.equal((await f.call('control/settings','admin','PATCH',{blockedTermsEnabled:true})).status,403);
+  assert.equal((await f.call('control/settings','admin','PATCH',{blockedTermsEnabled:true},{'origin':'https://attacker.invalid'})).status,403);
   assert.equal((await f.service.getSettings()).blockedTermsEnabled,false);
   assert.equal((await f.call('control/grants','admin','POST',{kind:'control',scope:'site',label:'网页签发'})).status,201,'same-origin website admins remain the explicit issuing authority');
   const cross={'origin':'https://display.site.test','sec-fetch-site':'same-site'};

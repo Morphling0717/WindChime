@@ -29,6 +29,12 @@ export type WindChimeSubmitPayload = {
   topicSlug?: string | null;
   attachments?: Array<{ id: string; receipt: string }>;
 };
+export type WindChimeMessageAsset = {
+  id: string;
+  mimeType: string;
+  width: number;
+  height: number;
+};
 export type WindChimeMessageRecord = {
   id: string;
   topicId?: string;
@@ -43,6 +49,8 @@ export type WindChimeMessageRecord = {
   isFlagged?: boolean;
   senderLabel?: string | null;
   senderHash?: string | null;
+  assets?: WindChimeMessageAsset[];
+  assetCount?: number;
 };
 export type WindChimeMessageList = {
   items: WindChimeMessageRecord[];

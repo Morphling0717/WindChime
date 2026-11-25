@@ -19,6 +19,7 @@ async function harness(options={}) {
     destroyContents(){this.contentsDestroyed=true;this.webContents.emit('destroyed');}
     close(){this.closeRequested=true;}finishClose(){this.destroyContents();this.destroyed=true;this.emit('closed');}
     getBounds(){return {x:50,y:60,width:this.options.width,height:this.options.height};}setAlwaysOnTop(pinned){this.pinned=pinned;}
+    setContentSize(width,height){this.contentSize={width,height};this.resizeCount=(this.resizeCount??0)+1;}
   }
   const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutPolicy?options.shortcutPolicy(key):options.shortcutResult??true;},unregister:key=>unregistered.push(key),unregisterAll:()=>{}},dialog:{showMessageBox:async(_window,input)=>{confirmations.push(input);return {response:typeof confirmation==='function'?await confirmation():confirmation};}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
   const fetch=async(url,options)=>{
@@ -747,4 +748,31 @@ for(const outcome of ['conflict','timeout']) test('a current activation image '+
   h.setRoute(r=>r.url.includes('/display/assets/')?(outcome==='conflict'?Response.json({error:'asset unavailable'},{status:409}):Promise.reject(Object.assign(new Error('synthetic timeout'),{code:'REMOTE_TIMEOUT',status:0}))):null);
   assert.equal((await h.invoke('display:request',[{path:'/display/assets/asset_A?receiverId=r&activation=1',method:'GET'}],output)).ok,false);
   await flush();await flush();assert.equal(output.crashCount,1);
+});
+
+test('main non-review dirty state does not block floating tile message selection but still guards mailbox switches',async()=>{
+  const h=await harness();const first=await h.pair(3011),second=await h.pair(3012);await h.invoke('sites:select',[first.id]);
+  await h.invoke('tiles:open',['inbox']);const inbox=h.windows.at(-1);
+  const version=(await h.invoke('app:status')).data.contextVersion;
+  assert((await h.invoke('control:select-message',['first',first.id,version],inbox)).ok);
+  assert((await h.invoke('tiles:dirty',[{review:false,other:true}])).ok);
+  assert((await h.invoke('control:select-message',['second',first.id,version],inbox)).ok);
+  assert.equal((await h.invoke('app:status')).data.selectedMessageId,'second');
+  assert.equal((await h.invoke('sites:select',[second.id])).code,'OPERATION_CANCELLED');
+  assert((await h.invoke('tiles:dirty',[{review:true,other:false}])).ok);
+  assert.equal((await h.invoke('control:select-message',['third',first.id,version],inbox)).code,'OPERATION_CANCELLED');
+});
+
+test('display window resizes content area to match frame appearance maxWidth and viewportHeight',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,appearance:{maxWidth:1280,viewportHeight:360},snapshot:null}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.deepEqual(output.contentSize,{width:1280,height:360});
+  assert.equal(output.resizeCount,1);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.equal(output.resizeCount,1,'unchanged dimensions do not trigger redundant resizes');
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:3,activation:1,appearance:{maxWidth:480,viewportHeight:860},snapshot:null}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.deepEqual(output.contentSize,{width:480,height:860});
+  assert.equal(output.resizeCount,2);
 });

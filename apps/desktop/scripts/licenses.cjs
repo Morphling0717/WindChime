@@ -142,7 +142,7 @@ const installerAssets = [
   { name: 'Nsis7z_19.00.7z', component: 'nsis7z', url: 'https://nsis.sourceforge.io/mediawiki/images/6/69/Nsis7z_19.00.7z', sha256: '6f2f3730049926f40442ee0c8b7d3e3dee7ace544d82467ff8059ea3f4201c58' },
   { name: 'lzma1900.7z', component: 'nsis7z', url: 'https://www.7-zip.org/a/lzma1900.7z', sha256: '00f569e624b3d9ed89cf8d40136662c4c5207eaceb92a70b1044c77f84234bad' },
   { name: 'UAC.zip', component: 'UAC', url: 'https://nsis.sourceforge.io/mediawiki/images/8/8f/UAC.zip', sha256: '20e3192af5598568887c16d88de59a52c2ce4a26e42c5fb8bee8105dcbbd1760' },
-  { name: 'NsProcess.zip', component: 'nsProcess', url: 'https://nsis.sourceforge.io/mediawiki/images/1/18/NsProcess.zip', sha256: 'fc19fc66a5219a233570fafd5daeb0c9b85387b379f6df5ac8898159a57c5944' },
+  { name: 'NsProcess.zip', component: 'nsProcess', url: 'https://nsis.sourceforge.io/mediawiki/images/archive/1/18/20261029203037%21NsProcess.zip', sha256: 'fc19fc66a5219a233570fafd5daeb0c9b85387b379f6df5ac8898159a57c5944' },
   { name: 'WinShell.zip', component: 'WinShell', url: 'https://nsis.sourceforge.io/mediawiki/images/5/54/WinShell.zip', sha256: '34e111f8aacf64c540d848fd06b9d6f3e2c10cb825ec9329a01d1141973e749b' },
 ];
 const installerComponents = {

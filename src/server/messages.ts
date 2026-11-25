@@ -4,6 +4,7 @@ import {
   validateWindChimeSubmission,
   matchWindChimeBlockedTerm,
   WindChimeError,
+  type WindChimeMessageAsset,
   type WindChimeMessageRecord,
   type WindChimeInboxFilter,
   type WindChimeMessageList,
@@ -37,7 +38,11 @@ export type MessageRow = {
   sender_hash: string | null;
   sender_label: string | null;
 };
-function messageDto(row: MessageRow, original = false): WindChimeMessageRecord {
+function messageDto(
+  row: MessageRow,
+  original = false,
+  assets: WindChimeMessageAsset[] = [],
+): WindChimeMessageRecord {
   const redact = row.is_flagged && !original;
   return {
     id: row.id,
@@ -51,7 +56,45 @@ function messageDto(row: MessageRow, original = false): WindChimeMessageRecord {
     isFlagged: !!row.is_flagged,
     senderHash: row.sender_hash,
     senderLabel: row.sender_label,
+    assets: redact ? [] : assets,
+    assetCount: assets.length,
   };
+}
+async function loadSourceAssets(
+  db: WindChimeSqlExecutor,
+  messageIds: readonly string[],
+): Promise<Map<string, WindChimeMessageAsset[]>> {
+  const result = new Map<string, WindChimeMessageAsset[]>();
+  if (!messageIds.length) return result;
+  const CHUNK_SIZE = 400;
+  for (let i = 0; i < messageIds.length; i += CHUNK_SIZE) {
+    const chunk = messageIds.slice(i, i + CHUNK_SIZE);
+    const placeholders = chunk.map(() => "?").join(",");
+    const rows = await db.all<{
+      id: string;
+      message_id: string;
+      mime_type: string;
+      width: number;
+      height: number;
+    }>(
+      `SELECT id, message_id, mime_type, width, height FROM mail_live_assets WHERE message_id IN(${placeholders}) AND purpose='source' ORDER BY ordinal ASC, id ASC`,
+      chunk,
+    );
+    for (const row of rows) {
+      let list = result.get(row.message_id);
+      if (!list) {
+        list = [];
+        result.set(row.message_id, list);
+      }
+      list.push({
+        id: row.id,
+        mimeType: row.mime_type,
+        width: row.width,
+        height: row.height,
+      });
+    }
+  }
+  return result;
 }
 async function requireMessage(
   db: WindChimeSqlExecutor,
@@ -224,8 +267,14 @@ export function createMessageOperations(options: MessageOperationOptions) {
         `SELECT * FROM mail_messages WHERE ${where} AND ${filterSql} ORDER BY created_at DESC,id DESC`,
         params,
       );
+      const assetsByMessage = await loadSourceAssets(
+        db,
+        rows.map((row) => row.id),
+      );
       return {
-        items: rows.map((row) => messageDto(row, !blockedTermsEnabled)),
+        items: rows.map((row) =>
+          messageDto(row, !blockedTermsEnabled, assetsByMessage.get(row.id) ?? []),
+        ),
         blockedTermsEnabled,
         counts: {
           all: Number(counts?.all_count ?? 0),
@@ -241,9 +290,11 @@ export function createMessageOperations(options: MessageOperationOptions) {
     topicId = "default",
   ): Promise<WindChimeMessageRecord> {
     await ready();
-    return storage.transaction(async (db) =>
-      messageDto(await requireMessage(db, id, topicId, now()), true),
-    );
+    return storage.transaction(async (db) => {
+      const row = await requireMessage(db, id, topicId, now());
+      const assetsByMessage = await loadSourceAssets(db, [row.id]);
+      return messageDto(row, true, assetsByMessage.get(row.id) ?? []);
+    });
   }
   async function updateMessage(
     id: string,
@@ -282,6 +333,7 @@ export function createMessageOperations(options: MessageOperationOptions) {
         new Date(now()).toISOString(),
         row.id,
       ]);
+      await db.run("DELETE FROM mail_live_assets WHERE message_id=?", [row.id]);
       return { ok: true as const };
     });
   }
@@ -320,6 +372,12 @@ export function createMessageOperations(options: MessageOperationOptions) {
         `UPDATE mail_messages SET ${set} WHERE id IN(${placeholders}) AND topic_id=?`,
         params,
       );
+      if (raw.action === "delete") {
+        await db.run(
+          `DELETE FROM mail_live_assets WHERE message_id IN(${placeholders}) AND topic_id=?`,
+          [...ids, topic.id],
+        );
+      }
       return { ok: true as const };
     });
   }
@@ -342,6 +400,10 @@ export function createMessageOperations(options: MessageOperationOptions) {
       await db.run(
         "UPDATE mail_messages SET deleted_at=? WHERE sender_hash=? AND deleted_at IS NULL",
         [stamp, row.sender_hash],
+      );
+      await db.run(
+        "DELETE FROM mail_live_assets WHERE message_id IN (SELECT id FROM mail_messages WHERE sender_hash=?)",
+        [row.sender_hash],
       );
       return { ok: true as const };
     });

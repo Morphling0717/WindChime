@@ -125,7 +125,14 @@ function App() {
     selectedMessageId: null, contextVersion: 0, tiles: [], tile: null,
   });
   const refreshStatus = useCallback(async () => { setStatus(await unwrap(bridge.status())); }, []);
-  useEffect(() => { void unwrap(bridge.setTileDirty(studioDirty || topicDirty || settingsDirty)).catch(() => {}); }, [studioDirty, topicDirty, settingsDirty]);
+  useEffect(() => {
+    void unwrap(
+      bridge.setTileDirty({
+        review: view === "studio" && studioDirty,
+        other: (view === "settings" && studioDirty) || topicDirty || settingsDirty,
+      }),
+    ).catch(() => {});
+  }, [view, studioDirty, topicDirty, settingsDirty]);
   const selected = sites.find((site) => site.id === selectedId);
   const selectedRef = useRef(selectedId);
   selectedRef.current = selectedId;
@@ -170,7 +177,12 @@ function App() {
   const change = async (operation: () => Promise<unknown>) => {
     await act(async () => {
       // The main process checks all private windows once, at commit time.
-      await unwrap(bridge.setTileDirty(studioDirty || topicDirty || settingsDirty));
+      await unwrap(
+        bridge.setTileDirty({
+          review: view === "studio" && studioDirty,
+          other: (view === "settings" && studioDirty) || topicDirty || settingsDirty,
+        }),
+      );
       await operation();
     });
   };
@@ -738,6 +750,7 @@ function App() {
                   client={client}
                   topicId={topicId}
                   title={topic?.title ?? selected.label}
+                  module={view === "settings" ? "appearance" : undefined}
                   canApproveDevices={false}
                   blockedTermsEnabled={keywordEnabled}
                   onDirtyChange={setStudioDirty}
@@ -745,8 +758,8 @@ function App() {
                   onOpenDisplay={() => unwrap(bridge.openDisplay())}
                   onHideDisplay={() => unwrap(bridge.hide())}
                   onOpenTile={view === 'studio' ? module => unwrap(bridge.openTile(module)) : undefined}
-                  selectedMessageId={status.selectedMessageId}
-                  onSelectMessage={async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); }}
+                  selectedMessageId={view === "studio" ? status.selectedMessageId : undefined}
+                  onSelectMessage={view === "studio" ? async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); } : undefined}
                 />
               </div>
             )}

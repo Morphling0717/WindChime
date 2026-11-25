@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WindChimeClient } from "../../../src/client";
-import type {
-  WindChimeAdminTopic,
-  WindChimeBlockedSender,
-  WindChimeInboxFilter,
-  WindChimeMessageList,
-  WindChimeMessageRecord,
+import {
+  windChimeLocalToUtcIso,
+  windChimeUtcIsoToLocal,
+  type WindChimeAdminTopic,
+  type WindChimeBlockedSender,
+  type WindChimeInboxFilter,
+  type WindChimeMessageList,
+  type WindChimeMessageRecord,
 } from "../../../src/core";
 import type { WindChimeLiveControlState } from "../../../src/core/live";
 import { windChimeTopicStateLabel } from "../../../src/types-topics";
@@ -91,60 +93,80 @@ export function Inbox({
       });
     return () => abort.abort();
   }, [active, client, topicId, onError]);
+  const detailReady = detail?.id === active;
+  const detailAssetsKey = detailReady
+    ? detail.assets !== undefined
+      ? detail.assets.map((asset) => asset.id).join(",")
+      : "__legacy__"
+    : "";
   useEffect(() => {
     const abort = new AbortController(),
       owned: string[] = [];
     setImages([]);
-    if (active)
+    if (!active || !detailReady) {
+      return () => {
+        abort.abort();
+      };
+    }
+    const fetchAssetRows = async (
+      assets: Array<{ id: string; caption?: string }>,
+    ) => {
+      const rows = await Promise.all(
+        assets.map(async (asset) => {
+          const result = await client.request<{
+            image: string;
+            mimeType: string;
+          }>(`/assets/${encodeURIComponent(asset.id)}`, "GET", undefined, {
+            topicId,
+            signal: abort.signal,
+          });
+          if (abort.signal.aborted) return null;
+          if (
+            !["image/png", "image/jpeg", "image/webp"].includes(result.mimeType)
+          )
+            throw new Error("无效图片格式");
+          const blob = new Blob(
+              [Uint8Array.from(atob(result.image), (c) => c.charCodeAt(0))],
+              { type: result.mimeType },
+            ),
+            url = URL.createObjectURL(blob);
+          owned.push(url);
+          return { url, caption: asset.caption ?? "" };
+        }),
+      );
+      if (!abort.signal.aborted)
+        setImages(
+          rows.filter(
+            (item): item is { url: string; caption: string } => !!item,
+          ),
+        );
+    };
+    if (detailAssetsKey === "__legacy__") {
       void client
         .request<WindChimeLiveControlState>("/state", "GET", undefined, {
           topicId,
           signal: abort.signal,
         })
-        .then(async (state) => {
-          const assets =
+        .then((state) =>
+          fetchAssetRows(
             state.messages.find((item) => item.id === active)?.source.assets ??
-            [];
-          const rows = await Promise.all(
-            assets.map(async (asset) => {
-              const result = await client.request<{
-                image: string;
-                mimeType: string;
-              }>(`/assets/${encodeURIComponent(asset.id)}`, "GET", undefined, {
-                topicId,
-                signal: abort.signal,
-              });
-              if (abort.signal.aborted) return null;
-              if (
-                !["image/png", "image/jpeg", "image/webp"].includes(
-                  result.mimeType,
-                )
-              )
-                throw new Error("无效图片格式");
-              const blob = new Blob(
-                  [Uint8Array.from(atob(result.image), (c) => c.charCodeAt(0))],
-                  { type: result.mimeType },
-                ),
-                url = URL.createObjectURL(blob);
-              owned.push(url);
-              return { url, caption: asset.caption };
-            }),
-          );
-          if (!abort.signal.aborted)
-            setImages(
-              rows.filter(
-                (item): item is { url: string; caption: string } => !!item,
-              ),
-            );
-        })
+              [],
+          ),
+        )
         .catch((e) => {
           if (!abort.signal.aborted) onError(message(e));
         });
+    } else if (detailAssetsKey) {
+      const ids = detailAssetsKey.split(",");
+      void fetchAssetRows(ids.map((id) => ({ id }))).catch((e) => {
+        if (!abort.signal.aborted) onError(message(e));
+      });
+    }
     return () => {
       abort.abort();
       owned.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [active, client, topicId, onError]);
+  }, [active, detailReady, detailAssetsKey, client, topicId, onError]);
   useEffect(() => {
     const abort = new AbortController();
     let polling = false, refreshAgain = false;
@@ -189,6 +211,9 @@ export function Inbox({
       value?.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
     ),
   );
+  const visibleChecked = checked.filter((id) =>
+    rows.some((row) => row.id === id),
+  );
   const listed = data.items.find((item) => item.id === active);
   const item =
     detail?.id === active
@@ -212,8 +237,8 @@ export function Inbox({
   };
   const exportCsv = () =>
     void act(async () => {
-      const items = checked.length
-        ? data.items.filter((row) => checked.includes(row.id))
+      const items = visibleChecked.length
+        ? rows.filter((row) => visibleChecked.includes(row.id))
         : rows;
       await unwrap(
         bridge.saveFile({
@@ -268,7 +293,7 @@ export function Inbox({
           <input
             type="checkbox"
             checked={
-              rows.length > 0 && rows.every((row) => checked.includes(row.id))
+              rows.length > 0 && visibleChecked.length === rows.length
             }
             onChange={(e) =>
               setChecked(e.target.checked ? rows.map((row) => row.id) : [])
@@ -276,34 +301,36 @@ export function Inbox({
           />{" "}
           选择当前列表
         </label>
-        <span>已选 {checked.length} 封</span>
+        <span>已选 {visibleChecked.length} 封</span>
         <button
-          disabled={busy || !checked.length}
+          disabled={busy || !visibleChecked.length}
           onClick={() =>
             void act(() =>
-              client.messages.batch("markRead", checked, { topicId }),
+              client.messages.batch("markRead", visibleChecked, { topicId }),
             )
           }
         >
           批量标为已读
         </button>
         <button
-          disabled={busy || !checked.length}
+          disabled={busy || !visibleChecked.length}
           onClick={() =>
             void act(async () => {
               if (
                 await confirm(
-                  `删除已选的 ${checked.length} 封来信？对应待播和正在展示的内容会同步撤下。`,
+                  `删除已选的 ${visibleChecked.length} 封来信？对应待播和正在展示的内容会同步撤下。`,
                 )
               )
-                await client.messages.batch("delete", checked, { topicId });
+                await client.messages.batch("delete", visibleChecked, {
+                  topicId,
+                });
             })
           }
         >
           批量删除
         </button>
         <button disabled={busy || !rows.length} onClick={exportCsv}>
-          导出 {checked.length ? "所选" : "当前列表"} CSV
+          导出 {visibleChecked.length ? "所选" : "当前列表"} CSV
         </button>
       </div>
       <div className="mailbox-columns">
@@ -475,13 +502,6 @@ const freshTopic = (): TopicForm => ({
   isEnabled: true,
   sortOrder: 0,
 });
-const localDate = (value: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-};
 export function Topics({
   client,
   siteScope,
@@ -502,6 +522,11 @@ export function Topics({
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [archived, setArchived] = useState(false);
+  const editingTopic =
+    editing && editing !== "new"
+      ? (topics.find((item) => item.id === editing) ?? null)
+      : null;
+  const isDefaultEditing = Boolean(editingTopic?.isDefault);
   useEffect(() => {
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
@@ -528,8 +553,8 @@ export function Topics({
             slug: topic.slug,
             description: topic.description ?? "",
             note: topic.note ?? "",
-            startsAt: localDate(topic.startsAt),
-            endsAt: localDate(topic.endsAt),
+            startsAt: windChimeUtcIsoToLocal(topic.startsAt),
+            endsAt: windChimeUtcIsoToLocal(topic.endsAt),
             isEnabled: topic.isEnabled,
             sortOrder: topic.sortOrder,
           }
@@ -543,13 +568,39 @@ export function Topics({
   };
   const save = () =>
     void act(async () => {
-      const { slug, ...patch } = {
-        ...form,
-        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
-        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-      };
-      if (editing === "new") await client.topics.create({ ...patch, slug });
-      else if (editing) await client.topics.update(editing, patch);
+      if (editing === "new") {
+        await client.topics.create({
+          ...form,
+          slug: form.slug.trim().toLowerCase(),
+          startsAt: form.startsAt
+            ? windChimeLocalToUtcIso(form.startsAt) || null
+            : null,
+          endsAt: form.endsAt
+            ? windChimeLocalToUtcIso(form.endsAt) || null
+            : null,
+        });
+      } else if (editing) {
+        const patch = isDefaultEditing
+          ? {
+              title: form.title,
+              description: form.description,
+              isEnabled: form.isEnabled,
+            }
+          : {
+              title: form.title,
+              description: form.description,
+              note: form.note,
+              isEnabled: form.isEnabled,
+              sortOrder: form.sortOrder,
+              startsAt: form.startsAt
+                ? windChimeLocalToUtcIso(form.startsAt) || null
+                : null,
+              endsAt: form.endsAt
+                ? windChimeLocalToUtcIso(form.endsAt) || null
+                : null,
+            };
+        await client.topics.update(editing, patch);
+      }
       setDirty(false);
       setEditing(null);
     });
@@ -713,7 +764,7 @@ export function Topics({
                 话题名称
                 <input
                   required
-                  maxLength={80}
+                  maxLength={64}
                   value={form.title}
                   onChange={(e) => field("title", e.target.value)}
                 />
@@ -722,45 +773,52 @@ export function Topics({
                 链接短名
                 <input
                   required
+                  maxLength={64}
                   disabled={editing !== "new"}
                   pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                   value={form.slug}
-                  onChange={(e) => field("slug", e.target.value)}
+                  onChange={(e) => field("slug", e.target.value.toLowerCase())}
                 />
               </label>
-              <label>
-                开始时间
-                <input
-                  type="datetime-local"
-                  value={form.startsAt}
-                  onChange={(e) => field("startsAt", e.target.value)}
-                />
-              </label>
-              <label>
-                结束时间
-                <input
-                  type="datetime-local"
-                  value={form.endsAt}
-                  onChange={(e) => field("endsAt", e.target.value)}
-                />
-              </label>
+              {!isDefaultEditing && (
+                <>
+                  <label>
+                    开始时间（北京时间）
+                    <input
+                      type="datetime-local"
+                      value={form.startsAt}
+                      onChange={(e) => field("startsAt", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    结束时间（北京时间）
+                    <input
+                      type="datetime-local"
+                      value={form.endsAt}
+                      onChange={(e) => field("endsAt", e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
             </div>
             <label>
               公开说明
               <textarea
                 value={form.description}
-                maxLength={2000}
+                maxLength={500}
                 onChange={(e) => field("description", e.target.value)}
               />
             </label>
-            <label>
-              私人备注
-              <textarea
-                value={form.note}
-                maxLength={2000}
-                onChange={(e) => field("note", e.target.value)}
-              />
-            </label>
+            {!isDefaultEditing && (
+              <label>
+                私人备注
+                <textarea
+                  value={form.note}
+                  maxLength={500}
+                  onChange={(e) => field("note", e.target.value)}
+                />
+              </label>
+            )}
             <div className="wc-actions">
               <label>
                 <input
@@ -770,14 +828,16 @@ export function Topics({
                 />{" "}
                 允许投稿
               </label>
-              <label>
-                排列序号
-                <input
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(e) => field("sortOrder", Number(e.target.value))}
-                />
-              </label>
+              {!isDefaultEditing && (
+                <label>
+                  排列序号
+                  <input
+                    type="number"
+                    value={form.sortOrder}
+                    onChange={(e) => field("sortOrder", Number(e.target.value))}
+                  />
+                </label>
+              )}
               <button
                 className="wc-primary"
                 disabled={busy || !dirty}

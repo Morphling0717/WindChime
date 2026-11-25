@@ -333,6 +333,7 @@ test("public API and SSR DTO never serialize notes, counts, hashes, or submitted
     ["/blocklist", "GET"],
     ["/blocklist/hash", "DELETE"],
     ["/settings", "PUT", { enabled: false }],
+    ["/settings", "PATCH", { blockedTermsEnabled: true }],
   ])
     assert.equal(
       (await f.call(path, method, payload, false)).status,
@@ -1033,4 +1034,32 @@ test("blocklist preserves normal previews but never reveals new, legacy or untra
     items.find((item) => item.hash === normal.senderHash).sampleText,
     null,
   );
+});
+
+test("PATCH /api/mail/settings toggles blockedTermsEnabled for authenticated admins only", async (t) => {
+  const f = await fixture(t);
+  assert.equal((await f.service.getSettings()).blockedTermsEnabled, false);
+  assert.equal(
+    (await f.call("/settings", "PATCH", { blockedTermsEnabled: true }, false))
+      .status,
+    401,
+  );
+  assert.equal(
+    (await f.call("/settings", "PATCH", { blockedTermsEnabled: "yes" })).status,
+    400,
+  );
+  const on = await f.call("/settings", "PATCH", { blockedTermsEnabled: true });
+  assert.equal(on.status, 200);
+  assert.deepEqual(await on.json(), {
+    enabled: true,
+    blockedTermsEnabled: true,
+  });
+  const off = await f.call("/settings", "PATCH", {
+    blockedTermsEnabled: false,
+  });
+  assert.equal(off.status, 200);
+  assert.deepEqual(await off.json(), {
+    enabled: true,
+    blockedTermsEnabled: false,
+  });
 });

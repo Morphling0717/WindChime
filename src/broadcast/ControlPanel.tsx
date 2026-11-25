@@ -11,13 +11,17 @@ import { AppearanceEditor } from './AppearanceEditor.js';
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
 type PrivateAsset = { url: string; mimeType: string; width: number; height: number };
-function usePrivateAssets(client: WindChimeLiveClient, topicId: string, ids: string[]) {
-  const [loaded, setLoaded] = useState<{ client: WindChimeLiveClient; topicId: string; signature: string; assets: Record<string, PrivateAsset> } | null>(null);
+function usePrivateAssets(client: WindChimeLiveClient, topicId: string, ids: string[], retryKey = 0) {
+  const [loaded, setLoaded] = useState<{ client: WindChimeLiveClient; topicId: string; signature: string; retryKey: number; assets: Record<string, PrivateAsset>; error: string } | null>(null);
   const signature = ids.join('|');
   useEffect(() => {
     let cancelled = false; const controller = new AbortController(); const owned = new Set<string>();
     const release = () => { cancelled = true; controller.abort(); owned.forEach(url => URL.revokeObjectURL(url)); owned.clear(); };
     setLoaded(null);
+    if (!ids.length) {
+      setLoaded({ client, topicId, signature, retryKey, assets: {}, error: '' });
+      return release;
+    }
     void Promise.all(ids.map(async id => {
       const blob = await client.asset(topicId, id, controller.signal);
       if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) || blob.size > 5 * 1024 * 1024) throw new Error('图片格式无效');
@@ -29,12 +33,46 @@ function usePrivateAssets(client: WindChimeLiveClient, topicId: string, ids: str
         const url = URL.createObjectURL(blob); owned.add(url);
         return [id, { url, mimeType: blob.type, width: decoded.width, height: decoded.height }] as const;
       } finally { decoded.close(); }
-    })).then(entries => { if (!cancelled) setLoaded({ client, topicId, signature, assets: Object.fromEntries(entries) }); }).catch(release);
+    })).then(entries => { if (!cancelled) setLoaded({ client, topicId, signature, retryKey, assets: Object.fromEntries(entries), error: '' }); }).catch(cause => {
+      const wasCancelled = cancelled;
+      release();
+      if (!wasCancelled) setLoaded({ client, topicId, signature, retryKey, assets: {}, error: cause instanceof Error ? cause.message : '图片加载失败' });
+    });
     return release;
     // IDs define the requested bytes; their order is significant only for presentation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, topicId, signature]);
-  return loaded?.client === client && loaded.topicId === topicId && loaded.signature === signature ? loaded.assets : {};
+  }, [client, topicId, signature, retryKey]);
+  const current = loaded?.client === client && loaded.topicId === topicId && loaded.signature === signature && loaded.retryKey === retryKey ? loaded : null;
+  return { assets: current?.assets ?? {}, error: current?.error ?? '' };
+}
+function useSourceOnlyAssets(client: WindChimeLiveClient, topicId: string, ids: string[], retryKey = 0) {
+  const [loaded, setLoaded] = useState<{ client: WindChimeLiveClient; topicId: string; signature: string; retryKey: number; assets: Record<string, PrivateAsset> } | null>(null);
+  const signature = ids.join('|');
+  useEffect(() => {
+    let cancelled = false; const controller = new AbortController(); const owned = new Set<string>();
+    const release = () => { cancelled = true; controller.abort(); owned.forEach(url => URL.revokeObjectURL(url)); owned.clear(); };
+    setLoaded(null);
+    if (!ids.length) return release;
+    void Promise.allSettled(ids.map(async id => {
+      const blob = await client.asset(topicId, id, controller.signal);
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) || blob.size > 5 * 1024 * 1024) throw new Error('图片格式无效');
+      if (cancelled || controller.signal.aborted) throw new Error('已取消图片加载');
+      const decoded = await createImageBitmap(blob);
+      try {
+        if (cancelled || controller.signal.aborted) throw new Error('已取消图片加载');
+        if (!(decoded.width > 0 && decoded.height > 0)) throw new Error('图片尺寸无效');
+        const url = URL.createObjectURL(blob); owned.add(url);
+        return [id, { url, mimeType: blob.type, width: decoded.width, height: decoded.height }] as const;
+      } finally { decoded.close(); }
+    })).then(results => {
+      if (cancelled) return;
+      const entries = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : []);
+      setLoaded({ client, topicId, signature, retryKey, assets: Object.fromEntries(entries) });
+    });
+    return release;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, topicId, signature, retryKey]);
+  return loaded?.client === client && loaded.topicId === topicId && loaded.signature === signature && loaded.retryKey === retryKey ? loaded.assets : {};
 }
 function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blockedTermsEnabled }: { message: WindChimeLiveMessage; studio: Studio; client: WindChimeLiveClient; topicId: string; onDirtyChange: (dirty: boolean) => void; blockedTermsEnabled: boolean }) {
   const [{ draft, basis }, setEditor] = useState(() => ({ draft: structuredClone(message.draft), basis: { draft: structuredClone(message.draft), revision: message.draftRevision } }));
@@ -42,15 +80,20 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
   const setBasis = (value: { draft: WindChimeLiveDraft; revision: number }) => setEditor(before => ({ ...before, basis: value }));
   const [markError, setMarkError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [assetRetry, setAssetRetry] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null); const replaceIndex = useRef<number | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(basis.draft);
   useEffect(() => { onDirtyChange(dirty || uploading); }, [dirty, uploading, onDirtyChange]);
   useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
   const conflict = basis.revision !== message.draftRevision;
-  const privateAssets = usePrivateAssets(client, topicId, [...new Set([...message.source.assets, ...draft.assets].map(a => a.id))]);
+  const draftAssetIds = [...new Set(draft.assets.map(a => a.id))];
+  const sourceOnlyIds = [...new Set(message.source.assets.map(a => a.id).filter(id => !draftAssetIds.includes(id)))];
+  const draftAssetsResult = usePrivateAssets(client, topicId, draftAssetIds, assetRetry);
+  const sourceOnlyAssets = useSourceOnlyAssets(client, topicId, sourceOnlyIds, assetRetry);
+  const privateAssets = { ...sourceOnlyAssets, ...draftAssetsResult.assets };
   const urls = Object.fromEntries(Object.entries(privateAssets).map(([id, asset]) => [id, asset.url]));
   const snapshot: WindChimeLiveSnapshot = { ...draft, id: message.snapshotId ?? `preview-${message.id}`, messageId: message.id, assets: draft.assets.flatMap(a => {
-    const asset = privateAssets[a.id];
+    const asset = draftAssetsResult.assets[a.id];
     return asset ? [{ ...a, mimeType: asset.mimeType, width: asset.width, height: asset.height, sha256: '' }] : [];
   }) };
   const act = async (action: 'approve' | 'reject' | 'revoke' | 'draft') => {
@@ -93,7 +136,8 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
     <label>展示正文<textarea value={draft.text} maxLength={1000} rows={7} onChange={e => setDraft({ ...draft, text: e.target.value })} /></label>
     <label>展示链接文字<input value={draft.linkUrl ?? ''} maxLength={500} onChange={e => setDraft({ ...draft, linkUrl: e.target.value || null })} /></label>
     <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传审核图片" style={{ display: 'none' }} onChange={e => { const file = e.currentTarget.files?.[0]; if (file) void upload(file); }} />
-    {draft.assets.map((a, index) => <div key={a.id} className="wc-stack"><div className="wc-asset">{urls[a.id] ? <img src={urls[a.id]} alt="将上屏的已保存图片" /> : <span className="wc-muted">图片载入中</span>}<label>图片 {index + 1} 说明<input value={a.caption} maxLength={200} onChange={e => setDraft({ ...draft, assets: draft.assets.map((item, at) => at === index ? { ...item, caption: e.target.value } : item) })} /></label></div><div className="wc-actions"><button disabled={uploading} onClick={() => { replaceIndex.current = index; fileInput.current?.click(); }}>替换图片</button><button disabled={uploading} aria-label={`移除图片 ${index + 1}`} onClick={() => setDraft({ ...draft, assets: draft.assets.filter((_, at) => at !== index) })}>移除</button><button disabled={uploading || index === 0} aria-label={`上移图片 ${index + 1}`} onClick={() => reorderAsset(index, index - 1)}>↑</button><button disabled={uploading || index === draft.assets.length - 1} aria-label={`下移图片 ${index + 1}`} onClick={() => reorderAsset(index, index + 1)}>↓</button></div></div>)}
+    {draftAssetsResult.error ? <div className="wc-error" role="alert"><strong>展示图片加载失败：{draftAssetsResult.error}</strong><p>可点击重试，或在下方移除异常图片并保存后批准其余内容。</p><button type="button" onClick={() => setAssetRetry(n => n + 1)}>重试加载图片</button></div> : null}
+    {draft.assets.map((a, index) => <div key={a.id} className="wc-stack"><div className="wc-asset">{urls[a.id] ? <img src={urls[a.id]} alt="将上屏的已保存图片" /> : <span className="wc-muted">{draftAssetsResult.error ? '图片加载失败' : '图片载入中'}</span>}<label>图片 {index + 1} 说明<input value={a.caption} maxLength={200} onChange={e => setDraft({ ...draft, assets: draft.assets.map((item, at) => at === index ? { ...item, caption: e.target.value } : item) })} /></label></div><div className="wc-actions"><button disabled={uploading} onClick={() => { replaceIndex.current = index; fileInput.current?.click(); }}>替换图片</button><button disabled={uploading} aria-label={`移除图片 ${index + 1}`} onClick={() => setDraft({ ...draft, assets: draft.assets.filter((_, at) => at !== index) })}>移除</button><button disabled={uploading || index === 0} aria-label={`上移图片 ${index + 1}`} onClick={() => reorderAsset(index, index - 1)}>↑</button><button disabled={uploading || index === draft.assets.length - 1} aria-label={`下移图片 ${index + 1}`} onClick={() => reorderAsset(index, index + 1)}>↓</button></div></div>)}
     <button disabled={uploading || draft.assets.length >= 3 || !studio.connected} onClick={() => { replaceIndex.current = null; fileInput.current?.click(); }}>{uploading ? '正在保存审核图片…' : '添加展示图片（最多 3 张）'}</button>
     {message.source.assets.some(a => !draft.assets.some(d => d.id === a.id)) ? <button className="wc-subtle" onClick={() => setDraft({ ...draft, assets: structuredClone(message.source.assets) })}>恢复投稿附件</button> : null}
     <div className="wc-actions"><button disabled={!dirty || conflict || uploading || studio.pending || !studio.connected || !draft.text.trim()} onClick={() => void act('draft')}>保存展示稿</button><span className="wc-muted">{dirty ? '有未保存改动；保存后需重新批准' : '展示稿已保存'}</span></div>

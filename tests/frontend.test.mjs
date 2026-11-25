@@ -67,6 +67,31 @@ test('submission keyword hints require the explicit site switch and follow chang
   await act(async () => { assert.equal(await form.submit(), true); });
   assert.equal(sent.length, 2);
 });
+
+test('local validation failure preserves Turnstile token while network dispatch resets it', async t => {
+  let form, tree, resets = 0, shouldFail = false;
+  function Harness() {
+    form = useWindChimeSubmission({
+      requireTurnstile: true,
+      rateLimit: false,
+      disableSenderFingerprint: true,
+      onTurnstileReset: () => { resets++; },
+      onSubmit: async () => { if (shouldFail) throw new WindChimeClientError('SERVER_ERROR', 500, 'fail'); },
+    });
+    return null;
+  }
+  await act(async () => { tree = create(React.createElement(Harness)); });
+  t.after(async () => { await act(async () => tree.unmount()); });
+  await act(async () => { form.setText('hello'); form.setLinkRaw('javascript:alert(1)'); form.setTurnstileToken('tok-1'); });
+  await act(async () => { assert.equal(await form.submit(), false); });
+  assert.equal(form.error.code, 'INVALID_LINK');
+  assert.equal(form.turnstileToken, 'tok-1', 'local validation failure must not wipe unconsumed Turnstile token');
+  assert.equal(resets, 0);
+  await act(async () => { form.setLinkRaw('https://example.com'); shouldFail = true; });
+  await act(async () => { assert.equal(await form.submit(), false); });
+  assert.equal(form.turnstileToken, null, 'dispatched failure clears consumed token');
+  assert.equal(resets, 1);
+});
 const counts = { all: 1, unread: 1, favorited: 0, flagged: 0 };
 const row = (id) => ({
   id,

@@ -14,7 +14,8 @@ let connectionIntent = 0;
 let connectionCommit = null;
 const tiles = new Map();
 let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
-let selectedMessageId = null, mainDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
+let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
+let displaySize = { width: 960, height: 640 };
 let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
 let shortcutConfigTail = Promise.resolve(), shortcutConfigPending = 0;
 let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
@@ -77,7 +78,8 @@ function tileMetadata(tile) { return { module: tile.module, pinned: tile.pinned,
 function assertTile(tile) { if (tiles.get(tile.module) !== tile || !isCurrent(tile.scope) || tile.topicId !== activeTopic(selected())) throw Object.assign(new Error('磁贴所属信箱已切换，请重新打开磁贴'), { code: 'CONNECTION_CHANGED' }); }
 function cancelled() { return Object.assign(new Error('已取消操作，未保存内容仍然保留'), { code: 'OPERATION_CANCELLED' }); }
 async function confirmDirty(tileList, message, includeMain = false, parent = controlWindow) {
-  if (!tileList.some(tile => tile.dirty) && !(includeMain && mainDirty)) return;
+  const mainBlocked = includeMain === 'review' ? mainReviewDirty : Boolean(includeMain && mainDirty);
+  if (!tileList.some(tile => tile.dirty) && !mainBlocked) return;
   const response = await dialog.showMessageBox(parent, { type: 'warning', title: '保留未保存内容', message, buttons: ['取消，继续编辑', '放弃并继续'], defaultId: 0, cancelId: 0, noLink: true });
   if (response.response !== 1) throw cancelled();
 }
@@ -88,7 +90,7 @@ function rememberTile(tile) {
   void saveWorkspace().catch(() => { connectionError('磁贴位置未能保存'); });
 }
 function disposeTiles() {
-  selectedMessageId = null; mainDirty = false;
+  selectedMessageId = null; mainDirty = false; mainReviewDirty = false; mainOtherDirty = false;
   for (const tile of tiles.values()) { rememberTile(tile); tile.allowClose = true; tile.window.close(); }
   tiles.clear();
 }
@@ -130,7 +132,7 @@ async function chooseMessage(messageId, connectionId, contextVersion, parent = c
   if (messageId !== null) { await siteRequest(scope.site, { path: `/control/messages/${encodeURIComponent(messageId)}?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' }); assertSelection(); }
   if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
   const review = tiles.get('review');
-  await confirmDirty(review ? [review] : [], '当前审阅中有未保存的修改。选择另一封信会放弃当前信件的修改。', true, parent); assertSelection();
+  await confirmDirty(review ? [review] : [], '当前审阅中有未保存的修改。选择另一封信会放弃当前信件的修改。', 'review', parent); assertSelection();
   if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
   selectedMessageId = messageId; if (review) review.dirty = false; return selectedMessageId;
 }
@@ -452,9 +454,17 @@ function confirmOutputLease(result, startedAt) {
   outputDeadline = startedAt + Math.min(result.leaseMs, 3000) - 400;
   if (performance.now() >= outputDeadline) { void recoverOutput(); throw new Error('展示租期已失效'); }
 }
+function syncDisplaySize(appearance) {
+  if (!displayWindow || displayWindow.isDestroyed() || !appearance || typeof appearance !== 'object') return;
+  const width = Number.isFinite(appearance.maxWidth) ? Math.round(Math.min(1920, Math.max(280, appearance.maxWidth))) : 1200;
+  const height = Number.isFinite(appearance.viewportHeight) ? Math.round(Math.min(1080, Math.max(180, appearance.viewportHeight))) : 640;
+  if (displaySize.width === width && displaySize.height === height) return;
+  displaySize = { width, height };
+  displayWindow.setContentSize?.(width, height);
+}
 function closeOutput(expectedWindow = displayWindow) {
   if (expectedWindow !== displayWindow) return;
-  const old = displayWindow; blank(false); displayWindow = null; state.output = null; outputDeadline = 0; outputHeld = false; outputVersion++;
+  const old = displayWindow; blank(false); displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputHeld = false; outputVersion++;
   if (old && !old.isDestroyed()) old.close();
 }
 function hideSite(site) {
@@ -506,10 +516,11 @@ async function openDisplay(initiatingTile) {
   assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); if (version !== outputVersion) throw new Error('展示请求已取消');
   state.output = grant;
   const partition = `windchime-display-${crypto.randomUUID()}`;
+  displaySize = { width: 960, height: 640 };
   displayWindow = new BrowserWindow({ width: 960, height: 640, title: 'WindChime Display', transparent: true, backgroundColor: '#00000000', show: false, frame: false, webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false } });
   secureWindow(displayWindow, partition);
   const window = displayWindow;
-  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; outputDeadline = 0; outputVersion++; if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
+  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputVersion++; if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
   window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
   window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
   await window.loadFile(path.join(__dirname, 'build/display.html'));
@@ -622,6 +633,7 @@ async function start() {
         if (outputSnapshotId && !result.snapshot) { void recoverOutput(); throw new Error('当前展示已撤下'); }
         outputSnapshotId = result.snapshot?.id ?? null;
         output.frameActivation = result.activation;
+        syncDisplaySize(result.appearance);
       }
       if (opening || request.path.startsWith('/display/frame?')) confirmOutputLease(result, startedAt);
       return result;
@@ -640,7 +652,27 @@ async function start() {
   handle('tiles:open', 'control', openTile);
   ipcMain.handle('tiles:close', async (event, module) => { try { const window = assertWindow(event, 'private'), own = tileFor(window); if (own && own.module !== module) throw new Error('不可关闭其他磁贴'); await closeTile(module); return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
   ipcMain.handle('tiles:pin', async (event, module, pinned) => { try { const window = assertWindow(event, 'private'), own = tileFor(window), tile = tiles.get(module); if (!tile || typeof pinned !== 'boolean' || (own && own !== tile)) throw new Error('无效磁贴'); assertTile(tile); tile.pinned = pinned; tile.window.setAlwaysOnTop(pinned); rememberTile(tile); return { ok: true, data: tileMetadata(tile) }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
-  ipcMain.handle('tiles:dirty', async (event, dirty) => { try { const window = assertWindow(event, 'private'); if (typeof dirty !== 'boolean') throw new Error('无效编辑状态'); const tile = tileFor(window); if (tile) tile.dirty = dirty; else mainDirty = dirty; return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  ipcMain.handle('tiles:dirty', async (event, dirty) => {
+    try {
+      const window = assertWindow(event, 'private');
+      const tile = tileFor(window);
+      if (tile) {
+        if (typeof dirty !== 'boolean') throw new Error('无效编辑状态');
+        tile.dirty = dirty;
+      } else if (typeof dirty === 'boolean') {
+        mainReviewDirty = dirty;
+        mainOtherDirty = false;
+        mainDirty = dirty;
+      } else if (dirty && typeof dirty === 'object' && typeof dirty.review === 'boolean' && typeof dirty.other === 'boolean') {
+        mainReviewDirty = dirty.review;
+        mainOtherDirty = dirty.other;
+        mainDirty = dirty.review || dirty.other;
+      } else {
+        throw new Error('无效编辑状态');
+      }
+      return { ok: true };
+    } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; }
+  });
   handle('control:select-message', 'private', (window, id, connectionId, contextVersion) => chooseMessage(id, connectionId, contextVersion, window), true);
   handle('app:next-shortcut', 'control', configureNextShortcut);
   handle('app:shortcut-recording', 'control', recordNextShortcut);

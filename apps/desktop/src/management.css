@@ -379,12 +379,6 @@
 .wc-desktop[data-view="settings"] .desktop-studio .wc-settings {
   grid-template-columns: minmax(0, 1fr);
 }
-.wc-desktop[data-view="settings"]
-  .desktop-studio
-  .wc-settings
-  > .wc-panel:last-child {
-  display: none;
-}
 .desktop-end {
   position: fixed;
   top: 6px;

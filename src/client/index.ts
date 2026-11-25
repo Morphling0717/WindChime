@@ -334,6 +334,13 @@ export function createWindChimeClient(options: WindChimeClientOptions = {}) {
           "PUT",
           { enabled },
         ),
+      setBlockedTermsEnabled: (blockedTermsEnabled: boolean) =>
+        mutate<WindChimeSettings>(
+          ["settings", "messages", "topics"],
+          "/settings",
+          "PATCH",
+          { blockedTermsEnabled },
+        ),
     },
     blockedTerms: {
       get: (opts?: Pick<WindChimeRequestOptions, "signal">) =>

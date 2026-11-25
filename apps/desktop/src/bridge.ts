@@ -56,7 +56,7 @@ type Bridge = {
   openTile(module: WindChimeLiveModule): Promise<Result<void>>;
   setTilePinned(module: WindChimeLiveModule, pinned: boolean): Promise<Result<void>>;
   closeTile(module: WindChimeLiveModule): Promise<Result<void>>;
-  setTileDirty(dirty: boolean): Promise<Result<void>>;
+  setTileDirty(dirty: boolean | { review: boolean; other: boolean }): Promise<Result<void>>;
   selectMessage(id: string | null, connectionId: string, contextVersion?: number): Promise<Result<void>>;
   setNextShortcut(accelerator: string): Promise<Result<void>>;
   setShortcutRecording(recording: boolean): Promise<Result<void>>;

@@ -65,7 +65,8 @@ export async function saveLiveUpload(storage: WindChimeStorage, topicId: string,
       if (reviewMessageId && !(await db.get("SELECT id FROM mail_messages WHERE id=? AND topic_id=? AND deleted_at IS NULL", [reviewMessageId,topicId]))) fail("MESSAGE_NOT_FOUND", "信件不存在或已删除", 404);
       const quota = await db.get<{ daily: number; total: number }>(`SELECT
         COALESCE(SUM(CASE WHEN created_at>? THEN size ELSE 0 END),0) daily,
-        COALESCE(SUM(size),0) total FROM mail_live_assets WHERE topic_id=?`, [now - 86400000, topicId]);
+        COALESCE(SUM(size),0) total FROM mail_live_assets
+        WHERE topic_id=? AND (message_id IS NULL OR EXISTS(SELECT 1 FROM mail_messages m WHERE m.id=mail_live_assets.message_id AND m.deleted_at IS NULL))`, [now - 86400000, topicId]);
       if ((quota?.daily ?? 0) + output!.length > 200 * 1024 * 1024 || (quota?.total ?? 0) + output!.length > 2 * 1024 * 1024 * 1024)
         fail("UPLOAD_QUOTA", "当前信箱图片存储额度已满", 429);
       await db.run(`INSERT INTO mail_live_assets(id,topic_id,message_id,purpose,sha256,mime_type,width,height,size,receipt_hash,created_at,expires_at)
@@ -80,15 +81,40 @@ export async function readLiveAsset(row: LiveAssetRow, directory: string) {
   if (!bytes || bytes.length !== row.size || liveHash(bytes) !== row.sha256) fail("ASSET_UNAVAILABLE", "图片内容不可确认", 409);
   return bytes;
 }
-/** Call periodically or before uploads; only private generated orphan objects older than 24 hours are removed. */
+/** Call periodically or before uploads; removes expired/deleted/unreferenced asset rows and private orphan files older than 24 hours. */
 export async function cleanupLiveMedia(storage: WindChimeStorage, directory: string, now: number) {
   await storage.run("DELETE FROM mail_live_assets WHERE message_id IS NULL AND expires_at<=?", [now]);
+  await storage.run(`DELETE FROM mail_live_assets WHERE message_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM mail_messages m WHERE m.id=mail_live_assets.message_id AND m.deleted_at IS NULL)`);
+  const staleReview = await storage.all<{ id: string; message_id: string }>(
+    "SELECT id, message_id FROM mail_live_assets WHERE purpose='review' AND message_id IS NOT NULL AND created_at<=?",
+    [now - 86400000],
+  );
+  if (staleReview.length) {
+    const referenced = new Map<string, Set<string>>();
+    for (const row of staleReview) {
+      let ids = referenced.get(row.message_id);
+      if (!ids) {
+        ids = new Set<string>();
+        const draft = await storage.get<{ draft_json: string }>("SELECT draft_json FROM mail_live_drafts WHERE message_id=?", [row.message_id]);
+        if (draft) {
+          try { for (const asset of (JSON.parse(draft.draft_json)?.assets ?? []) as Array<{ id?: string }>) if (asset?.id) ids.add(asset.id); } catch { /* ignore malformed */ }
+        }
+        const snapshots = await storage.all<{ payload_json: string }>("SELECT payload_json FROM mail_live_snapshots WHERE message_id=?", [row.message_id]);
+        for (const snap of snapshots) {
+          try { for (const asset of (JSON.parse(snap.payload_json)?.assets ?? []) as Array<{ id?: string }>) if (asset?.id) ids.add(asset.id); } catch { /* ignore malformed */ }
+        }
+        referenced.set(row.message_id, ids);
+      }
+      if (!ids.has(row.id)) await storage.run("DELETE FROM mail_live_assets WHERE id=? AND purpose='review'", [row.id]);
+    }
+  }
   const root = resolve(directory);
   for (const name of await readdir(root).catch(() => [] as string[])) {
     if (!/^[a-f0-9-]{36}\.webp$/.test(name)) continue;
     const id = name.slice(0, -5);
     if (await storage.get("SELECT id FROM mail_live_assets WHERE id=?", [id])) continue;
     const path = join(root, name), info = await stat(path).catch(() => null);
-    if (info && info.mtimeMs < now - 86400000) await unlink(path);
+    if (info && info.mtimeMs < now - 86400000) await unlink(path).catch(() => undefined);
   }
 }
