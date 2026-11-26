@@ -390,6 +390,10 @@ async function verifyTopicPickerLayouts() {
   const sizes = [[1200, 620], [1366, 768], [960, 700], [961, 700], [760, 900]];
   for (const [view, label] of [["inbox", "收件箱"], ["studio", "直播工作台"]]) {
     await nav(view, label);
+    if (view === "studio") {
+      await until(() => evaluate('!!document.querySelector(".wc-mode-switch")'), "studio mode switch");
+      await click("列表备稿");
+    }
     for (const [width, height] of sizes) {
       control.setSize(width, height);
       await evaluate("window.scrollTo(0,0)");
@@ -795,14 +799,19 @@ async function run() {
   await capture("share-wide");
   for (const route of ['/control/settings', '/control/blocklist', '/control/grants']) responseDelays.set(route, 4500);
   await nav("settings", "设置与外观");
+  await until(() => evaluate('!!document.querySelector(".settings-tabs")'), "settings tabs");
+  await click("安全与屏蔽");
   await until(
     () => evaluate('!!document.querySelector(".setting-toggle input")'),
     "settings loaded",
   );
+  await click("连接授权");
   await until(() => evaluate('Array.from(document.querySelectorAll(".blocked-sender")).some(node=>node.textContent.includes("另一台电脑"))'), 'slow settings and grant requests complete');
   responseDelays.clear();
   checks.push('settings, blocklist and grants taking 4.5 seconds finish without being repeatedly cancelled by polling');
+  await click("展示外观");
   await verifyAppearanceEditor();
+  await click("安全与屏蔽");
   await evaluate(
     'document.querySelectorAll(".setting-toggle input")[1].click()',
   );
@@ -876,11 +885,18 @@ async function run() {
     "external settings/blocklist/grants synchronize while visible; hidden pauses reads; focus refreshes immediately; dirty terms preserved",
   );
   await nav("studio", "直播工作台");
+  await until(() => evaluate('!!document.querySelector(".wc-mode-switch")'), "studio mode switch");
+  await click("列表备稿");
   await until(
     () => evaluate('!!document.querySelector(".wc-mail")'),
     "studio loaded",
   );
   await evaluate('document.querySelector(".wc-mail").click()');
+  await until(
+    () => evaluate('Array.from(document.querySelectorAll("button")).some(b=>b.textContent.includes("编辑 / 打码展示稿"))'),
+    "collapsible review toggle",
+  );
+  await evaluate('Array.from(document.querySelectorAll("button")).find(b=>b.textContent.includes("编辑 / 打码展示稿")).click()');
   await until(
     () =>
       evaluate(

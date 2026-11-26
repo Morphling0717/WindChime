@@ -3,6 +3,8 @@ export { WindChimeConnectionKeys } from './ConnectionKeys.js';
 export type { WindChimeConnectionKeysProps } from './ConnectionKeys.js';
 export { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from './ControlPanel.js';
 export type { WindChimeLiveControlPanelProps, WindChimeLiveModule } from './ControlPanel.js';
+export { OnAirTeleprompter } from './Teleprompter.js';
+export { BlindBoxStudio, type BlindBoxStudioProps } from './BlindBoxStudio.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';
 export type { WindChimeLiveRenderProps } from './Display.js';
 export type {

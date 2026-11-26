@@ -53,4 +53,8 @@ test('workspace restores dark theme preference and omits default or invalid valu
   assert.equal(restoreWorkspace({ version: 1, theme: 'dark', tiles: {} }).theme, 'dark');
   assert.equal(restoreWorkspace({ version: 1, theme: 'light', tiles: {} }).theme, undefined);
   assert.equal(restoreWorkspace({ version: 1, theme: 'neon', tiles: {} }).theme, undefined);
+  assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: true, clearOnBlindDraw: true, tiles: {} }).randomDrawEnabled, true);
+  assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: true, clearOnBlindDraw: true, tiles: {} }).clearOnBlindDraw, true);
+  assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).randomDrawEnabled, undefined);
+  assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).clearOnBlindDraw, undefined);
 });

@@ -18,6 +18,7 @@ import {
   type DesktopStatus,
   type OnAirInfo,
   type DesktopTheme,
+  type DesktopPrefs,
 } from "./bridge";
 import { TileApp } from "./tiles";
 import { Hotkeys } from "./Hotkeys";
@@ -140,6 +141,10 @@ function App() {
   const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
   const [onAir, setOnAir] = useState<OnAirInfo | null>(null);
   const [theme, setTheme] = useState<DesktopTheme>("light");
+  const [prefs, setPrefs] = useState<DesktopPrefs>({ randomDrawEnabled: false, clearOnBlindDraw: false });
+  const [testCardActive, setTestCardActive] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"appearance" | "controls" | "safety" | "grants">("appearance");
+  const [studioMode, setStudioMode] = useState<"blindbox" | "workbench">("blindbox");
   useEffect(() => {
     void unwrap(bridge.getScrollState()).then(setScrollState).catch(() => {});
     return bridge.onScrollState(setScrollState);
@@ -153,6 +158,14 @@ function App() {
     return bridge.onThemeChanged(setTheme);
   }, []);
   useEffect(() => {
+    void unwrap(bridge.getPrefs()).then(setPrefs).catch(() => {});
+    return bridge.onPrefsChanged(setPrefs);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getTestCard()).then(setTestCardActive).catch(() => {});
+    return bridge.onTestCardChanged(setTestCardActive);
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   const toggleTheme = () => {
@@ -160,6 +173,21 @@ function App() {
     setTheme(next);
     void unwrap(bridge.setTheme(next)).catch(() => {});
   };
+  const updatePrefs = useCallback(async (patch: Partial<DesktopPrefs>) => {
+    setPrefs(current => ({ ...current, ...patch }));
+    const saved = await unwrap(bridge.setPrefs(patch));
+    setPrefs(saved);
+  }, []);
+  const toggleTestCard = useCallback(async (active: boolean) => {
+    setError("");
+    try {
+      const next = await unwrap(bridge.setTestCard(active));
+      setTestCardActive(next);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "无法切换对位测试卡");
+      throw e;
+    }
+  }, []);
   const scrollDisplay = useCallback(
     (command: WindChimeDisplayScrollCommand) => unwrap(bridge.scrollDisplay(command)),
     [],
@@ -425,6 +453,16 @@ function App() {
             <i className="titlebar-onair-dot" aria-hidden="true" />
             <span>正在播出：{onAir.nickname || onAir.textPreview || "已批准信件"}</span>
           </button>
+        ) : testCardActive ? (
+          <button
+            type="button"
+            className="titlebar-onair is-live"
+            title="展示窗口正在显示 OBS 对位测试卡（点击关闭）"
+            onClick={() => void toggleTestCard(false).catch(() => {})}
+          >
+            <i className="titlebar-onair-dot" aria-hidden="true" />
+            <span>OBS 测试卡对位中 · 点击关闭</span>
+          </button>
         ) : selected ? (
           <span
             className="titlebar-onair is-blank"
@@ -435,22 +473,6 @@ function App() {
           </span>
         ) : null}
       </div>
-      <button
-        className="desktop-end"
-        disabled={!topicId}
-        onClick={() =>
-          void act(() =>
-            client.action({
-              topicId,
-              action: "end",
-              expectedRevision: 0,
-              operationId: crypto.randomUUID(),
-            }),
-          )
-        }
-      >
-        结束展示
-      </button>
       <aside className="desktop-sidebar glass-surface">
         <div className="desktop-brand">
           <picture className="brand-mark">
@@ -807,17 +829,70 @@ function App() {
                 <Icon name="inbox" size={16} />
                 {topic?.title ?? selected.label}
               </span>
-              <button
-                disabled={busy}
-                onClick={() => void act(() => unwrap(bridge.openDisplay()))}
-              >
-                <Icon name="screen" size={16} />
-                {status.displayOpen ? "查看展示窗口" : "打开独立展示窗口"}
-                <Icon name="arrow" size={15} />
-              </button>
+              <div className="wc-actions">
+                <button
+                  disabled={busy || Boolean(onAir && !testCardActive)}
+                  onClick={() => void toggleTestCard(!testCardActive).catch(() => {})}
+                >
+                  {testCardActive ? "关闭测试卡" : "测试卡对位 OBS"}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => void act(() => unwrap(bridge.openDisplay()))}
+                >
+                  <Icon name="screen" size={16} />
+                  {status.displayOpen ? "查看展示窗口" : "打开独立展示窗口"}
+                  <Icon name="arrow" size={15} />
+                </button>
+              </div>
             </div>
+            {view === "settings" && (
+              <nav className="settings-tabs glass-surface" role="tablist" aria-label="设置分类">
+                {(
+                  [
+                    ["appearance", "展示外观"],
+                    ["controls", "播控与热键"],
+                    ["safety", "安全与屏蔽"],
+                    ["grants", "连接授权"],
+                  ] as const
+                ).map(([tabId, tabLabel]) => (
+                  <button
+                    key={tabId}
+                    type="button"
+                    role="tab"
+                    aria-selected={settingsTab === tabId}
+                    onClick={() => setSettingsTab(tabId)}
+                  >
+                    {tabLabel}
+                  </button>
+                ))}
+              </nav>
+            )}
             {topicId && (view === "studio" || view === "settings") && (
-              <div className="desktop-studio">
+              <div
+                className="desktop-studio"
+                hidden={view === "settings" && settingsTab !== "appearance"}
+              >
+                {view === "settings" && (
+                  <div className="desktop-workspace-bar" style={{ marginBottom: 14 }}>
+                    <span>调整外观后可在展示窗发送测试卡实时对位 OBS。</span>
+                    <div className="wc-actions">
+                      <button
+                        disabled={busy || Boolean(onAir && !testCardActive)}
+                        onClick={() => void toggleTestCard(!testCardActive).catch(() => {})}
+                      >
+                        {testCardActive ? "关闭测试卡" : "发测试卡对位 OBS"}
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => void act(() => unwrap(bridge.openDisplay()))}
+                      >
+                        <Icon name="screen" size={16} />
+                        {status.displayOpen ? "查看展示窗口" : "打开独立展示窗口"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <WindChimeLiveControlPanel
                   key={`${selected.id}:${topicId}:${view}`}
                   client={client}
@@ -835,6 +910,25 @@ function App() {
                   onSelectMessage={view === "studio" ? async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); } : undefined}
                   scrollState={view === "studio" ? scrollState : undefined}
                   onScrollDisplay={view === "studio" ? scrollDisplay : undefined}
+                  defaultStudioMode={view === "studio" ? "blindbox" : undefined}
+                  studioMode={view === "studio" ? studioMode : undefined}
+                  onStudioModeChange={view === "studio" ? setStudioMode : undefined}
+                  collapsibleReviewEditor={view === "studio"}
+                  testCardActive={testCardActive}
+                  onToggleTestCard={toggleTestCard}
+                  randomDrawEnabled={prefs.randomDrawEnabled}
+                  clearOnBlindDraw={prefs.clearOnBlindDraw}
+                  onToggleClearOnBlindDraw={enabled => void updatePrefs({ clearOnBlindDraw: enabled }).catch(() => {})}
+                  onBlockMessage={
+                    view === "studio" && selected.scope === "site"
+                      ? async messageId => {
+                          if (!(await unwrap(bridge.confirm("在整个网站屏蔽此发送者并处理其来信？对应展示会同步撤下。")))) {
+                            throw new Error("已取消屏蔽操作");
+                          }
+                          await mailClient.messages.block(messageId, { topicId });
+                        }
+                      : undefined
+                  }
                 />
               </div>
             )}
@@ -842,10 +936,12 @@ function App() {
               <Inbox
                 key={`${selected.id}:${topicId}`}
                 client={mailClient}
+                liveClient={client}
                 topicId={topicId}
                 siteScope={selected.scope === "site"}
                 keywordEnabled={keywordEnabled}
                 onError={reportError}
+                onNotice={setNotice}
               />
             )}
             {view === "topics" && (
@@ -869,15 +965,28 @@ function App() {
               />
             )}
             {view === "settings" && (
-              <><Hotkeys status={status} onSaved={refreshStatus} /><GlobalSettings
-                key={`${selected.id}:${topicId}`}
-                client={mailClient}
-                siteScope={selected.scope === "site"}
-                keywordEnabled={keywordEnabled}
-                onKeywordChange={updateKeyword}
-                onError={reportError}
-                onDirtyChange={setSettingsDirty}
-              /></>
+              <>
+                <div hidden={settingsTab !== "controls"}>
+                  <Hotkeys
+                    status={status}
+                    onSaved={refreshStatus}
+                    prefs={prefs}
+                    onUpdatePrefs={updatePrefs}
+                  />
+                </div>
+                <div hidden={settingsTab !== "safety" && settingsTab !== "grants"}>
+                  <GlobalSettings
+                    key={`${selected.id}:${topicId}`}
+                    client={mailClient}
+                    siteScope={selected.scope === "site"}
+                    keywordEnabled={keywordEnabled}
+                    onKeywordChange={updateKeyword}
+                    onError={reportError}
+                    onDirtyChange={setSettingsDirty}
+                    section={settingsTab === "grants" ? "grants" : "safety"}
+                  />
+                </div>
+              </>
             )}
           </>
         ) : null}

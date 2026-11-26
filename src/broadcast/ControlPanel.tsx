@@ -8,6 +8,7 @@ import { WindChimeLiveCard } from './Display.js';
 import { windChimeControlCss } from './styles.js';
 import { AppearanceEditor } from './AppearanceEditor.js';
 import { OnAirTeleprompter } from './Teleprompter.js';
+import { BlindBoxStudio } from './BlindBoxStudio.js';
 import type { WindChimeDisplayScrollCommand, WindChimeDisplayScrollMetrics } from './scroll-loop.js';
 
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
@@ -89,6 +90,7 @@ function ReviewEditor({
   topicId,
   onDirtyChange,
   blockedTermsEnabled,
+  collapsibleEditor = false,
   nextPendingId,
   pendingRemaining,
   autoAdvance,
@@ -102,6 +104,7 @@ function ReviewEditor({
   topicId: string;
   onDirtyChange: (dirty: boolean) => void;
   blockedTermsEnabled: boolean;
+  collapsibleEditor?: boolean;
   nextPendingId?: string | null;
   pendingRemaining?: number;
   autoAdvance?: boolean;
@@ -117,6 +120,7 @@ function ReviewEditor({
   const [markError, setMarkError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [assetRetry, setAssetRetry] = useState(0);
+  const [editorExpanded, setEditorExpanded] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null); const replaceIndex = useRef<number | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(basis.draft);
   useEffect(() => { onDirtyChange(dirty || uploading); }, [dirty, uploading, onDirtyChange]);
@@ -180,25 +184,28 @@ function ReviewEditor({
     finally { setUploading(false); if (fileInput.current) fileInput.current.value = ''; }
   };
   const reorderAsset = (from: number, to: number) => setDraft(before => { const assets = [...before.assets]; assets.splice(to, 0, assets.splice(from, 1)[0]!); return { ...before, assets }; });
+  const showEditorForm = !collapsibleEditor || editorExpanded || dirty || conflict || Boolean(draftAssetsResult.error);
   return <div className="wc-stack wc-pad">
     <div className="wc-actions"><span className={`wc-tag ${message.status}`}>{statusLabels[message.status]}</span><span className="wc-muted">当前审阅版本 {basis.revision}</span>{blockedTermsEnabled && message.isFlagged ? <span className="wc-tag rejected">敏感词标记</span> : null}</div>
     {conflict ? <div className="wc-error" role="alert"><strong>展示稿已在其他控制端更新为版本 {message.draftRevision}。</strong><p>你的本地改稿仍保留；确认新版本后才能保存或批准。</p><details><summary>查看服务器的最新展示稿</summary><div className="wc-source">{message.draft.nickname}<br />{message.draft.text}{message.draft.linkUrl ? <p>{message.draft.linkUrl}</p> : null}{message.draft.assets.map((asset, index) => <p key={asset.id}>图片 {index + 1}：{asset.caption || '无说明'}</p>)}</div></details><div className="wc-actions"><button onClick={() => { setDraft(structuredClone(message.draft)); setBasis({ draft: structuredClone(message.draft), revision: message.draftRevision }); }}>载入最新版本，放弃本地改动</button>{dirty ? <button onClick={() => setBasis({ draft: structuredClone(message.draft), revision: message.draftRevision })}>确认新版本，保留我的编辑</button> : null}</div></div> : null}
-    <div className="wc-actions"><button disabled={!studio.connected} onClick={() => void mark({ isRead: !message.isRead })}>{message.isRead ? '标为未读' : '标为已读'}</button><button disabled={!studio.connected} aria-pressed={message.isFavorited} onClick={() => void mark({ isFavorited: !message.isFavorited })}>{message.isFavorited ? '♥ 已收藏' : '♡ 收藏'}</button></div>{markError ? <p className="wc-error" role="alert">{markError}</p> : null}
+    <div className="wc-actions"><button disabled={!studio.connected} onClick={() => void mark({ isRead: !message.isRead })}>{message.isRead ? '标为未读' : '标为已读'}</button><button disabled={!studio.connected} aria-pressed={message.isFavorited} onClick={() => void mark({ isFavorited: !message.isFavorited })}>{message.isFavorited ? '♥ 已收藏' : '♡ 收藏'}</button>{collapsibleEditor ? <button type="button" className="wc-subtle" style={{ marginLeft: 'auto' }} aria-expanded={showEditorForm} onClick={() => setEditorExpanded(v => !v)}>{showEditorForm ? '收起改稿表单' : '✎ 编辑 / 打码展示稿'}</button> : null}</div>{markError ? <p className="wc-error" role="alert">{markError}</p> : null}
     <div><div className="wc-muted" style={{ marginBottom: 6 }}>投稿原文 · 仅主播可见</div><div className="wc-source">
       {message.source.nickname ? <strong>{message.source.nickname}<br /></strong> : null}{message.source.text}
       {message.source.linkUrl ? <p style={{ marginTop: 10 }}>附带链接：{message.source.linkUrl}</p> : null}
       {message.source.assets.map(a => <figure key={a.id} style={{ margin: '12px 0 0' }}>{urls[a.id] ? <img src={urls[a.id]} alt={a.caption || '投稿原始附件'} style={{ maxWidth: '100%', maxHeight: 200 }} /> : <span>附件载入中或不可用</span>}{a.caption ? <figcaption>{a.caption}</figcaption> : null}</figure>)}
     </div></div>
-    <div className="wc-rule" /><div><h3>最终展示稿</h3><p className="wc-muted">批准覆盖下面的称呼、正文、链接文字与图片说明。外链只显示文字。</p></div>
-    <label>展示称呼<input value={draft.nickname ?? ''} maxLength={32} onChange={e => setDraft({ ...draft, nickname: e.target.value || null })} /></label>
-    <label>展示正文<textarea value={draft.text} maxLength={1000} rows={7} onChange={e => setDraft({ ...draft, text: e.target.value })} /></label>
-    <label>展示链接文字<input value={draft.linkUrl ?? ''} maxLength={500} onChange={e => setDraft({ ...draft, linkUrl: e.target.value || null })} /></label>
-    <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传审核图片" style={{ display: 'none' }} onChange={e => { const file = e.currentTarget.files?.[0]; if (file) void upload(file); }} />
-    {draftAssetsResult.error ? <div className="wc-error" role="alert"><strong>展示图片加载失败：{draftAssetsResult.error}</strong><p>可点击重试，或在下方移除异常图片并保存后批准其余内容。</p><button type="button" onClick={() => setAssetRetry(n => n + 1)}>重试加载图片</button></div> : null}
-    {draft.assets.map((a, index) => <div key={a.id} className="wc-stack"><div className="wc-asset">{urls[a.id] ? <img src={urls[a.id]} alt="将上屏的已保存图片" /> : <span className="wc-muted">{draftAssetsResult.error ? '图片加载失败' : '图片载入中'}</span>}<label>图片 {index + 1} 说明<input value={a.caption} maxLength={200} onChange={e => setDraft({ ...draft, assets: draft.assets.map((item, at) => at === index ? { ...item, caption: e.target.value } : item) })} /></label></div><div className="wc-actions"><button disabled={uploading} onClick={() => { replaceIndex.current = index; fileInput.current?.click(); }}>替换图片</button><button disabled={uploading} aria-label={`移除图片 ${index + 1}`} onClick={() => setDraft({ ...draft, assets: draft.assets.filter((_, at) => at !== index) })}>移除</button><button disabled={uploading || index === 0} aria-label={`上移图片 ${index + 1}`} onClick={() => reorderAsset(index, index - 1)}>↑</button><button disabled={uploading || index === draft.assets.length - 1} aria-label={`下移图片 ${index + 1}`} onClick={() => reorderAsset(index, index + 1)}>↓</button></div></div>)}
-    <button disabled={uploading || draft.assets.length >= 3 || !studio.connected} onClick={() => { replaceIndex.current = null; fileInput.current?.click(); }}>{uploading ? '正在保存审核图片…' : '添加展示图片（最多 3 张）'}</button>
-    {message.source.assets.some(a => !draft.assets.some(d => d.id === a.id)) ? <button className="wc-subtle" onClick={() => setDraft({ ...draft, assets: structuredClone(message.source.assets) })}>恢复投稿附件</button> : null}
-    <div className="wc-actions"><button disabled={!dirty || conflict || uploading || studio.pending || !studio.connected || !draft.text.trim()} onClick={() => void act('draft')}>保存展示稿</button><span className="wc-muted">{dirty ? '有未保存改动；可保存或直接保存并批准' : '展示稿已保存'}</span></div>
+    {showEditorForm ? <>
+      <div className="wc-rule" /><div><h3>最终展示稿</h3><p className="wc-muted">批准覆盖下面的称呼、正文、链接文字与图片说明。外链只显示文字。</p></div>
+      <label>展示称呼<input value={draft.nickname ?? ''} maxLength={32} onChange={e => setDraft({ ...draft, nickname: e.target.value || null })} /></label>
+      <label>展示正文<textarea value={draft.text} maxLength={1000} rows={7} onChange={e => setDraft({ ...draft, text: e.target.value })} /></label>
+      <label>展示链接文字<input value={draft.linkUrl ?? ''} maxLength={500} onChange={e => setDraft({ ...draft, linkUrl: e.target.value || null })} /></label>
+      <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传审核图片" style={{ display: 'none' }} onChange={e => { const file = e.currentTarget.files?.[0]; if (file) void upload(file); }} />
+      {draftAssetsResult.error ? <div className="wc-error" role="alert"><strong>展示图片加载失败：{draftAssetsResult.error}</strong><p>可点击重试，或在下方移除异常图片并保存后批准其余内容。</p><button type="button" onClick={() => setAssetRetry(n => n + 1)}>重试加载图片</button></div> : null}
+      {draft.assets.map((a, index) => <div key={a.id} className="wc-stack"><div className="wc-asset">{urls[a.id] ? <img src={urls[a.id]} alt="将上屏的已保存图片" /> : <span className="wc-muted">{draftAssetsResult.error ? '图片加载失败' : '图片载入中'}</span>}<label>图片 {index + 1} 说明<input value={a.caption} maxLength={200} onChange={e => setDraft({ ...draft, assets: draft.assets.map((item, at) => at === index ? { ...item, caption: e.target.value } : item) })} /></label></div><div className="wc-actions"><button disabled={uploading} onClick={() => { replaceIndex.current = index; fileInput.current?.click(); }}>替换图片</button><button disabled={uploading} aria-label={`移除图片 ${index + 1}`} onClick={() => setDraft({ ...draft, assets: draft.assets.filter((_, at) => at !== index) })}>移除</button><button disabled={uploading || index === 0} aria-label={`上移图片 ${index + 1}`} onClick={() => reorderAsset(index, index - 1)}>↑</button><button disabled={uploading || index === draft.assets.length - 1} aria-label={`下移图片 ${index + 1}`} onClick={() => reorderAsset(index, index + 1)}>↓</button></div></div>)}
+      <button disabled={uploading || draft.assets.length >= 3 || !studio.connected} onClick={() => { replaceIndex.current = null; fileInput.current?.click(); }}>{uploading ? '正在保存审核图片…' : '添加展示图片（最多 3 张）'}</button>
+      {message.source.assets.some(a => !draft.assets.some(d => d.id === a.id)) ? <button className="wc-subtle" onClick={() => setDraft({ ...draft, assets: structuredClone(message.source.assets) })}>恢复投稿附件</button> : null}
+      <div className="wc-actions"><button disabled={!dirty || conflict || uploading || studio.pending || !studio.connected || !draft.text.trim()} onClick={() => void act('draft')}>保存展示稿</button><span className="wc-muted">{dirty ? '有未保存改动；可保存或直接保存并批准' : '展示稿已保存'}</span></div>
+    </> : null}
     <details open><summary>预览 · 不会上屏</summary><div className="wc-preview"><WindChimeLiveCard snapshot={snapshot} appearance={studio.state!.appearance} assetUrls={urls} /></div></details>
     <p className="wc-muted">批准后仍需在待播列表点击「上屏」。已读、收藏{blockedTermsEnabled ? '和敏感词标记' : ''}与播出批准相互独立。</p>
     <div className="wc-review-sticky-bar">
@@ -320,11 +327,28 @@ export type WindChimeLiveControlPanelProps = {
   /** Desktop hosts can synchronize on-air teleprompter scroll position with the local display window. */
   scrollState?: WindChimeDisplayScrollMetrics | null;
   onScrollDisplay?: (command: WindChimeDisplayScrollCommand) => Promise<void> | void;
+  /** Desktop hosts can enable Solo Live Blind-Box mode and streamline the studio controls. */
+  defaultStudioMode?: 'blindbox' | 'workbench';
+  studioMode?: 'blindbox' | 'workbench';
+  onStudioModeChange?: (mode: 'blindbox' | 'workbench') => void;
+  collapsibleReviewEditor?: boolean;
+  testCardActive?: boolean;
+  onToggleTestCard?: (active: boolean) => Promise<void>;
+  randomDrawEnabled?: boolean;
+  clearOnBlindDraw?: boolean;
+  onToggleClearOnBlindDraw?: (enabled: boolean) => void;
+  onBlockMessage?: (messageId: string) => Promise<void>;
 };
 /** Private control surface. Hosts can reuse the hook/client for wholly custom UIs. */
 export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps) {
   const { client, topicId, title = '风铃直播信箱' } = props;
   const studio = useWindChimeLiveControl(client, topicId);
+  const [internalStudioMode, setInternalStudioMode] = useState<'blindbox' | 'workbench'>(() => props.studioMode ?? props.defaultStudioMode ?? 'workbench');
+  const studioMode = props.studioMode ?? internalStudioMode;
+  const setStudioMode = (next: 'blindbox' | 'workbench') => {
+    setInternalStudioMode(next);
+    props.onStudioModeChange?.(next);
+  };
   const [localSelection, setSelection] = useState(''); const [filter, setFilter] = useState('all'); const [search, setSearch] = useState(''); const [dragging, setDragging] = useState('');
   const [playedIds, setPlayedIds] = useState<string[]>([]);
   const [autoAdvance, setAutoAdvance] = useState(() => readLocalFlag('windchime:auto-advance-review'));
@@ -335,17 +359,26 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
   const includes = (module: WindChimeLiveModule) => props.module === undefined || props.module === module;
   const [auxiliaryError, setAuxiliaryError] = useState('');
   const [reviewDirty, setReviewDirty] = useState(false);
+  const [blindBoxDirty, setBlindBoxDirty] = useState(false);
   const [appearanceDirty, setAppearanceDirty] = useState(false);
-  useEffect(() => { props.onDirtyChange?.(reviewDirty || appearanceDirty); }, [reviewDirty, appearanceDirty, props.onDirtyChange]);
+  useEffect(() => { props.onDirtyChange?.(reviewDirty || blindBoxDirty || appearanceDirty); }, [reviewDirty, blindBoxDirty, appearanceDirty, props.onDirtyChange]);
   useEffect(() => () => {
     props.onDirtyChange?.(false);
     if (advanceTimerRef.current !== null) clearTimeout(advanceTimerRef.current);
   }, [props.onDirtyChange]);
   useEffect(() => {
     setPlayedIds([]);
+    setBlindBoxDirty(false);
     autoMarkedRef.current.clear();
     if (advanceTimerRef.current !== null) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
   }, [topicId]);
+  const switchStudioMode = async (next: 'blindbox' | 'workbench') => {
+    if (studioMode === next) return;
+    if ((reviewDirty || blindBoxDirty) && !(await (props.onConfirmDiscard?.() ?? Promise.resolve(typeof window !== 'undefined' && window.confirm('展示稿尚未保存。放弃改动并切换模式？'))))) return;
+    setReviewDirty(false);
+    setBlindBoxDirty(false);
+    setStudioMode(next);
+  };
   const select = async (id: string) => {
     if (selection === id) return;
     if (props.onSelectMessage) {
@@ -427,16 +460,63 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
     if (props.onHideDisplay) void props.onHideDisplay().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '隐藏失败'));
     else void studio.act({ action: 'hide' });
   };
-  return <section className="wc-live" data-module={props.module} aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
+  const showPrevLetter = () => {
+    if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId });
+  };
+  const isBlindBoxActive = !props.module && studioMode === 'blindbox';
+  useEffect(() => {
+    if (isBlindBoxActive || !includes('inbox') || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
+      const target = event.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+      if (!visible.length) return;
+      event.preventDefault();
+      const idx = visible.findIndex(m => m.id === selection);
+      const nextIdx = event.key === 'ArrowDown'
+        ? (idx < 0 ? 0 : Math.min(visible.length - 1, idx + 1))
+        : (idx <= 0 ? 0 : idx - 1);
+      const nextItem = visible[nextIdx];
+      if (nextItem) void select(nextItem.id);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+  const otherTiles = WINDCHIME_LIVE_MODULES.filter(item => item.id !== 'transport');
+  return <section className="wc-live" data-module={props.module} data-studio-mode={props.module ? undefined : studioMode} aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
     {props.module ? null : <header className="wc-top"><h2>{title}</h2><div className="wc-actions"><button onClick={endShow}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={hideDisplay}>■ 一键隐藏</button></div></header>}
     <div className="wc-status" role="status"><span><i className={`wc-led${studio.connected ? ' on' : ''}`} />{studio.connected ? '控制已连接' : '连接状态未确认'}</span><span>{state?.receivers ?? 0} 个展示端就绪</span><strong style={{ marginLeft: 'auto', fontSize: 12 }}>{state?.current ? '正在展示已批准信件' : '观众画面为空白'}</strong></div>
     {studio.error || auxiliaryError ? <div className="wc-error" role="alert">{studio.error || auxiliaryError}</div> : null}
-    {props.onOpenTile && !props.module ? <nav className="wc-tile-launcher" aria-label="悬浮磁贴"><strong>悬浮磁贴</strong><span className="wc-muted">在独立窗口中操作，可置顶</span><div className="wc-actions">{WINDCHIME_LIVE_MODULES.map(item => <button key={item.id} aria-label={`打开${item.title}磁贴`} onClick={() => openTile(item.id)}>{item.title} ↗</button>)}</div></nav> : null}
+    {!props.module && (props.defaultStudioMode !== undefined || props.onOpenTile) ? (
+      <div className="wc-studio-bar">
+        {props.defaultStudioMode !== undefined ? (
+          <div className="wc-mode-switch" role="group" aria-label="工作台模式">
+            <button type="button" aria-pressed={studioMode === 'blindbox'} onClick={() => void switchStudioMode('blindbox')}>盲盒拆信</button>
+            <button type="button" aria-pressed={studioMode === 'workbench'} onClick={() => void switchStudioMode('workbench')}>列表备稿</button>
+          </div>
+        ) : <span />}
+        {props.onOpenTile ? (
+          <nav className="wc-tile-compact" aria-label="悬浮磁贴">
+            <button type="button" aria-label="打开快捷播控磁贴" onClick={() => openTile('transport')}>悬浮播控小窗 ↗</button>
+            <details className="wc-tile-more">
+              <summary>更多悬浮窗 ▾</summary>
+              <div className="wc-tile-more-menu">
+                {otherTiles.map(item => (
+                  <button key={item.id} type="button" aria-label={`打开${item.title}磁贴`} onClick={() => openTile(item.id)}>
+                    {item.title} ↗
+                  </button>
+                ))}
+              </div>
+            </details>
+          </nav>
+        ) : null}
+      </div>
+    ) : null}
     {props.module === 'transport' ? <>
       <section className="wc-panel wc-transport-panel"><div className="wc-pad wc-transport-actions">
         <button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>
         <button className="wc-danger" onClick={hideDisplay}>■ 一键隐藏</button>
-        <button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={() => { if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId }); }}>← 上一封</button>
+        <button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={showPrevLetter}>← 上一封</button>
         <button onClick={endShow}>结束展示</button>
         {needsDisplayGuide ? (
           <div className="wc-display-guide" role="status">
@@ -450,11 +530,36 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
       </div></section>
       {props.onScrollDisplay ? <OnAirTeleprompter client={client} topicId={topicId} message={onAir} scrollState={props.scrollState} onScrollDisplay={props.onScrollDisplay} compact /> : null}
     </> : null}
-    {!props.module && props.onScrollDisplay && onAir ? <OnAirTeleprompter client={client} topicId={topicId} message={onAir} scrollState={props.scrollState} onScrollDisplay={props.onScrollDisplay} /> : null}
-    {includes('inbox') || includes('review') || includes('queue') ? <div className="wc-columns">
-      {includes('inbox') ? <section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封</span></div><div className="wc-tabs" aria-label="审核状态">{([['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']] as const).map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}<span className="wc-tab-count">{counts[key]}</span></button>)}</div><div className="wc-mail-search"><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索昵称或正文…" aria-label="搜索审核来信" /></div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className="wc-mail-badges">{m.draft.assets.length > 0 ? <span className="wc-tag wc-img-badge" aria-label={`含 ${m.draft.assets.length} 张图片`}>{`图 ${m.draft.assets.length}`}</span> : null}<span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? (needle ? '没有匹配的来信' : '此分类暂无来信') : '正在连接信箱…'}</p> : null}</div></section> : null}
-      {includes('review') ? <section className="wc-panel wc-review-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} nextPendingId={nextPendingId} pendingRemaining={pendingRemaining} autoAdvance={autoAdvance} onToggleAutoAdvance={toggleAutoAdvance} onSelectNextPending={id => void select(id)} onAfterDecision={handleAfterDecision} /> : <p className="wc-empty">{props.module ? '在来信磁贴或主工作台选择一封来信。' : '选择左侧一封来信，审阅最终展示内容。'}</p>}</section> : null}
-      {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准 · 剩 {unplayedCount} 封未播</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><div className="wc-actions"><button className="wc-primary" style={{ flex: 1 }} disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button><button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={() => { if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId }); }}>← 上一封</button></div>{needsDisplayGuide ? <div className="wc-display-guide" role="status"><span>尚未打开展示窗口，打开后即可上屏。</span>{openDisplaySafe ? <button type="button" className="wc-primary" onClick={openDisplaySafe}>打开独立展示窗口</button> : null}</div> : openDisplaySafe ? <button onClick={openDisplaySafe}>打开独立展示窗口</button> : null}<label className="wc-checkbox wc-inline-toggle"><input type="checkbox" checked={autoMarkRead} onChange={e => toggleAutoMarkRead(e.target.checked)} /><span>上屏时自动标为已读</span></label></div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} data-played={playedSet.has(m.id) ? 'true' : undefined} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : playedSet.has(m.id) ? <span className="wc-tag wc-tag-played">已播</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">暂无已批准信件。批准后需手动上屏。</p> : null}</aside> : null}
+    {isBlindBoxActive ? (
+      <BlindBoxStudio
+        client={client}
+        topicId={topicId}
+        studio={studio}
+        blockedTermsEnabled={props.blockedTermsEnabled === true}
+        scrollState={props.scrollState}
+        onScrollDisplay={props.onScrollDisplay}
+        onOpenDisplay={props.onOpenDisplay}
+        onHideDisplay={props.onHideDisplay}
+        testCardActive={props.testCardActive}
+        onToggleTestCard={props.onToggleTestCard}
+        randomDrawEnabled={props.randomDrawEnabled}
+        clearOnBlindDraw={props.clearOnBlindDraw}
+        onToggleClearOnBlindDraw={props.onToggleClearOnBlindDraw}
+        onBlockMessage={props.onBlockMessage}
+        onDirtyChange={setBlindBoxDirty}
+        playedIds={playedIds}
+        onEndShow={endShow}
+        onPrevLetter={showPrevLetter}
+        canPrev={Boolean(prevMessageId)}
+        autoMarkRead={autoMarkRead}
+        onToggleAutoMarkRead={toggleAutoMarkRead}
+      />
+    ) : null}
+    {!isBlindBoxActive && !props.module && props.onScrollDisplay && onAir ? <OnAirTeleprompter client={client} topicId={topicId} message={onAir} scrollState={props.scrollState} onScrollDisplay={props.onScrollDisplay} /> : null}
+    {!isBlindBoxActive && (includes('inbox') || includes('review') || includes('queue')) ? <div className="wc-columns">
+      {includes('inbox') ? <section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封 · Alt+↑/↓ 切信</span></div><div className="wc-tabs" aria-label="审核状态">{([['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']] as const).map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}<span className="wc-tab-count">{counts[key]}</span></button>)}</div><div className="wc-mail-search"><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索昵称或正文…" aria-label="搜索审核来信" /></div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className="wc-mail-badges">{m.draft.assets.length > 0 ? <span className="wc-tag wc-img-badge" aria-label={`含 ${m.draft.assets.length} 张图片`}>{`图 ${m.draft.assets.length}`}</span> : null}<span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? (needle ? '没有匹配的来信' : '此分类暂无来信') : '正在连接信箱…'}</p> : null}</div></section> : null}
+      {includes('review') ? <section className="wc-panel wc-review-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} collapsibleEditor={props.collapsibleReviewEditor === true} nextPendingId={nextPendingId} pendingRemaining={pendingRemaining} autoAdvance={autoAdvance} onToggleAutoAdvance={toggleAutoAdvance} onSelectNextPending={id => void select(id)} onAfterDecision={handleAfterDecision} /> : <p className="wc-empty">{props.module ? '在来信磁贴或主工作台选择一封来信。' : '选择左侧一封来信，审阅最终展示内容。'}</p>}</section> : null}
+      {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准 · 剩 {unplayedCount} 封未播</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><div className="wc-actions"><button className="wc-primary" style={{ flex: 1 }} disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button><button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={showPrevLetter}>← 上一封</button></div>{needsDisplayGuide ? <div className="wc-display-guide" role="status"><span>尚未打开展示窗口，打开后即可上屏。</span>{openDisplaySafe ? <button type="button" className="wc-primary" onClick={openDisplaySafe}>打开独立展示窗口</button> : null}</div> : openDisplaySafe ? <button onClick={openDisplaySafe}>打开独立展示窗口</button> : null}<div className="wc-actions" style={{ justifyContent: 'space-between' }}><label className="wc-checkbox wc-inline-toggle"><input type="checkbox" checked={autoMarkRead} onChange={e => toggleAutoMarkRead(e.target.checked)} /><span>上屏时自动标为已读</span></label><button type="button" className="wc-subtle wc-queue-small" onClick={endShow}>重置本场进度</button></div></div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} data-played={playedSet.has(m.id) ? 'true' : undefined} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : playedSet.has(m.id) ? <span className="wc-tag wc-tag-played">已播</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">暂无已批准信件。批准后需手动上屏。</p> : null}</aside> : null}
     </div> : null}
     {!props.module || includes('appearance') ? <div className="wc-grid2 wc-settings">
       {includes('appearance') ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} /> : null}</div></section> : null}

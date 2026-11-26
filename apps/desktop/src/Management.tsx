@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WindChimeClient } from "../../../src/client";
+import type { WindChimeLiveClient } from "../../../src/client/live";
 import {
   windChimeLocalToUtcIso,
   windChimeUtcIsoToLocal,
@@ -35,11 +36,13 @@ async function confirm(text: string) {
 }
 export function Inbox({
   client,
+  liveClient,
   topicId,
   siteScope,
   keywordEnabled,
   onError,
-}: Common) {
+  onNotice,
+}: Common & { liveClient?: WindChimeLiveClient; onNotice?(message: string): void }) {
   const [filter, setFilter] = useState<WindChimeInboxFilter>("all"),
     [data, setData] = useState<WindChimeMessageList>({
       items: [],
@@ -235,6 +238,33 @@ export function Inbox({
         client.messages.update(item.id, { isRead: true }, { topicId }),
       );
   };
+  const approveIds = async (ids: string[]) => {
+    if (!liveClient || !ids.length) return;
+    let state = await liveClient.state(topicId);
+    let approvedCount = 0;
+    for (const id of ids) {
+      const target = state.messages.find((m) => m.id === id);
+      if (!target || target.status === "approved") continue;
+      state = await liveClient.action({
+        topicId,
+        action: "approve",
+        messageId: target.id,
+        expectedRevision: state.revision,
+        expectedDraftRevision: target.draftRevision,
+        operationId: crypto.randomUUID(),
+      });
+      approvedCount++;
+    }
+    if (approvedCount > 0) {
+      onNotice?.(
+        approvedCount === 1
+          ? "已批准加入待播列表，可在直播工作台直接上屏。"
+          : `已批量批准 ${approvedCount} 封来信加入待播列表。`,
+      );
+    } else {
+      onNotice?.("所选来信已在待播列表中。");
+    }
+  };
   const exportCsv = () =>
     void act(async () => {
       const items = visibleChecked.length
@@ -312,6 +342,20 @@ export function Inbox({
         >
           批量标为已读
         </button>
+        {liveClient && (
+          <button
+            className="wc-primary"
+            disabled={busy || !visibleChecked.length}
+            onClick={() =>
+              void act(async () => {
+                await approveIds(visibleChecked);
+                setChecked([]);
+              })
+            }
+          >
+            批量批准待播
+          </button>
+        )}
         <button
           disabled={busy || !visibleChecked.length}
           onClick={() =>
@@ -391,6 +435,15 @@ export function Inbox({
                 <p className="original-link">外链文字：{item.linkUrl}</p>
               )}
               <div className="wc-actions">
+                {liveClient && (
+                  <button
+                    className="wc-primary"
+                    disabled={busy}
+                    onClick={() => void act(() => approveIds([item.id]))}
+                  >
+                    批准进入待播
+                  </button>
+                )}
                 <button
                   disabled={busy}
                   onClick={() =>
@@ -872,6 +925,7 @@ export function GlobalSettings({
   onKeywordChange,
   onError,
   onDirtyChange,
+  section = "all",
 }: {
   client: WindChimeClient;
   siteScope: boolean;
@@ -879,6 +933,7 @@ export function GlobalSettings({
   onKeywordChange(enabled: boolean): void;
   onError(message: string): void;
   onDirtyChange?(dirty: boolean): void;
+  section?: "all" | "safety" | "grants";
 }) {
   const [terms, setTerms] = useState(""),
     [savedTerms, setSavedTerms] = useState(""),
@@ -1007,7 +1062,7 @@ export function GlobalSettings({
   return (
     <section className="management wc-live" aria-label="网站设置">
       <div className="settings-grid">
-        <article className="glass-surface settings-card">
+        <article className="glass-surface settings-card" hidden={section === "grants"}>
           <h2>投稿与审核设置</h2>
           <label className="setting-toggle">
             <span>
@@ -1086,7 +1141,7 @@ export function GlobalSettings({
             </>
           )}
         </article>
-        <article className="glass-surface settings-card">
+        <article className="glass-surface settings-card" hidden={section === "grants"}>
           <h2>已屏蔽发送者</h2>
           {blocked.length ? (
             blocked.map((sender) => (
@@ -1115,7 +1170,7 @@ export function GlobalSettings({
             <p className="empty-copy">暂时没有屏蔽记录。</p>
           )}
         </article>
-        <article className="glass-surface settings-card">
+        <article className="glass-surface settings-card" hidden={section === "safety"}>
           <h2>网站授权</h2>
           <p className="wc-muted">
             连接密钥只在网站后台生成。撤销会同时停止使用该密钥的电脑及其派生展示授权。

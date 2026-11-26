@@ -20,6 +20,10 @@ export type OnAirInfo = {
   textPreview: string;
 };
 export type DesktopTheme = "light" | "dark";
+export type DesktopPrefs = {
+  randomDrawEnabled: boolean;
+  clearOnBlindDraw: boolean;
+};
 export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: boolean; connectionId: string; topicId: string; contextVersion: number };
 export type DesktopStatus = {
   connectionError: string; displayOpen: boolean; shortcut: string;
@@ -76,6 +80,12 @@ type Bridge = {
   getTheme(): Promise<Result<DesktopTheme>>;
   setTheme(theme: DesktopTheme): Promise<Result<DesktopTheme>>;
   onThemeChanged(callback: (theme: DesktopTheme) => void): () => void;
+  getPrefs(): Promise<Result<DesktopPrefs>>;
+  setPrefs(patch: Partial<DesktopPrefs>): Promise<Result<DesktopPrefs>>;
+  onPrefsChanged(callback: (prefs: DesktopPrefs) => void): () => void;
+  getTestCard(): Promise<Result<boolean>>;
+  setTestCard(active: boolean): Promise<Result<boolean>>;
+  onTestCardChanged(callback: (active: boolean) => void): () => void;
   hide(): Promise<Result<void>>;
   status(): Promise<Result<DesktopStatus>>;
   openTile(module: WindChimeLiveModule): Promise<Result<void>>;
@@ -103,6 +113,7 @@ declare global {
     windchimeOutput: Pick<Bridge, "request"> & {
       onBlank(callback: () => void): () => void;
       onScrollCommand(callback: (command: WindChimeDisplayScrollCommand) => void): () => void;
+      onTestCard(callback: (payload: { active: boolean; appearance: unknown }) => void): () => void;
       reportScroll(metrics: WindChimeDisplayScrollMetrics | null): void;
     };
   }

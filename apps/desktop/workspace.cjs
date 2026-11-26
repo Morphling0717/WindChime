@@ -25,6 +25,8 @@ function restoreWorkspace(value) {
   if (!value || value.version !== 1) return restored;
   try { restored.nextShortcut = normalizeNextShortcut(value.nextShortcut ?? ''); } catch {}
   if (value.theme === 'dark') restored.theme = 'dark';
+  if (value.randomDrawEnabled === true) restored.randomDrawEnabled = true;
+  if (value.clearOnBlindDraw === true) restored.clearOnBlindDraw = true;
   const used = new Set([HIDE_SHORTCUT, restored.nextShortcut].filter(Boolean));
   for (const field of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
     try {

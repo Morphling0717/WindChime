@@ -590,7 +590,8 @@ button svg {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   margin: -6px 0 18px;
 }
 .desktop-workspace-bar > span {
@@ -601,6 +602,12 @@ button svg {
   font-size: 12px;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.desktop-workspace-bar .wc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .desktop-workspace-bar button {
   display: flex;
@@ -1222,7 +1229,7 @@ button svg {
   display: none;
 }
 .desktop-titlebar {
-  padding-right: 382px;
+  padding-right: 292px;
   overflow: hidden;
 }
 .titlebar-onair {
@@ -1329,6 +1336,106 @@ button svg {
 .wc-desktop .wc-live .wc-teleprompter-thumb {
   background: #ffffff;
   border-color: #cde0e6;
+}
+.wc-desktop .wc-live .wc-mode-switch {
+  background: #ffffff8c;
+  border-color: #d6e4e9;
+}
+.wc-desktop .wc-live .wc-mode-switch button {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: #54727e;
+}
+.wc-desktop .wc-live .wc-mode-switch button[aria-pressed="true"] {
+  background: linear-gradient(145deg, #568f99, #347c8a);
+  color: #ffffff;
+  border-color: #78a7ae;
+}
+.wc-desktop .wc-live .wc-tile-more > summary {
+  background: linear-gradient(150deg, #fffffff2, #ffffff96);
+  border-color: #d8e4e7;
+  color: #4b6874;
+  border-radius: 11px;
+  padding: 8px 12px;
+}
+.wc-desktop .wc-live .wc-tile-more-menu {
+  background: #f8fcfdf2;
+  border-color: #d5e4ea;
+  box-shadow: 0 12px 32px #3b5e6f22;
+}
+.wc-desktop .wc-live .wc-bb-pill {
+  background: #eaf4f6;
+  border-color: #cce0e6;
+  color: #55727e;
+}
+.wc-desktop .wc-live .wc-bb-pill.is-pending {
+  background: #dff3f0;
+  border-color: #93cbc4;
+  color: #21636b;
+}
+.wc-desktop .wc-live .wc-bb-badge-count {
+  background: linear-gradient(145deg, #e5f6f3, #d2eee9);
+  border-color: #98cfc8;
+  color: #266b75;
+}
+.wc-desktop .wc-live .wc-bb-private-banner {
+  background: #fff4df;
+  border-bottom-color: #ecd2a4;
+  color: #7f5316;
+}
+.wc-desktop .wc-live .wc-bb-reading {
+  background: #f5fafc;
+  border-color: #d6e5eb;
+  color: #243d4c;
+}
+.wc-desktop .wc-live .wc-bb-link-chip {
+  background: #eaf4f8;
+  border-color: #bfd8e2;
+  color: #4d6b78;
+}
+.wc-desktop .wc-live .wc-bb-asset-card {
+  background: #f4f9fb;
+  border-color: #d4e3e9;
+}
+.wc-desktop .wc-live .wc-bb-asset-frame {
+  background: #e4eef2;
+}
+.settings-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+}
+.settings-tabs button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #5c7682;
+  padding: 8px 16px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.16s, color 0.16s, border-color 0.16s;
+}
+.settings-tabs button:hover {
+  background: #ffffff7d;
+  color: #264d5d;
+}
+.settings-tabs button[aria-selected="true"] {
+  background: linear-gradient(120deg, #fff, #ffffffb8);
+  border-color: #ffffff;
+  color: #1f6574;
+  font-weight: 600;
+  box-shadow: 0 3px 10px #51799012;
+}
+.desktop-controls-stack {
+  display: grid;
+  gap: 16px;
+}
+.desktop-controls-stack .desktop-hotkeys {
+  margin: 0;
 }
 /* Dark theme for low-glare streaming rooms. Audience previews retain their own card styles. */
 :root[data-theme="dark"] {
@@ -1636,6 +1743,78 @@ button svg {
 .wc-desktop[data-theme="dark"] .wc-live .wc-teleprompter-thumb {
   background: #182532;
   border-color: #334a5e;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-mode-switch {
+  background: #101923;
+  border-color: #2e4356;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-mode-switch button {
+  color: #9bb3c1;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-mode-switch button[aria-pressed="true"] {
+  background: linear-gradient(145deg, #32808e, #246674);
+  border-color: #4a9fab;
+  color: #f4fbfc;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-tile-more > summary {
+  background: #213242;
+  border-color: #344b60;
+  color: #d6e6ef;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-tile-more-menu {
+  background: #16222f;
+  border-color: #32485c;
+  box-shadow: 0 14px 36px #00000055;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-pill {
+  background: #1b2b39;
+  border-color: #32495d;
+  color: #a4bcc9;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-pill.is-pending {
+  background: #173a40;
+  border-color: #3a7c84;
+  color: #8ee5e0;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-badge-count {
+  background: #17373e;
+  border-color: #367880;
+  color: #8ae3de;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-private-banner {
+  background: #3a2d1a;
+  border-bottom-color: #6b5128;
+  color: #f6d59e;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-reading {
+  background: #101923;
+  border-color: #2f4355;
+  color: #e6f1f7;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-link-chip {
+  background: #152433;
+  border-color: #344e63;
+  color: #a2bac7;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-asset-card {
+  background: #131f2b;
+  border-color: #2e4254;
+}
+.wc-desktop[data-theme="dark"] .wc-live .wc-bb-asset-frame {
+  background: #0b1219;
+}
+.wc-desktop[data-theme="dark"] .settings-tabs button {
+  color: #97afb9;
+}
+.wc-desktop[data-theme="dark"] .settings-tabs button:hover {
+  background: #233446;
+  color: #e6f2f8;
+}
+.wc-desktop[data-theme="dark"] .settings-tabs button[aria-selected="true"] {
+  background: linear-gradient(120deg, #213746, #1b2f3d);
+  border-color: #385c6e;
+  color: #8ae3de;
+  box-shadow: none;
 }
 .desktop-workspace-bar {
   margin-top: 0;

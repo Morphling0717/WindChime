@@ -828,3 +828,24 @@ test('on-air status and dark theme IPC synchronize across control and tiles with
   assert.equal(h.windows[0].sent.filter(m=>m.channel==='app:theme-changed').at(-1).args[0],'dark');
   assert.equal(tile.sent.filter(m=>m.channel==='app:theme-changed').at(-1).args[0],'dark');
 });
+
+test('blind-box preferences and local OBS test card IPC enforce live-letter safety and broadcast state',async()=>{
+  const h=await harness();await h.pair(3011);
+  // Preferences default false, validate booleans, persist and reject display window
+  assert.deepEqual({...((await h.invoke('app:prefs-get')).data)},{randomDrawEnabled:false,clearOnBlindDraw:false});
+  assert.equal((await h.invoke('app:prefs-set',[{randomDrawEnabled:'yes'}])).ok,false);
+  const updated=await h.invoke('app:prefs-set',[{randomDrawEnabled:true,clearOnBlindDraw:true}]);
+  assert.deepEqual({...updated.data},{randomDrawEnabled:true,clearOnBlindDraw:true});
+  assert.equal(h.windows[0].sent.filter(m=>m.channel==='app:prefs-changed').at(-1).args[0].randomDrawEnabled,true);
+  // Test card opens display window automatically when blank and sends output:test-card
+  assert.equal((await h.invoke('display:test-card-get')).data,false);
+  assert.equal((await h.invoke('display:test-card',[true])).data,true);
+  assert(h.output,'enabling test card opens display window');
+  assert.equal(h.output.sent.filter(m=>m.channel==='output:test-card').at(-1).args[0].active,true);
+  // Real live snapshot automatically turns off test card and blocks enabling it while on air
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,snapshot:{id:'snap-live',messageId:'m1',nickname:'A',text:'live'}}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],h.output)).ok);
+  assert.equal((await h.invoke('display:test-card-get')).data,false);
+  assert.equal((await h.invoke('display:test-card',[true])).ok,false,'cannot overwrite a live approved letter with test card');
+  assert.equal((await h.invoke('app:prefs-set',[{randomDrawEnabled:false}],h.output)).ok,false,'display window cannot modify prefs');
+});

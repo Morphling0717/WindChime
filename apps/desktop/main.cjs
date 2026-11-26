@@ -16,7 +16,8 @@ const tiles = new Map();
 let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
 let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
 let scrollShortcuts = { up: '', down: '', pause: '' }, scrollRegistered = { up: false, down: false, pause: false }, scrollShortcutError = '';
-let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null, desktopTheme = 'light';
+let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null, outputTestCard = false, outputAppearance = null, desktopTheme = 'light';
+let desktopPrefs = { randomDrawEnabled: false, clearOnBlindDraw: false };
 let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
 let shortcutConfigTail = Promise.resolve(), shortcutConfigPending = 0;
 let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
@@ -62,7 +63,7 @@ async function readWorkspace() {
   try { workspace = restoreWorkspace(JSON.parse(await fs.readFile(workspacePath, 'utf8'))); }
   catch (error) { if (error.code !== 'ENOENT') connectionError('悬浮磁贴和快捷键设置无法读取，已使用默认设置'); }
 }
-function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme) {
+function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme, candidatePrefs) {
   const save = workspaceTail.then(async () => {
     // Build from the latest committed shortcut and current tile preferences at
     // execution time. A queued tile write cannot capture a tentative shortcut,
@@ -72,13 +73,27 @@ function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme) {
       ...(candidateShortcut !== undefined ? { nextShortcut: candidateShortcut } : {}),
       ...(candidateScroll !== undefined ? candidateScroll : {}),
       ...(candidateTheme !== undefined ? { theme: candidateTheme } : {}),
+      ...(candidatePrefs !== undefined ? candidatePrefs : {}),
     };
     for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
       if (!value[key]) delete value[key];
     }
     if (value.theme !== 'dark') delete value.theme;
+    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
+      if (value[key] !== true) delete value[key];
+    }
     const temporary = `${workspacePath}.tmp`;
-    await fs.writeFile(temporary, JSON.stringify(value)); await fs.rename(temporary, workspacePath);
+    await fs.writeFile(temporary, JSON.stringify(value));
+    for (let attempt = 0; ; attempt++) {
+      try { await fs.rename(temporary, workspacePath); break; }
+      catch (err) {
+        if ((err?.code === 'EPERM' || err?.code === 'EBUSY') && attempt < 4) {
+          await new Promise(resolve => setTimeout(resolve, 35 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+    }
     if (candidateShortcut !== undefined) workspace.nextShortcut = candidateShortcut;
     if (candidateScroll !== undefined) {
       for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
@@ -89,6 +104,12 @@ function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme) {
     if (candidateTheme !== undefined) {
       if (candidateTheme === 'dark') workspace.theme = 'dark';
       else delete workspace.theme;
+    }
+    if (candidatePrefs !== undefined) {
+      for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
+        if (candidatePrefs[key] === true) workspace[key] = true;
+        else if (key in candidatePrefs) delete workspace[key];
+      }
     }
   });
   workspaceTail = save.catch(() => {}); return save;
@@ -202,6 +223,13 @@ function broadcastOnAir(next) {
   ) return;
   outputOnAir = next;
   liveContents(controlWindow)?.send?.('display:on-air', next);
+}
+function broadcastTestCard(active) {
+  const next = Boolean(active);
+  outputTestCard = next;
+  liveContents(displayWindow)?.send?.('output:test-card', { active: next, appearance: outputAppearance });
+  liveContents(controlWindow)?.send?.('display:test-card-state', next);
+  for (const tile of tiles.values()) liveContents(tile.window)?.send?.('display:test-card-state', next);
 }
 function snapshotToOnAir(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') return null;
@@ -570,6 +598,7 @@ function blank(paint = true) {
   outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
   broadcastScrollState(null);
   broadcastOnAir(null);
+  if (outputTestCard) broadcastTestCard(false);
   if (displayWindow && !displayWindow.isDestroyed()) {
     displayWindow.hide();
     // Discard the backing renderer immediately, even if the site's hide request
@@ -598,6 +627,7 @@ async function recoverOutput(window = displayWindow, crashed = false) {
   outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
   broadcastScrollState(null);
   broadcastOnAir(null);
+  if (outputTestCard) broadcastTestCard(false);
   const version = ++outputVersion;
   const owned = () => window === displayWindow && version === outputVersion;
   const current = () => owned() && !quitting && !pendingOutputClears && liveContents(window) === contents;
@@ -700,7 +730,7 @@ async function openDisplay(initiatingTile) {
   displayWindow = new BrowserWindow({ width: 960, height: 640, title: 'WindChime Display', transparent: true, backgroundColor: '#00000000', show: false, frame: false, webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false } });
   secureWindow(displayWindow, partition);
   const window = displayWindow;
-  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputVersion++; broadcastScrollState(null); broadcastOnAir(null); if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
+  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputAppearance = null; outputDeadline = 0; outputVersion++; broadcastScrollState(null); broadcastOnAir(null); if (outputTestCard) broadcastTestCard(false); if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
   window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
   window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
   await window.loadFile(path.join(__dirname, 'build/display.html'));
@@ -711,6 +741,10 @@ async function start() {
   vaultPath = path.join(app.getPath('userData'), 'devices.v1.enc'); await readVault();
   workspacePath = path.join(app.getPath('userData'), 'workspace.v1.json'); await readWorkspace();
   desktopTheme = workspace.theme === 'dark' ? 'dark' : 'light';
+  desktopPrefs = {
+    randomDrawEnabled: workspace.randomDrawEnabled === true,
+    clearOnBlindDraw: workspace.clearOnBlindDraw === true,
+  };
   // Only explicit poster preferences use persistent browser storage. Network,
   // credentials, remote pages and inbox persistence remain unavailable here.
   const partition = 'persist:windchime-private';
@@ -790,6 +824,18 @@ async function start() {
   handle('display:scroll', 'private', command => { sendDisplayScroll(command); });
   handle('display:scroll-state', 'private', () => outputScrollState);
   handle('display:on-air', 'private', () => outputOnAir);
+  handle('display:test-card-get', 'private', () => outputTestCard);
+  handle('display:test-card', 'private', async (window, active) => {
+    const enabled = Boolean(active);
+    if (enabled) {
+      if (outputSnapshotId) throw new Error('当前正在播出真实来信，请先一键隐藏后再发送测试卡');
+      if (!displayWindow || displayWindow.isDestroyed() || !state.output) await openDisplay(tileFor(window));
+      broadcastTestCard(true);
+      return true;
+    }
+    broadcastTestCard(false);
+    return false;
+  }, true);
   handle('display:scroll-metrics', 'display', metrics => { broadcastScrollState(sanitizeScrollMetrics(metrics)); });
   handle('display:request', 'display', async input => {
     const scope = context(), version = outputVersion;
@@ -810,7 +856,11 @@ async function start() {
       const result = await http(`${scope.site.origin}/api/mail/live`, request.path, request.method, request.body, output.token, { binary: assetRequest, timeout: 2400 });
       assertCurrent(scope); if (version !== outputVersion || output !== state.output || receiverVersion !== outputReceiverVersion) throw new Error('展示连接已更新');
       if (!ownsAsset()) throw new Error('图片所属展示已切换');
-      if (opening) { if (typeof result.receiverId !== 'string' || typeof result.epoch !== 'string') throw new Error('展示接收端无效'); outputReceiverId = result.receiverId; outputEpoch = result.epoch; }
+      if (opening) {
+        if (typeof result.receiverId !== 'string' || typeof result.epoch !== 'string') throw new Error('展示接收端无效');
+        outputReceiverId = result.receiverId; outputEpoch = result.epoch;
+        if (outputTestCard) liveContents(displayWindow)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
+      }
       if (request.path.startsWith('/display/frame?')) {
         if (result.receiverId !== outputReceiverId || result.epoch !== outputEpoch) throw new Error('展示接收端已更新');
         // Do not trust a running JS timer as evidence that an old GPU surface
@@ -818,9 +868,16 @@ async function start() {
         if (outputSnapshotId && !result.snapshot) { void recoverOutput(); throw new Error('当前展示已撤下'); }
         const nextSnapshotId = result.snapshot?.id ?? null;
         if (nextSnapshotId !== outputSnapshotId) broadcastScrollState(null);
+        if (nextSnapshotId && outputTestCard) broadcastTestCard(false);
         outputSnapshotId = nextSnapshotId;
         broadcastOnAir(snapshotToOnAir(result.snapshot));
         output.frameActivation = result.activation;
+        if (result.appearance && typeof result.appearance === 'object') {
+          outputAppearance = result.appearance;
+          if (outputTestCard && !nextSnapshotId) {
+            liveContents(displayWindow)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
+          }
+        }
         syncDisplaySize(result.appearance);
       }
       if (opening || request.path.startsWith('/display/frame?')) confirmOutputLease(result, startedAt);
@@ -875,6 +932,22 @@ async function start() {
     liveContents(controlWindow)?.send?.('app:theme-changed', theme);
     for (const tile of tiles.values()) liveContents(tile.window)?.send?.('app:theme-changed', theme);
     return theme;
+  });
+  handle('app:prefs-get', 'private', () => ({ ...desktopPrefs }));
+  handle('app:prefs-set', 'private', async patch => {
+    if (!patch || typeof patch !== 'object') throw new Error('无效偏好设置');
+    const next = { ...desktopPrefs };
+    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
+      if (key in patch) {
+        if (typeof patch[key] !== 'boolean') throw new Error('无效偏好设置');
+        next[key] = patch[key];
+      }
+    }
+    desktopPrefs = next;
+    await saveWorkspace(undefined, undefined, undefined, next);
+    liveContents(controlWindow)?.send?.('app:prefs-changed', { ...next });
+    for (const tile of tiles.values()) liveContents(tile.window)?.send?.('app:prefs-changed', { ...next });
+    return { ...next };
   });
   handle('app:confirm', 'private', async (window, input) => {
     if (!input || typeof input.message !== 'string' || input.message.length > 500) throw new Error('无效确认内容');

@@ -109,7 +109,7 @@ export function OnAirTeleprompter({
 
   // Close zoomed lightbox with Escape key.
   useEffect(() => {
-    if (!zoomed || typeof window === 'undefined') return;
+    if (!zoomed || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setZoomed(null);
     };

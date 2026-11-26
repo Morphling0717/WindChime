@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { shortcutLabel, unwrap, type DesktopStatus, type ScrollShortcuts } from './bridge';
+import { shortcutLabel, unwrap, type DesktopPrefs, type DesktopStatus, type ScrollShortcuts } from './bridge';
 
 const bridge = window.windchimeDesktop;
 function accelerator(event: KeyboardEvent<HTMLInputElement>) {
@@ -9,7 +9,17 @@ function accelerator(event: KeyboardEvent<HTMLInputElement>) {
 
 type Slot = 'next' | 'up' | 'down' | 'pause';
 
-export function Hotkeys({ status, onSaved }: { status: DesktopStatus; onSaved: () => Promise<void> }) {
+export function Hotkeys({
+  status,
+  onSaved,
+  prefs,
+  onUpdatePrefs,
+}: {
+  status: DesktopStatus;
+  onSaved: () => Promise<void>;
+  prefs?: DesktopPrefs;
+  onUpdatePrefs?: (patch: Partial<DesktopPrefs>) => Promise<void>;
+}) {
   const [value, setValue] = useState(status.nextShortcut ?? '');
   const [basis, setBasis] = useState(status.nextShortcut ?? '');
   const [scrollValues, setScrollValues] = useState<ScrollShortcuts>({ up: '', down: '', pause: '' });
@@ -114,7 +124,38 @@ export function Hotkeys({ status, onSaved }: { status: DesktopStatus; onSaved: (
     { slot: 'pause', label: '暂停 / 继续滚动热键（可选）', placeholder: '例如 Alt+Space' },
   ];
 
-  return <section className="desktop-hotkeys glass-surface" aria-label="直播热键">
+  return <div className="desktop-controls-stack">
+    {prefs && onUpdatePrefs ? (
+      <section className="desktop-hotkeys glass-surface management" aria-label="盲盒拆信偏好">
+        <h2>盲盒拆信偏好</h2>
+        <p>控制单人直播「盲盒拆信模式」的抽信行为，本机自动保存，无需改动网站。</p>
+        <label className="pref-toggle">
+          <span>
+            <strong>启用「随机拆一封」按钮</strong>
+            <small>默认关闭。开启后，盲盒拆信台面会出现「随机拆一封」按钮，可从待拆来信中随机抽取。</small>
+          </span>
+          <input
+            type="checkbox"
+            aria-label="启用随机拆一封按钮"
+            checked={prefs.randomDrawEnabled}
+            onChange={e => void onUpdatePrefs({ randomDrawEnabled: e.target.checked })}
+          />
+        </label>
+        <label className="pref-toggle">
+          <span>
+            <strong>拆封下一封时先清空观众画面</strong>
+            <small>关闭时，私下拆封新信期间观众画面继续停留在上一封；开启后，点击「拆下一封」会先清空观众画面。</small>
+          </span>
+          <input
+            type="checkbox"
+            aria-label="拆封下一封时先清空观众画面"
+            checked={prefs.clearOnBlindDraw}
+            onChange={e => void onUpdatePrefs({ clearOnBlindDraw: e.target.checked })}
+          />
+        </label>
+      </section>
+    ) : null}
+    <section className="desktop-hotkeys glass-surface" aria-label="直播热键">
     <h2>直播热键</h2><p>为当前话题的「下一封」与展示窗手动滚动设置全局组合键。不切窗口即可翻页；展示端未就绪时不会留下延迟任务。</p>
     <div className="desktop-hotkey-row">
       <label>下一封热键<input ref={el => { inputs.current.next = el; }} aria-label="下一封热键" value={recordingSlot === 'next' && !awaitingRelease ? '请按组合键，Esc 取消' : value} readOnly={recordingSlot === 'next'} onChange={event => setValue(event.currentTarget.value)} onKeyDown={event => record('next', event)} onKeyUp={event => void release('next', event)} placeholder="例如 Ctrl+Shift+N" maxLength={80} disabled={busy} /></label>
@@ -134,5 +175,6 @@ export function Hotkeys({ status, onSaved }: { status: DesktopStatus; onSaved: (
     {awaitingRelease ? <div className="desktop-hotkey-feedback" role="status">松开所有按键后完成录制。</div> : null}
     {error || status.shortcutError || scrollError ? <div className="desktop-hotkey-error" role="alert">{error || status.shortcutError || scrollError}</div> : null}
     {notice ? <div className="desktop-hotkey-feedback" role="status">{notice}</div> : null}
-  </section>;
+  </section>
+  </div>;
 }

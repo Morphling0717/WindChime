@@ -1,7 +1,7 @@
 'use client';
 import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { WindChimeDisplayClient } from '../client/live.js';
-import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/live.js';
+import { DEFAULT_WINDCHIME_LIVE_APPEARANCE, type WindChimeLiveAppearance, type WindChimeLiveSnapshot } from '../core/live.js';
 import { WindChimeDisplayReceiver, type WindChimeDisplayValue } from './receiver.js';
 import { resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
 import { windChimeDisplayCss } from './display-styles.js';
@@ -90,7 +90,7 @@ class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean 
   render() { return this.state.failed ? null : this.props.children; }
 }
 /** Capture only this isolated output. No login, notification or error UI is rendered. */
-export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController }) {
+export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl, fallbackSnapshot, fallbackAppearance }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController; fallbackSnapshot?: WindChimeLiveSnapshot | null; fallbackAppearance?: WindChimeLiveAppearance | null }) {
   const [received, setReceived] = useState<{ client: WindChimeDisplayClient; value: WindChimeDisplayValue } | null>(null);
   // A caller changing accounts/credentials must not paint the previous client's
   // frame while React is waiting to run the effect cleanup.
@@ -108,7 +108,11 @@ export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, sc
   useEffect(() => {
     if (!value || !snapshot) scrollControl?.onMetrics?.(null);
   }, [value, snapshot, scrollControl]);
-  if (!value || !snapshot) return null;
+  if (!value || !snapshot) {
+    if (!fallbackSnapshot) return null;
+    const testProps = { snapshot: fallbackSnapshot, appearance: fallbackAppearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE, assetUrls: {} };
+    return <BlankOnError key={`test-card:${fallbackSnapshot.id}`}>{render ? render(testProps) : <WindChimeLiveCard {...testProps} />}</BlankOnError>;
+  }
   const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl };
   return <BlankOnError key={`${value.frame.epoch}:${value.frame.activation}`}>{render ? render(props) : <WindChimeLiveCard {...props} />}</BlankOnError>;
 }

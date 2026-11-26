@@ -140,8 +140,8 @@ async function importSite(site) {
   }, 'default topic selected');
 }
 async function openModule(module) {
-  // Root launch UI uses these stable labels; bridge is checked separately too.
-  await evaluate(control, `(()=>{const node=document.querySelector('[aria-label=${JSON.stringify('打开' + moduleLabels[module] + '磁贴')} ]');if(!node)throw Error('Missing tile launcher ${module}');node.click()})()`);
+  // Root launch UI uses these stable labels; extra tiles live inside the compact menu.
+  await evaluate(control, `(()=>{const more=document.querySelector('.wc-tile-more');if(more)more.open=true;const node=document.querySelector('[aria-label=${JSON.stringify('打开' + moduleLabels[module] + '磁贴')} ]');if(!node)throw Error('Missing tile launcher ${module}');node.click();if(more)more.open=false;})()`);
   await until(() => tile(module), module + ' native tile exists');
   const window = tile(module);
   const observe = stage => tileOpenObservations.push({ module, stage, visible: window.isVisible(), loading: window.webContents.isLoadingMainFrame(), topmost: window.isAlwaysOnTop() });
@@ -206,7 +206,9 @@ async function run() {
   const connectionId = metadata.selectedId;
   assert(!JSON.stringify(metadata).includes('wc_ctl_'));
   await click(control, '直播工作台');
-  await until(() => evaluate(control, 'document.querySelectorAll(".wc-mail").length===2'), 'main studio loaded');
+  await until(() => evaluate(control, '!!document.querySelector(".wc-mode-switch")'), 'main studio mode switch loaded');
+  await click(control, '列表备稿');
+  await until(() => evaluate(control, 'document.querySelectorAll(".wc-mail").length===2'), 'main studio workbench loaded');
   for (const module of Object.keys(moduleLabels)) {
     const window = await openModule(module);
     assert.equal(window.isAlwaysOnTop(), true, module + ' is initially topmost');
@@ -348,6 +350,8 @@ async function run() {
   // Shortcut UI and callback verification is completed below once the settings
   // page is loaded; a callback is production code, but no OS keypress is sent.
   await click(control, '设置与外观');
+  await until(() => evaluate(control, '!!document.querySelector(".settings-tabs")'), 'settings tabs loaded');
+  await click(control, '播控与热键');
   await until(() => evaluate(control, '!!document.querySelector("[aria-label=下一封热键]")'), 'custom next shortcut setting');
   await input(control, '[aria-label=下一封热键]', 'Ctrl+Alt+N');
   await click(control, '保存热键');

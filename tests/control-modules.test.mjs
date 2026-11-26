@@ -201,3 +201,71 @@ test('queue and transport expose previous letter, played status, display guide, 
   assert.equal(commands.at(-1).action, 'show');
   assert.equal(commands.at(-1).messageId, 'm1');
 });
+
+test('blind-box solo live mode stays spoiler-free, respects randomDrawEnabled, supports one-click approve+show and reject', async t => {
+  const draft1 = { nickname: '盲盒一号', text: '绝不能提前剧透给观众的正文一', assets: [], linkUrl: null };
+  const draft2 = { nickname: '盲盒二号', text: '绝不能提前剧透给观众的正文二', assets: [], linkUrl: null };
+  let server = {
+    topicId: 'topic', revision: 1, epoch: 'epoch', appearance, receivers: 1,
+    current: null, queue: [],
+    messages: [
+      { id: 'b1', status: 'pending', draft: structuredClone(draft1), source: structuredClone(draft1), draftRevision: 1, snapshotId: null, createdAt: '2026-09-13T00:00:00Z', isRead: false, isFavorited: false, isFlagged: false },
+      { id: 'b2', status: 'pending', draft: structuredClone(draft2), source: structuredClone(draft2), draftRevision: 1, snapshotId: null, createdAt: '2026-09-13T00:01:00Z', isRead: false, isFavorited: false, isFlagged: false },
+    ],
+  };
+  const commands = [];
+  const client = {
+    state: async () => structuredClone(server),
+    grants: async () => ({ items: [] }),
+    action: async command => {
+      commands.push(structuredClone(command));
+      server = structuredClone(server);
+      server.revision++;
+      const msg = server.messages.find(m => m.id === command.messageId);
+      if (command.action === 'draft' && msg) { msg.draft = structuredClone(command.draft); msg.draftRevision++; }
+      if (command.action === 'approve' && msg) { msg.status = 'approved'; msg.snapshotId = 'snap-' + msg.id; if (!server.queue.includes(msg.id)) server.queue.push(msg.id); }
+      if (command.action === 'show' && msg) { server.current = { messageId: msg.id, snapshotId: msg.snapshotId }; }
+      if (command.action === 'reject' && msg) { msg.status = 'rejected'; }
+      return structuredClone(server);
+    },
+  };
+  let renderer;
+  const render = extra => React.createElement(WindChimeLiveControlPanel, {
+    client, topicId: 'topic', defaultStudioMode: 'blindbox', randomDrawEnabled: false,
+    onScrollDisplay: () => {}, ...extra,
+  });
+  await act(async () => { renderer = create(render()); });
+  t.after(() => act(async () => renderer.unmount()));
+
+  // Standby: zero spoilers, random button hidden when randomDrawEnabled is false
+  const initialJson = JSON.stringify(renderer.toJSON());
+  assert(!initialJson.includes('绝不能提前剧透'), 'standby does not leak pending letter text');
+  assert(!initialJson.includes('随机拆一封'), 'random draw button hidden by default');
+
+  // Enable randomDrawEnabled -> button appears
+  await act(async () => { renderer.update(render({ randomDrawEnabled: true })); });
+  assert(JSON.stringify(renderer.toJSON()).includes('随机拆一封'));
+
+  // Draw first letter privately -> text visible only in unbox card, zero server commands sent yet
+  const btn = text => renderer.root.findAllByType('button').find(item => item.children.join('') === text);
+  await act(async () => { await btn('拆下一封 ✉').props.onClick(); });
+  assert.equal(commands.length, 0, 'drawing privately sends no broadcast command');
+  assert(JSON.stringify(renderer.toJSON()).includes('绝不能提前剧透给观众的正文一'));
+
+  // Click quick-redact, edit text, then 1-click 保存并直接上屏 -> draft + approve + show
+  await act(async () => { btn('✎ 快速打码 / 编辑').props.onClick(); });
+  const textarea = renderer.root.findByType('textarea');
+  await act(async () => { textarea.props.onChange({ target: { value: '打码后的安全正文一' } }); });
+  await act(async () => { await btn('✓ 保存并直接上屏').props.onClick(); await new Promise(r => setImmediate(r)); });
+  assert.deepEqual(commands.map(c => c.action), ['draft', 'approve', 'show']);
+  assert.equal(commands[0].draft.text, '打码后的安全正文一');
+  assert.equal(commands[1].expectedDraftRevision, 2);
+  assert.equal(commands[2].messageId, 'b1');
+
+  // Draw second letter and reject -> never shown
+  const drawNext = renderer.root.findAllByType('button').find(item => item.children.join('').startsWith('拆下一封'));
+  await act(async () => { await drawNext.props.onClick(); });
+  await act(async () => { await btn('✕ 跳过拒绝').props.onClick(); await new Promise(r => setImmediate(r)); });
+  assert.equal(commands.at(-1).action, 'reject');
+  assert.equal(commands.at(-1).messageId, 'b2');
+});

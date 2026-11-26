@@ -187,7 +187,8 @@
 .settings-card > label {
   margin: 16px 0;
 }
-.setting-toggle {
+.setting-toggle,
+.pref-toggle {
   display: flex !important;
   align-items: center;
   justify-content: space-between;
@@ -196,10 +197,13 @@
   border-bottom: 1px solid #dfe9ee;
 }
 .setting-toggle strong,
-.setting-toggle small {
+.setting-toggle small,
+.pref-toggle strong,
+.pref-toggle small {
   display: block;
 }
-.setting-toggle small {
+.setting-toggle small,
+.pref-toggle small {
   font-weight: 400;
   color: #758992;
   margin-top: 5px;
@@ -427,6 +431,7 @@
 .wc-desktop[data-theme="dark"] .inbox-row small,
 .wc-desktop[data-theme="dark"] .empty-copy,
 .wc-desktop[data-theme="dark"] .setting-toggle small,
+.wc-desktop[data-theme="dark"] .pref-toggle small,
 .wc-desktop[data-theme="dark"] .blocked-sender > small,
 .wc-desktop[data-theme="dark"] .original-image figcaption {
   color: #8aa3b1;
@@ -444,6 +449,7 @@
   color: #c4d8e3;
 }
 .wc-desktop[data-theme="dark"] .setting-toggle,
+.wc-desktop[data-theme="dark"] .pref-toggle,
 .wc-desktop[data-theme="dark"] .blocked-sender {
   border-bottom-color: #2b3f51;
 }
