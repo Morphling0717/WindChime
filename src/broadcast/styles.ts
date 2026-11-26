@@ -82,4 +82,16 @@ export const windChimeControlCss = `
 .wc-live .wc-bb-live-stage{display:grid;gap:12px}
 .wc-live .wc-bb-stage-bar{padding:12px 16px}
 .wc-live .wc-bb-history>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;font-size:13px;font-weight:600;color:var(--wc-ink)}
+.wc-live .wc-bb-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:11px;color:var(--wc-muted)}
+.wc-live .wc-bb-stat-pill{padding:2px 8px;border-radius:999px;background:rgba(143,225,213,.1);border:1px solid var(--wc-border);font-variant-numeric:tabular-nums}
+.wc-live .wc-bb-studio.is-compact .wc-bb-topbar{padding:8px 12px}
+.wc-live .wc-bb-studio.is-compact .wc-bb-standby{padding:20px 14px}
+.wc-live .wc-bb-studio.is-compact .wc-bb-badge-count{width:48px;height:48px;font-size:22px;border-radius:14px}
+.wc-live .wc-bb-studio.is-compact .wc-bb-reading{padding:12px}
+.wc-live .wc-bb-studio.is-compact .wc-bb-reading-text{font-size:14px;max-height:200px}
+.wc-live .wc-bb-studio.is-compact .wc-bb-asset-grid{grid-template-columns:1fr}
+.wc-live .wc-bb-studio.is-compact .wc-bb-asset-frame{height:120px}
+.wc-live .wc-bb-history-log{display:grid;gap:8px;max-height:260px;overflow-y:auto;padding:0;margin:0;list-style:none}
+.wc-live .wc-bb-history-row{padding:8px 10px;border-radius:10px;border:1px solid var(--wc-border);background:rgba(16,25,35,.32);display:grid;gap:4px;font-size:12px}
+.wc-live .wc-bb-history-row-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 `;

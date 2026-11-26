@@ -4,11 +4,11 @@ import type { WindChimeLiveClient } from '../client/live.js';
 import { encodeWindChimeConnectionKey } from '../core/connection-key.js';
 import type { WindChimeLiveControlState, WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
 import { useWindChimeLiveControl } from '../react/live.js';
-import { WindChimeLiveCard } from './Display.js';
+import { WindChimeLiveCard, type WindChimeLocalOverlay } from './Display.js';
 import { windChimeControlCss } from './styles.js';
 import { AppearanceEditor } from './AppearanceEditor.js';
 import { OnAirTeleprompter } from './Teleprompter.js';
-import { BlindBoxStudio } from './BlindBoxStudio.js';
+import { BlindBoxStudio, type BlindBoxHistoryEntry } from './BlindBoxStudio.js';
 import type { WindChimeDisplayScrollCommand, WindChimeDisplayScrollMetrics } from './scroll-loop.js';
 
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
@@ -303,6 +303,7 @@ function ConnectionControls({ client, topicId, displayUrl, onOpenDisplay, onCopy
   </div>;
 }
 export const WINDCHIME_LIVE_MODULES = [
+  { id: 'blindbox', title: '盲盒拆信' },
   { id: 'inbox', title: '来信列表' },
   { id: 'review', title: '审阅与预览' },
   { id: 'queue', title: '待播顺序' },
@@ -338,6 +339,13 @@ export type WindChimeLiveControlPanelProps = {
   clearOnBlindDraw?: boolean;
   onToggleClearOnBlindDraw?: (enabled: boolean) => void;
   onBlockMessage?: (messageId: string) => Promise<void>;
+  localOverlay?: WindChimeLocalOverlay | null;
+  obsClientCount?: number;
+  onOpenObsGuide?: () => void;
+  onPendingCountChange?: (count: number) => void;
+  sessionHistory?: BlindBoxHistoryEntry[];
+  onExportHistory?: (format: 'md' | 'csv') => Promise<void>;
+  onClearHistory?: () => Promise<void>;
 };
 /** Private control surface. Hosts can reuse the hook/client for wholly custom UIs. */
 export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps) {
@@ -413,6 +421,9 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
     approved: allMessages.filter(m => m.status === 'approved').length,
     rejected: allMessages.filter(m => m.status === 'rejected').length,
   };
+  useEffect(() => {
+    if (state) props.onPendingCountChange?.(counts.pending);
+  }, [state, counts.pending, props.onPendingCountChange]);
   const needle = search.trim().toLowerCase();
   const visible = allMessages.filter(m => {
     if (filter !== 'all' && m.status !== filter) return false;
@@ -463,7 +474,7 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
   const showPrevLetter = () => {
     if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId });
   };
-  const isBlindBoxActive = !props.module && studioMode === 'blindbox';
+  const isBlindBoxActive = props.module === 'blindbox' || (!props.module && studioMode === 'blindbox');
   useEffect(() => {
     if (isBlindBoxActive || !includes('inbox') || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -482,7 +493,7 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   });
-  const otherTiles = WINDCHIME_LIVE_MODULES.filter(item => item.id !== 'transport');
+  const otherTiles = WINDCHIME_LIVE_MODULES.filter(item => item.id !== 'transport' && item.id !== 'blindbox');
   return <section className="wc-live" data-module={props.module} data-studio-mode={props.module ? undefined : studioMode} aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
     {props.module ? null : <header className="wc-top"><h2>{title}</h2><div className="wc-actions"><button onClick={endShow}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={hideDisplay}>■ 一键隐藏</button></div></header>}
     <div className="wc-status" role="status"><span><i className={`wc-led${studio.connected ? ' on' : ''}`} />{studio.connected ? '控制已连接' : '连接状态未确认'}</span><span>{state?.receivers ?? 0} 个展示端就绪</span><strong style={{ marginLeft: 'auto', fontSize: 12 }}>{state?.current ? '正在展示已批准信件' : '观众画面为空白'}</strong></div>
@@ -497,6 +508,7 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
         ) : <span />}
         {props.onOpenTile ? (
           <nav className="wc-tile-compact" aria-label="悬浮磁贴">
+            <button type="button" aria-label="打开盲盒拆信磁贴" onClick={() => openTile('blindbox')}>悬浮盲盒小窗 ↗</button>
             <button type="button" aria-label="打开快捷播控磁贴" onClick={() => openTile('transport')}>悬浮播控小窗 ↗</button>
             <details className="wc-tile-more">
               <summary>更多悬浮窗 ▾</summary>
@@ -535,11 +547,14 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
         client={client}
         topicId={topicId}
         studio={studio}
+        compact={props.module === 'blindbox'}
         blockedTermsEnabled={props.blockedTermsEnabled === true}
         scrollState={props.scrollState}
         onScrollDisplay={props.onScrollDisplay}
         onOpenDisplay={props.onOpenDisplay}
         onHideDisplay={props.onHideDisplay}
+        onOpenObsGuide={props.onOpenObsGuide}
+        obsClientCount={props.obsClientCount}
         testCardActive={props.testCardActive}
         onToggleTestCard={props.onToggleTestCard}
         randomDrawEnabled={props.randomDrawEnabled}
@@ -548,6 +563,9 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
         onBlockMessage={props.onBlockMessage}
         onDirtyChange={setBlindBoxDirty}
         playedIds={playedIds}
+        sessionHistory={props.sessionHistory}
+        onExportHistory={props.onExportHistory}
+        onClearHistory={props.onClearHistory}
         onEndShow={endShow}
         onPrevLetter={showPrevLetter}
         canPrev={Boolean(prevMessageId)}
@@ -562,7 +580,7 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
       {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准 · 剩 {unplayedCount} 封未播</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><div className="wc-actions"><button className="wc-primary" style={{ flex: 1 }} disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button><button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={showPrevLetter}>← 上一封</button></div>{needsDisplayGuide ? <div className="wc-display-guide" role="status"><span>尚未打开展示窗口，打开后即可上屏。</span>{openDisplaySafe ? <button type="button" className="wc-primary" onClick={openDisplaySafe}>打开独立展示窗口</button> : null}</div> : openDisplaySafe ? <button onClick={openDisplaySafe}>打开独立展示窗口</button> : null}<div className="wc-actions" style={{ justifyContent: 'space-between' }}><label className="wc-checkbox wc-inline-toggle"><input type="checkbox" checked={autoMarkRead} onChange={e => toggleAutoMarkRead(e.target.checked)} /><span>上屏时自动标为已读</span></label><button type="button" className="wc-subtle wc-queue-small" onClick={endShow}>重置本场进度</button></div></div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} data-played={playedSet.has(m.id) ? 'true' : undefined} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : playedSet.has(m.id) ? <span className="wc-tag wc-tag-played">已播</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">暂无已批准信件。批准后需手动上屏。</p> : null}</aside> : null}
     </div> : null}
     {!props.module || includes('appearance') ? <div className="wc-grid2 wc-settings">
-      {includes('appearance') ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} /> : null}</div></section> : null}
+      {includes('appearance') ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} localOverlay={props.localOverlay} /> : null}</div></section> : null}
       {!props.module ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示授权与设备连接</h3></div><div className="wc-pad"><Connections key={topicId} {...props} /></div></section> : null}
     </div> : null}
   </section>;

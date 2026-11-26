@@ -11,15 +11,28 @@ import type {
 
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
 
+export type BlindBoxHistoryEntry = {
+  id: string;
+  playedAt: string;
+  dateKey: string;
+  nickname: string | null;
+  textSnippet: string;
+  topicTitle: string;
+  assetCount: number;
+};
+
 export type BlindBoxStudioProps = {
   client: WindChimeLiveClient;
   topicId: string;
   studio: Studio;
+  compact?: boolean;
   blockedTermsEnabled?: boolean;
   scrollState?: WindChimeDisplayScrollMetrics | null;
   onScrollDisplay?: (command: WindChimeDisplayScrollCommand) => Promise<void> | void;
   onOpenDisplay?: () => Promise<void>;
   onHideDisplay?: () => Promise<void>;
+  onOpenObsGuide?: () => void;
+  obsClientCount?: number;
   testCardActive?: boolean;
   onToggleTestCard?: (active: boolean) => Promise<void>;
   randomDrawEnabled?: boolean;
@@ -28,6 +41,9 @@ export type BlindBoxStudioProps = {
   onBlockMessage?: (messageId: string) => Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
   playedIds: string[];
+  sessionHistory?: BlindBoxHistoryEntry[];
+  onExportHistory?: (format: 'md' | 'csv') => Promise<void>;
+  onClearHistory?: () => Promise<void>;
   onEndShow: () => void;
   onPrevLetter: () => void;
   canPrev: boolean;
@@ -191,6 +207,12 @@ function BlindBoxUnboxCard({
   const busy = studio.pending || blocking;
   const assetsMissing = draft.assets.some(a => !assetUrls[a.id]);
   const removedSomeImages = message.draft.assets.some(a => !draft.assets.some(d => d.id === a.id));
+  const charCount = draft.text.replace(/\s+/g, '').length;
+  const estSeconds = Math.max(5, Math.round(charCount / 4.5));
+  const estReadLabel =
+    estSeconds >= 60
+      ? `${Math.floor(estSeconds / 60)}分${estSeconds % 60 ? `${estSeconds % 60}秒` : ''}`
+      : `${estSeconds}秒`;
 
   return (
     <section className="wc-panel wc-bb-unbox" aria-label="私下拆封预览">
@@ -203,7 +225,13 @@ function BlindBoxUnboxCard({
         <div className="wc-bb-letter-head">
           <div>
             <h3>{draft.nickname || '匿名来信'}</h3>
-            <span className="wc-muted">{new Date(message.createdAt).toLocaleString('zh-CN')}</span>
+            <div className="wc-bb-meta-row">
+              <span>{new Date(message.createdAt).toLocaleString('zh-CN')}</span>
+              <span className="wc-bb-stat-pill">{`约 ${charCount} 字 · 预计读 ${estReadLabel}`}</span>
+              {draft.assets.length > 0 ? (
+                <span className="wc-bb-stat-pill">{`${draft.assets.length} 张附图`}</span>
+              ) : null}
+            </div>
           </div>
           <div className="wc-actions">
             {blockedTermsEnabled && message.isFlagged ? (
@@ -427,11 +455,14 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
     client,
     topicId,
     studio,
+    compact = false,
     blockedTermsEnabled = false,
     scrollState,
     onScrollDisplay,
     onOpenDisplay,
     onHideDisplay,
+    onOpenObsGuide,
+    obsClientCount = 0,
     testCardActive = false,
     onToggleTestCard,
     randomDrawEnabled = false,
@@ -440,6 +471,9 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
     onBlockMessage,
     onDirtyChange,
     playedIds,
+    sessionHistory,
+    onExportHistory,
+    onClearHistory,
     onEndShow,
     onPrevLetter,
     canPrev,
@@ -517,8 +551,10 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
     setUnboxedId(chosen.id);
   };
 
+  const effectiveReceivers = (state?.receivers ?? 0) + (state?.receivers ? 0 : obsClientCount);
+
   return (
-    <div className="wc-bb-studio" aria-label="盲盒拆信台">
+    <div className={`wc-bb-studio${compact ? ' is-compact' : ''}`} aria-label="盲盒拆信台">
       <div className="wc-panel wc-bb-topbar">
         <div className="wc-bb-counters">
           <span className="wc-bb-pill is-pending">{`未拆来信 ${pending.length} 封`}</span>
@@ -548,7 +584,7 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
           message={unboxed}
           studio={studio}
           blockedTermsEnabled={blockedTermsEnabled}
-          receivers={state?.receivers ?? 0}
+          receivers={effectiveReceivers}
           onOpenDisplay={safeOpenDisplay}
           onToggleTestCard={safeToggleTestCard}
           testCardActive={testCardActive}
@@ -566,6 +602,7 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
               message={onAir}
               scrollState={scrollState}
               onScrollDisplay={onScrollDisplay}
+              compact={compact}
             />
           ) : (
             <section className="wc-panel wc-pad">
@@ -631,13 +668,18 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
             <p className="wc-muted">
               点击「拆下一封」只会在你的私人屏幕上拆封，保留初见惊喜感且绝不会提前泄露给观众；确认无雷后再一键上屏。
             </p>
-            {state && state.receivers === 0 ? (
+            {state && effectiveReceivers === 0 ? (
               <div className="wc-display-guide" role="status" style={{ maxWidth: 540, width: '100%' }}>
-                <span>展示窗口尚未打开，建议先打开并在 OBS 中对好位置。</span>
+                <span>尚未连接展示端，可打开独立展示窗口或使用本机 OBS 浏览器源对好位置。</span>
                 <div className="wc-actions">
                   {safeOpenDisplay ? (
                     <button type="button" className="wc-primary" onClick={safeOpenDisplay}>
                       打开独立展示窗口
+                    </button>
+                  ) : null}
+                  {onOpenObsGuide ? (
+                    <button type="button" onClick={onOpenObsGuide}>
+                      OBS 浏览器源采集
                     </button>
                   ) : null}
                   {safeToggleTestCard ? (
@@ -680,10 +722,11 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
         </section>
       )}
 
+      {!compact ? (
       <details className="wc-panel wc-bb-history">
         <summary>
-          <span>{`待播与本场已播记录（${queue.length} 封）`}</span>
-          <span className="wc-muted">展开可重新上屏、撤销批准或重置本场进度</span>
+          <span>{`待播队列（${queue.length} 封）与本地播报复盘（${sessionHistory?.length ?? playedIds.length} 条）`}</span>
+          <span className="wc-muted">展开可重新上屏、撤销批准、导出复盘或重置进度</span>
         </summary>
         <div className="wc-pad wc-stack">
           <div className="wc-actions" style={{ justifyContent: 'space-between' }}>
@@ -720,7 +763,7 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
                     <button
                       type="button"
                       className="wc-primary wc-queue-small"
-                      disabled={studio.pending || !studio.connected || !state?.receivers}
+                      disabled={studio.pending || !studio.connected || !effectiveReceivers}
                       onClick={() => void studio.act({ action: 'show', messageId: m.id })}
                     >
                       上屏
@@ -739,8 +782,49 @@ export function BlindBoxStudio(props: BlindBoxStudioProps) {
           ) : (
             <p className="wc-muted">本场还没有已批准的来信。</p>
           )}
+          {sessionHistory ? (
+            <>
+              <div className="wc-rule" />
+              <div className="wc-actions" style={{ justifyContent: 'space-between' }}>
+                <strong>{`本机上屏复盘记录（共 ${sessionHistory.length} 条）`}</strong>
+                <div className="wc-actions">
+                  {onExportHistory ? (
+                    <>
+                      <button type="button" className="wc-queue-small" disabled={!sessionHistory.length} onClick={() => void onExportHistory('md')}>
+                        导出 Markdown
+                      </button>
+                      <button type="button" className="wc-queue-small" disabled={!sessionHistory.length} onClick={() => void onExportHistory('csv')}>
+                        导出 CSV
+                      </button>
+                    </>
+                  ) : null}
+                  {onClearHistory ? (
+                    <button type="button" className="wc-subtle wc-queue-small" disabled={!sessionHistory.length} onClick={() => void onClearHistory()}>
+                      清空记录
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {sessionHistory.length ? (
+                <ul className="wc-bb-history-log" aria-label="本机播报复盘列表">
+                  {sessionHistory.slice(0, 30).map(item => (
+                    <li key={item.id} className="wc-bb-history-row">
+                      <div className="wc-bb-history-row-head">
+                        <strong>{item.nickname || '匿名来信'}</strong>
+                        <span className="wc-muted">{`${item.dateKey} ${new Date(item.playedAt).toLocaleTimeString('zh-CN', { hour12: false })}`}</span>
+                      </div>
+                      <span className="wc-snippet">{item.textSnippet}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="wc-muted">本机还没有记录到上屏来信，开始播报后将自动按时间记录，方便下播复盘切片。</p>
+              )}
+            </>
+          ) : null}
         </div>
       </details>
+      ) : null}
     </div>
   );
 }

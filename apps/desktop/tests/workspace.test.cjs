@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeNextShortcut, restoreWorkspace, fitTileBounds } = require('../workspace.cjs');
+const { normalizeNextShortcut, restoreWorkspace, fitTileBounds, fitDisplayPosition } = require('../workspace.cjs');
 
 test('next accelerator requires modifiers, normalizes aliases and protects the fixed hide shortcut', () => {
   assert.equal(normalizeNextShortcut('ctrl + alt + n'), 'CommandOrControl+Alt+N');
@@ -57,4 +57,32 @@ test('workspace restores dark theme preference and omits default or invalid valu
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: true, clearOnBlindDraw: true, tiles: {} }).clearOnBlindDraw, true);
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).randomDrawEnabled, undefined);
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).clearOnBlindDraw, undefined);
+});
+
+test('workspace restores 1.0.0 display position, chime, startup view, obs bridge, local overlay, and blindbox tile safely', () => {
+  const restored = restoreWorkspace({
+    version: 1,
+    chimeEnabled: true,
+    chimeVolume: 45,
+    startupView: 'studio',
+    lastView: 'settings',
+    autoCheckUpdate: false,
+    displayBounds: { x: 120.4, y: 80.7 },
+    obsBridge: { enabled: true, port: 18888, key: 'abcdefghijklmnop1234' },
+    localOverlay: { enabled: true, badgePosition: 'bottom-left', badgeSize: 80, badgeOpacity: 75, watermarkText: '  @风铃主播\n  ', backgroundOpacity: 25 },
+    tiles: { blindbox: { pinned: true, bounds: { x: 20, y: 30, width: 380, height: 560 } } },
+  });
+  assert.equal(restored.chimeEnabled, true);
+  assert.equal(restored.chimeVolume, 45);
+  assert.equal(restored.startupView, 'studio');
+  assert.equal(restored.lastView, 'settings');
+  assert.equal(restored.autoCheckUpdate, false);
+  assert.deepEqual(restored.displayBounds, { x: 120, y: 81 });
+  assert.deepEqual(restored.obsBridge, { enabled: true, port: 18888, key: 'abcdefghijklmnop1234' });
+  assert.deepEqual(restored.localOverlay, { enabled: true, badgePosition: 'bottom-left', badgeSize: 80, badgeOpacity: 75, watermarkText: '@风铃主播', backgroundOpacity: 25 });
+  assert.equal(restored.tiles.blindbox.bounds.width, 380);
+
+  const primary = { x: 0, y: 0, width: 1920, height: 1040 };
+  assert.deepEqual(fitDisplayPosition({ x: 3000, y: 2000 }, { width: 960, height: 640 }, [primary]), { x: 960, y: 400 });
+  assert.deepEqual(fitDisplayPosition({ x: 100, y: 120 }, { width: 960, height: 640 }, [primary]), { x: 100, y: 120 });
 });

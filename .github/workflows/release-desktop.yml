@@ -1,0 +1,122 @@
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22 LTS (required by Electron packaging toolchain)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+
+      - name: Install and verify shared @windchime/embed package
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run pack:check
+
+      - name: Install and test WindChime Desktop
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm test
+
+      - name: Package Windows installer and portable ZIP
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          WINDCHIME_BUILD_ROOT: C:\WindChimeBuild
+          ELECTRON_CACHE: C:\WindChimeBuild\electron-cache
+          ELECTRON_BUILDER_CACHE: C:\WindChimeBuild\builder-cache
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:WINDCHIME_BUILD_ROOT, $env:ELECTRON_CACHE, $env:ELECTRON_BUILDER_CACHE | Out-Null
+          node scripts/make.cjs
+          node scripts/verify-portable.cjs
+
+      - name: Optional Authenticode code signing (enabled when WIN_CERT_BASE64 secret is configured)
+        if: ${{ secrets.WIN_CERT_BASE64 != '' && secrets.WIN_CERT_PASSWORD != '' }}
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          WIN_CERT_BASE64: ${{ secrets.WIN_CERT_BASE64 }}
+          WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $relDir = "out\releases\$version"
+          $setup = "$relDir\WindChime-Setup-$version.exe"
+          $zip = "$relDir\WindChime-win32-x64-$version.zip"
+          $pfxPath = "$env:RUNNER_TEMP\windchime-sign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WIN_CERT_BASE64))
+          try {
+            $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' | Sort-Object FullName -Descending | Select-Object -First 1
+            if (-not $signtool) { throw 'signtool.exe not found on Windows runner' }
+            & $signtool.FullName sign /fd SHA256 /f $pfxPath /p $env:WIN_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $setup
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $hashes = @(
+              "$((Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant())  WindChime-win32-x64-$version.zip",
+              "$((Get-FileHash -Algorithm SHA256 $setup).Hash.ToLowerInvariant())  WindChime-Setup-$version.exe"
+            )
+            Set-Content -Path "$relDir\SHA256SUMS.txt" -Value ($hashes -join "`n") -NoNewline
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue $pfxPath
+          }
+
+      - name: Publish GitHub Release
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { $env:INPUT_TAG }
+          $relDir = "out\releases\$version"
+          $sums = Get-Content "$relDir\SHA256SUMS.txt" -Raw
+          $notes = @"
+          ## 风铃 WindChime $version
+
+          - 支持从旧版直接运行安装程序覆盖升级，已有网站连接密钥、热键、深色模式与本地配置完整保留。
+          - **Windows SmartScreen 提示说明**：若首次安装出现「Windows 已保护你的电脑」，点击「更多信息 → 仍要运行」即可，并可对照下方 ``SHA256SUMS.txt`` 校验文件完整性。
+
+          ### SHA-256 校验值
+          ``````text
+          $sums
+          ``````
+          "@
+          $notesFile = "$relDir\auto-release-notes.md"
+          Set-Content -Path $notesFile -Value $notes -Encoding UTF8
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists; uploading missing assets if needed and skipping duplicate creation."
+          } else {
+            gh release create $tag `
+              "$relDir\WindChime-Setup-$version.exe" `
+              "$relDir\WindChime-win32-x64-$version.zip" `
+              "$relDir\SHA256SUMS.txt" `
+              --title "风铃 $version" `
+              --notes-file $notesFile `
+              --latest
+          }

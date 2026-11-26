@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createWindChimeDisplayClient } from '../../../src/client/live';
 import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../../../src/core/live';
-import { WindChimeLiveDisplay } from '../../../src/broadcast/Display';
-import { assetTransport, transport } from './bridge';
+import { WindChimeLiveDisplay, type WindChimeLocalOverlay } from '../../../src/broadcast/Display';
+import { assetTransport, transport, unwrap } from './bridge';
 
 const client = createWindChimeDisplayClient({
   transport: transport(window.windchimeOutput),
@@ -22,6 +22,11 @@ const LOCAL_TEST_CARD: WindChimeLiveSnapshot = {
 function Output() {
   const [generation, setGeneration] = useState(0);
   const [testCard, setTestCard] = useState<{ active: boolean; appearance: WindChimeLiveAppearance | null }>({ active: false, appearance: null });
+  const [overlay, setOverlay] = useState<WindChimeLocalOverlay | null>(null);
+  useEffect(() => {
+    void unwrap(window.windchimeOutput.getOverlay()).then(setOverlay).catch(() => {});
+    return window.windchimeOutput.onOverlay(setOverlay);
+  }, []);
   useEffect(() => window.windchimeOutput.onBlank(() => { setTestCard({ active: false, appearance: null }); setGeneration(value => value + 1); }), []);
   useEffect(() => window.windchimeOutput.onTestCard(payload => setTestCard({ active: payload.active, appearance: (payload.appearance as WindChimeLiveAppearance | null) ?? null })), []);
   const scrollControl = useMemo(() => ({
@@ -38,6 +43,7 @@ function Output() {
       scrollControl={scrollControl}
       fallbackSnapshot={testCard.active ? LOCAL_TEST_CARD : null}
       fallbackAppearance={testCard.appearance}
+      localOverlay={overlay}
     />
   );
 }

@@ -35,7 +35,7 @@ async function harness(options={}) {
     if(url.endsWith('/display/open'))value={receiverId:'r',epoch:'epoch',leaseMs:3000};
     return Response.json(value);
   };
-  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
+  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(file.endsWith('play-history.v1.json')||file.includes('local-overlay')){throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{if(file.endsWith('play-history.v1.json.tmp')||file.includes('local-overlay')){return;}const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('play-history.v1.json.tmp'))return;if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,execPath:options.execPath??process.execPath,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
   wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
@@ -290,7 +290,7 @@ test('status reports both unreadable credentials and failed shortcut registratio
   for(const shortcutResult of [false,new Error('occupied')]){
     const h=await harness({readError:new Error('corrupt ciphertext'),shortcutResult});
     const status=(await h.invoke('app:status')).data;
-    assert.deepEqual(Object.keys(status).sort(),['connectionError','contextVersion','displayOpen','nextActionError','nextPending','nextShortcut','selectedMessageId','shortcut','shortcutError','shortcutRecording','tile','tiles']);
+    assert.deepEqual(Object.keys(status).sort(),['connectionError','contextVersion','displayOpen','nextActionError','nextPending','nextShortcut','obsClients','obsRunning','selectedMessageId','shortcut','shortcutError','shortcutRecording','tile','tiles','version']);
     assert.match(status.connectionError,/加密凭据无法读取/);assert.match(status.connectionError,/快捷键注册失败/);
     assert.equal(status.shortcut,'Ctrl+Shift+H');assert.equal(status.displayOpen,false);assert.equal(h.requests.length,0);
   }
@@ -832,10 +832,20 @@ test('on-air status and dark theme IPC synchronize across control and tiles with
 test('blind-box preferences and local OBS test card IPC enforce live-letter safety and broadcast state',async()=>{
   const h=await harness();await h.pair(3011);
   // Preferences default false, validate booleans, persist and reject display window
-  assert.deepEqual({...((await h.invoke('app:prefs-get')).data)},{randomDrawEnabled:false,clearOnBlindDraw:false});
+  const initialPrefs=(await h.invoke('app:prefs-get')).data;
+  assert.equal(initialPrefs.randomDrawEnabled,false);
+  assert.equal(initialPrefs.clearOnBlindDraw,false);
+  assert.equal(initialPrefs.chimeEnabled,false);
+  assert.equal(initialPrefs.chimeVolume,70);
+  assert.equal(initialPrefs.startupView,'last');
+  assert.equal(initialPrefs.autoCheckUpdate,true);
   assert.equal((await h.invoke('app:prefs-set',[{randomDrawEnabled:'yes'}])).ok,false);
-  const updated=await h.invoke('app:prefs-set',[{randomDrawEnabled:true,clearOnBlindDraw:true}]);
-  assert.deepEqual({...updated.data},{randomDrawEnabled:true,clearOnBlindDraw:true});
+  const updated=await h.invoke('app:prefs-set',[{randomDrawEnabled:true,clearOnBlindDraw:true,chimeEnabled:true,chimeVolume:55,startupView:'studio'}]);
+  assert.equal(updated.data.randomDrawEnabled,true);
+  assert.equal(updated.data.clearOnBlindDraw,true);
+  assert.equal(updated.data.chimeEnabled,true);
+  assert.equal(updated.data.chimeVolume,55);
+  assert.equal(updated.data.startupView,'studio');
   assert.equal(h.windows[0].sent.filter(m=>m.channel==='app:prefs-changed').at(-1).args[0].randomDrawEnabled,true);
   // Test card opens display window automatically when blank and sends output:test-card
   assert.equal((await h.invoke('display:test-card-get')).data,false);
@@ -848,4 +858,16 @@ test('blind-box preferences and local OBS test card IPC enforce live-letter safe
   assert.equal((await h.invoke('display:test-card-get')).data,false);
   assert.equal((await h.invoke('display:test-card',[true])).ok,false,'cannot overwrite a live approved letter with test card');
   assert.equal((await h.invoke('app:prefs-set',[{randomDrawEnabled:false}],h.output)).ok,false,'display window cannot modify prefs');
+  // Live snapshot is recorded in local play history and overlay updates broadcast cleanly
+  const hist=(await h.invoke('history:list')).data;
+  assert.equal(hist.length,1);
+  assert.equal(hist[0].snapshotId,'snap-live');
+  assert((await h.invoke('overlay:set',[{enabled:true,watermarkText:'@主播测试'}])).ok);
+  assert.equal(h.output.sent.filter(m=>m.channel==='output:overlay').at(-1).args[0].watermarkText,'@主播测试');
+  assert.equal((await h.invoke('overlay:set',[{enabled:false}],h.output)).ok,false,'display cannot write overlay');
+  // Blind-box tile opens as isolated topmost window
+  assert((await h.invoke('tiles:open',['blindbox'])).ok);
+  const bbTile=h.windows.at(-1);
+  assert.equal(bbTile.options.title,'WindChime Private · 盲盒拆信');
+  assert.equal(bbTile.loadOptions.query.tile,'blindbox');
 });

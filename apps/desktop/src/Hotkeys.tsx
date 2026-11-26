@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { shortcutLabel, unwrap, type DesktopPrefs, type DesktopStatus, type ScrollShortcuts } from './bridge';
+import {
+  shortcutLabel,
+  unwrap,
+  type DesktopPrefs,
+  type DesktopStartupView,
+  type DesktopStatus,
+  type ScrollShortcuts,
+} from './bridge';
+import { playWindChime } from './chime';
 
 const bridge = window.windchimeDesktop;
 function accelerator(event: KeyboardEvent<HTMLInputElement>) {
@@ -126,9 +134,9 @@ export function Hotkeys({
 
   return <div className="desktop-controls-stack">
     {prefs && onUpdatePrefs ? (
-      <section className="desktop-hotkeys glass-surface management" aria-label="盲盒拆信偏好">
-        <h2>盲盒拆信偏好</h2>
-        <p>控制单人直播「盲盒拆信模式」的抽信行为，本机自动保存，无需改动网站。</p>
+      <section className="desktop-hotkeys glass-surface management" aria-label="盲盒拆信与桌面偏好">
+        <h2>盲盒拆信与桌面偏好</h2>
+        <p>控制单人直播「盲盒拆信模式」、提示音与启动习惯，本机自动保存，无需改动网站。</p>
         <label className="pref-toggle">
           <span>
             <strong>启用「随机拆一封」按钮</strong>
@@ -151,6 +159,66 @@ export function Hotkeys({
             aria-label="拆封下一封时先清空观众画面"
             checked={prefs.clearOnBlindDraw}
             onChange={e => void onUpdatePrefs({ clearOnBlindDraw: e.target.checked })}
+          />
+        </label>
+        <label className="pref-toggle">
+          <span>
+            <strong>新来信风铃提示音</strong>
+            <small>默认关闭。开启后，有新投稿到达时仅从私人控制台播放轻柔风铃声，绝不会进入展示窗口或 OBS 画面源。</small>
+          </span>
+          <input
+            type="checkbox"
+            aria-label="新来信风铃提示音"
+            checked={prefs.chimeEnabled}
+            onChange={e => {
+              const next = e.target.checked;
+              void onUpdatePrefs({ chimeEnabled: next });
+              if (next) playWindChime(prefs.chimeVolume, true);
+            }}
+          />
+        </label>
+        {prefs.chimeEnabled ? (
+          <div className="pref-inline-row">
+            <label style={{ flex: 1 }}>
+              {`提示音量：${prefs.chimeVolume}%`}
+              <input
+                type="range"
+                min={10}
+                max={100}
+                step={5}
+                value={prefs.chimeVolume}
+                onChange={e => void onUpdatePrefs({ chimeVolume: Number(e.target.value) })}
+              />
+            </label>
+            <button type="button" onClick={() => playWindChime(prefs.chimeVolume, true)}>
+              试听风铃声
+            </button>
+          </div>
+        ) : null}
+        <div className="pref-inline-row">
+          <label style={{ flex: 1 }}>
+            启动时默认打开页面
+            <select
+              aria-label="启动时默认打开页面"
+              value={prefs.startupView}
+              onChange={e => void onUpdatePrefs({ startupView: e.target.value as DesktopStartupView })}
+            >
+              <option value="last">记住上次离开的页面（推荐）</option>
+              <option value="studio">直接进入直播工作台</option>
+              <option value="inbox">默认进入收件箱</option>
+            </select>
+          </label>
+        </div>
+        <label className="pref-toggle">
+          <span>
+            <strong>启动时自动检查 GitHub 新版本</strong>
+            <small>发现新版本仅在顶部显示温和提醒，绝不会在直播途中自动下载或重启软件。</small>
+          </span>
+          <input
+            type="checkbox"
+            aria-label="启动时自动检查新版本"
+            checked={prefs.autoCheckUpdate}
+            onChange={e => void onUpdatePrefs({ autoCheckUpdate: e.target.checked })}
           />
         </label>
       </section>

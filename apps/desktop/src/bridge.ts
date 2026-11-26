@@ -3,6 +3,7 @@ import type {
   WindChimeLiveTransport,
 } from "../../../src/client/live";
 import type { WindChimeLiveModule } from "../../../src/broadcast/ControlPanel";
+import type { WindChimeLocalOverlay } from "../../../src/broadcast/Display";
 import type {
   WindChimeDisplayScrollCommand,
   WindChimeDisplayScrollMetrics,
@@ -20,13 +21,57 @@ export type OnAirInfo = {
   textPreview: string;
 };
 export type DesktopTheme = "light" | "dark";
+export type DesktopStartupView = "inbox" | "studio" | "last";
+export type DesktopRememberedView = "inbox" | "studio" | "topics" | "share" | "settings";
 export type DesktopPrefs = {
   randomDrawEnabled: boolean;
   clearOnBlindDraw: boolean;
+  chimeEnabled: boolean;
+  chimeVolume: number;
+  startupView: DesktopStartupView;
+  lastView: DesktopRememberedView | null;
+  autoCheckUpdate: boolean;
+};
+export type ObsBridgeStatus = {
+  enabled: boolean;
+  running: boolean;
+  port: number;
+  url: string;
+  clientCount: number;
+  error: string;
+};
+export type DesktopOverlayState = WindChimeLocalOverlay & {
+  hasBadge: boolean;
+  hasBackground: boolean;
+  version: number;
+};
+export type PlayHistoryEntry = {
+  id: string;
+  snapshotId: string;
+  messageId: string;
+  playedAt: string;
+  dateKey: string;
+  siteLabel: string;
+  topicTitle: string;
+  nickname: string | null;
+  textSnippet: string;
+  assetCount: number;
+};
+export type UpdaterInfo = {
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  title: string;
+  notes: string;
+  url: string;
+  publishedAt: string;
+  checkedAt: string;
+  error: string;
 };
 export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: boolean; connectionId: string; topicId: string; contextVersion: number };
 export type DesktopStatus = {
-  connectionError: string; displayOpen: boolean; shortcut: string;
+  version?: string;
+  connectionError: string; displayOpen: boolean; obsRunning?: boolean; obsClients?: number; shortcut: string;
   nextShortcut: string; shortcutError: string; nextActionError: string;
   selectedMessageId: string | null; contextVersion: number;
   tiles: TileInfo[]; tile: TileInfo | null;
@@ -83,9 +128,26 @@ type Bridge = {
   getPrefs(): Promise<Result<DesktopPrefs>>;
   setPrefs(patch: Partial<DesktopPrefs>): Promise<Result<DesktopPrefs>>;
   onPrefsChanged(callback: (prefs: DesktopPrefs) => void): () => void;
+  updateBadge(count: number): Promise<Result<number>>;
   getTestCard(): Promise<Result<boolean>>;
   setTestCard(active: boolean): Promise<Result<boolean>>;
   onTestCardChanged(callback: (active: boolean) => void): () => void;
+  getObsStatus(): Promise<Result<ObsBridgeStatus>>;
+  configureObs(patch: { enabled?: boolean; port?: number }): Promise<Result<ObsBridgeStatus>>;
+  resetObsKey(): Promise<Result<ObsBridgeStatus>>;
+  onObsStatusChanged(callback: (status: ObsBridgeStatus) => void): () => void;
+  getOverlay(): Promise<Result<DesktopOverlayState>>;
+  setOverlay(patch: Partial<WindChimeLocalOverlay>): Promise<Result<DesktopOverlayState>>;
+  pickOverlayImage(slot: "badge" | "background"): Promise<Result<DesktopOverlayState | null>>;
+  clearOverlayImage(slot: "badge" | "background"): Promise<Result<DesktopOverlayState>>;
+  onOverlayChanged(callback: (overlay: DesktopOverlayState) => void): () => void;
+  getHistory(): Promise<Result<PlayHistoryEntry[]>>;
+  exportHistory(input?: { format?: "md" | "csv"; dateKey?: string }): Promise<Result<boolean>>;
+  clearHistory(): Promise<Result<PlayHistoryEntry[]>>;
+  onHistoryChanged(callback: (entries: PlayHistoryEntry[]) => void): () => void;
+  getUpdaterInfo(): Promise<Result<UpdaterInfo>>;
+  checkUpdate(): Promise<Result<UpdaterInfo>>;
+  openRelease(url?: string): Promise<Result<boolean>>;
   hide(): Promise<Result<void>>;
   status(): Promise<Result<DesktopStatus>>;
   openTile(module: WindChimeLiveModule): Promise<Result<void>>;
@@ -99,7 +161,7 @@ type Bridge = {
   setShortcutRecording(recording: boolean): Promise<Result<void>>;
   confirm(message: string): Promise<Result<boolean>>;
   saveFile(input: {
-    kind: "png" | "csv";
+    kind: "png" | "csv" | "md";
     name: string;
     content?: string;
     bytes?: Uint8Array;
@@ -111,9 +173,11 @@ declare global {
   interface Window {
     windchimeDesktop: Bridge;
     windchimeOutput: Pick<Bridge, "request"> & {
+      getOverlay(): Promise<Result<DesktopOverlayState>>;
       onBlank(callback: () => void): () => void;
       onScrollCommand(callback: (command: WindChimeDisplayScrollCommand) => void): () => void;
       onTestCard(callback: (payload: { active: boolean; appearance: unknown }) => void): () => void;
+      onOverlay(callback: (overlay: DesktopOverlayState) => void): () => void;
       reportScroll(metrics: WindChimeDisplayScrollMetrics | null): void;
     };
   }

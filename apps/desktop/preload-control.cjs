@@ -1,6 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 // No generic invoke, file, shell, token or request-header API crosses this bridge.
 const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
+const listen = (channel, callback) => {
+  const listener = (_event, payload) => callback(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+};
 contextBridge.exposeInMainWorld('windchimeDesktop', Object.freeze({
   sites: () => invoke('sites:list'),
   importKey: (key) => invoke('sites:import-key', key),
@@ -15,18 +20,35 @@ contextBridge.exposeInMainWorld('windchimeDesktop', Object.freeze({
   openDisplay: () => invoke('display:open'),
   scrollDisplay: (command) => invoke('display:scroll', command),
   getScrollState: () => invoke('display:scroll-state'),
-  onScrollState: (callback) => { const listener = (_event, state) => callback(state); ipcRenderer.on('display:scroll-state', listener); return () => ipcRenderer.removeListener('display:scroll-state', listener); },
+  onScrollState: (callback) => listen('display:scroll-state', callback),
   getOnAir: () => invoke('display:on-air'),
-  onOnAir: (callback) => { const listener = (_event, state) => callback(state); ipcRenderer.on('display:on-air', listener); return () => ipcRenderer.removeListener('display:on-air', listener); },
+  onOnAir: (callback) => listen('display:on-air', callback),
   getTheme: () => invoke('app:theme-get'),
   setTheme: (theme) => invoke('app:theme-set', theme),
-  onThemeChanged: (callback) => { const listener = (_event, theme) => callback(theme); ipcRenderer.on('app:theme-changed', listener); return () => ipcRenderer.removeListener('app:theme-changed', listener); },
+  onThemeChanged: (callback) => listen('app:theme-changed', callback),
   getPrefs: () => invoke('app:prefs-get'),
   setPrefs: (patch) => invoke('app:prefs-set', patch),
-  onPrefsChanged: (callback) => { const listener = (_event, prefs) => callback(prefs); ipcRenderer.on('app:prefs-changed', listener); return () => ipcRenderer.removeListener('app:prefs-changed', listener); },
+  onPrefsChanged: (callback) => listen('app:prefs-changed', callback),
+  updateBadge: (count) => invoke('app:badge-update', count),
   getTestCard: () => invoke('display:test-card-get'),
   setTestCard: (active) => invoke('display:test-card', active),
-  onTestCardChanged: (callback) => { const listener = (_event, active) => callback(Boolean(active)); ipcRenderer.on('display:test-card-state', listener); return () => ipcRenderer.removeListener('display:test-card-state', listener); },
+  onTestCardChanged: (callback) => listen('display:test-card-state', active => callback(Boolean(active))),
+  getObsStatus: () => invoke('obs:status'),
+  configureObs: (patch) => invoke('obs:configure', patch),
+  resetObsKey: () => invoke('obs:reset-key'),
+  onObsStatusChanged: (callback) => listen('obs:status-changed', callback),
+  getOverlay: () => invoke('overlay:get'),
+  setOverlay: (patch) => invoke('overlay:set', patch),
+  pickOverlayImage: (slot) => invoke('overlay:pick', slot),
+  clearOverlayImage: (slot) => invoke('overlay:clear', slot),
+  onOverlayChanged: (callback) => listen('overlay:changed', callback),
+  getHistory: () => invoke('history:list'),
+  exportHistory: (input) => invoke('history:export', input),
+  clearHistory: () => invoke('history:clear'),
+  onHistoryChanged: (callback) => listen('history:changed', callback),
+  getUpdaterInfo: () => invoke('updater:info'),
+  checkUpdate: () => invoke('updater:check'),
+  openRelease: (url) => invoke('updater:open-release', url),
   hide: () => invoke('control:hide'),
   status: () => invoke('app:status'),
   openTile: (module) => invoke('tiles:open', module),

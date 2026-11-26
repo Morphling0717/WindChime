@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/live.js';
 import type { useWindChimeLiveControl } from '../react/live.js';
 import { LIVE_LAYOUTS, LIVE_THEMES, LIVE_THEME_FONTS, applyLiveTheme, resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
-import { WindChimeLiveCard } from './Display.js';
+import { WindChimeLiveCard, type WindChimeLocalOverlay } from './Display.js';
 import { windChimeAppearanceEditorCss } from './appearance-editor-styles.js';
 
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
@@ -49,7 +49,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   </span></label>;
 }
 
-function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance }) {
+function AppearancePreview({ appearance, localOverlay }: { appearance: WindChimeLiveAppearance; localOverlay?: WindChimeLocalOverlay | null }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [previewWidth, setPreviewWidth] = useState(512);
   const [withImages, setWithImages] = useState(true);
@@ -91,7 +91,7 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
       <div className="wc-appearance-scroll-space" style={{ height: canvasHeight * scale }}>
         <div className="wc-appearance-canvas" style={{ width: canvasWidth, height: canvasHeight, transform: `scale(${scale})` }}>
           <div className="wc-appearance-preview-content">
-            <WindChimeLiveCard key={appearance.animation} snapshot={snapshot} appearance={appearance} assetUrls={SAMPLE_URLS} />
+            <WindChimeLiveCard key={appearance.animation} snapshot={snapshot} appearance={appearance} assetUrls={SAMPLE_URLS} localOverlay={localOverlay} />
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ function AppearancePreview({ appearance }: { appearance: WindChimeLiveAppearance
   </section>;
 }
 
-export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; onDirtyChange: (dirty: boolean) => void }) {
+export function AppearanceEditor({ studio, onDirtyChange, localOverlay }: { studio: Studio; onDirtyChange: (dirty: boolean) => void; localOverlay?: WindChimeLocalOverlay | null }) {
   const form = useRef<HTMLFormElement>(null);
   const [appearance, setAppearance] = useState(studio.state!.appearance);
   const [basis, setBasis] = useState(studio.state!.appearance);
@@ -137,7 +137,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
     if (details) details.open = true;
   }}>
     <style>{windChimeAppearanceEditorCss}</style>
-    <AppearancePreview appearance={appearance} />
+    <AppearancePreview appearance={appearance} localOverlay={localOverlay} />
     <p className="wc-appearance-caption">调整会立即显示在这里，点击「应用外观」后同步到观众画面。</p>
 
     <fieldset className="wc-appearance-section">

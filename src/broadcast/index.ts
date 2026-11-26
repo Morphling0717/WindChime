@@ -6,7 +6,7 @@ export type { WindChimeLiveControlPanelProps, WindChimeLiveModule } from './Cont
 export { OnAirTeleprompter } from './Teleprompter.js';
 export { BlindBoxStudio, type BlindBoxStudioProps } from './BlindBoxStudio.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';
-export type { WindChimeLiveRenderProps } from './Display.js';
+export type { WindChimeLiveRenderProps, WindChimeLocalOverlay } from './Display.js';
 export type {
   WindChimeDisplayScrollCommand,
   WindChimeDisplayScrollMetrics,

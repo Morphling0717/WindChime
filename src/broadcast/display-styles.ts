@@ -60,5 +60,13 @@ export const windChimeDisplayCss = `
 }
 @keyframes wc-display-fade{from{opacity:0}to{opacity:1}}
 @keyframes wc-display-slide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.wc-display .wc-display-local-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;z-index:0;border-radius:inherit}
+.wc-display .wc-display-local-overlay{position:absolute;z-index:2;pointer-events:none;display:inline-flex;align-items:center;gap:8px;max-width:65%}
+.wc-display .wc-display-local-overlay[data-position="top-right"]{top:14px;right:16px;flex-direction:row-reverse}
+.wc-display .wc-display-local-overlay[data-position="top-left"]{top:14px;left:16px}
+.wc-display .wc-display-local-overlay[data-position="bottom-right"]{bottom:14px;right:16px;flex-direction:row-reverse}
+.wc-display .wc-display-local-overlay[data-position="bottom-left"]{bottom:14px;left:16px}
+.wc-display .wc-display-local-badge{display:block;object-fit:contain;border-radius:12px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
+.wc-display .wc-display-local-watermark{font:600 13px/1.25 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;letter-spacing:.04em;padding:4px 10px;border-radius:999px;background:rgba(12,20,28,.55);color:#fff;backdrop-filter:blur(6px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(prefers-reduced-motion:reduce){.wc-display{animation:none!important}}
 `;

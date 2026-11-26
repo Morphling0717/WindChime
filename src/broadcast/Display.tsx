@@ -7,11 +7,22 @@ import { resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
 import { windChimeDisplayCss } from './display-styles.js';
 import { startDisplayScroll, type WindChimeDisplayScrollController } from './scroll-loop.js';
 
+export type WindChimeLocalOverlay = {
+  enabled: boolean;
+  badgeUrl?: string | null;
+  badgePosition: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  badgeSize: number;
+  badgeOpacity: number;
+  watermarkText: string;
+  backgroundUrl?: string | null;
+  backgroundOpacity: number;
+};
 export type WindChimeLiveRenderProps = {
   snapshot: WindChimeLiveSnapshot;
   appearance: WindChimeLiveAppearance;
   assetUrls: Readonly<Record<string, string>>;
   scrollControl?: WindChimeDisplayScrollController;
+  localOverlay?: WindChimeLocalOverlay | null;
 };
 const metric = (value: number | undefined, fallback: number, min: number, max: number) => Number.isFinite(value) ? Math.min(max, Math.max(min, value!)) : fallback;
 
@@ -49,7 +60,7 @@ function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl }: Win
     </div> : null}
   </div>;
 }
-export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollControl }: WindChimeLiveRenderProps) {
+export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollControl, localOverlay }: WindChimeLiveRenderProps) {
   const theme = appearance.theme ?? 'pure';
   const size = resolveLiveViewportSize(appearance);
   const style: CSSProperties = {
@@ -70,8 +81,15 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollContr
     height: size.height,
     animation: appearance.animation === 'none' ? undefined : `wc-display-${appearance.animation} .3s ease-out both`,
   };
+  const showOverlay = Boolean(localOverlay?.enabled);
+  const badgeSize = showOverlay ? metric(localOverlay?.badgeSize, 64, 32, 128) : 64;
+  const badgeOpacity = showOverlay ? metric(localOverlay?.badgeOpacity, 90, 10, 100) / 100 : 0.9;
+  const bgOpacity = showOverlay ? metric(localOverlay?.backgroundOpacity, 35, 0, 80) / 100 : 0.35;
   return <article className="wc-display" style={style} data-windchime-snapshot={snapshot.id} data-theme={theme} data-layout={resolveLiveLayout(appearance.layout)} data-filled={!appearance.transparent} data-has-media={snapshot.assets.length > 0} data-has-author={!!snapshot.nickname}>
     <style>{windChimeDisplayCss}</style>
+    {showOverlay && localOverlay?.backgroundUrl ? (
+      <img className="wc-display-local-bg" src={localOverlay.backgroundUrl} alt="" style={{ opacity: bgOpacity }} aria-hidden="true" />
+    ) : null}
     {theme === 'uliuli' ? <>
       <i className="wc-display-ornament wc-display-corner wc-display-corner-a" aria-hidden="true" />
       <i className="wc-display-ornament wc-display-corner wc-display-corner-b" aria-hidden="true" />
@@ -82,6 +100,12 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollContr
       <svg className="wc-display-ornament wc-display-star" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 0v16M0 8h16M3 3l10 10M3 13 13 3" /></svg>
     </> : null}
     <ScrollingLetter key={JSON.stringify([snapshot, appearance, assetUrls])} snapshot={snapshot} appearance={appearance} assetUrls={assetUrls} scrollControl={scrollControl} />
+    {showOverlay && (localOverlay?.badgeUrl || localOverlay?.watermarkText) ? (
+      <div className="wc-display-local-overlay" data-position={localOverlay.badgePosition} style={{ opacity: badgeOpacity }} aria-hidden="true">
+        {localOverlay.badgeUrl ? <img className="wc-display-local-badge" src={localOverlay.badgeUrl} alt="" style={{ width: badgeSize, height: badgeSize }} /> : null}
+        {localOverlay.watermarkText ? <span className="wc-display-local-watermark">{localOverlay.watermarkText}</span> : null}
+      </div>
+    ) : null}
   </article>;
 }
 class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -90,7 +114,7 @@ class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean 
   render() { return this.state.failed ? null : this.props.children; }
 }
 /** Capture only this isolated output. No login, notification or error UI is rendered. */
-export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl, fallbackSnapshot, fallbackAppearance }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController; fallbackSnapshot?: WindChimeLiveSnapshot | null; fallbackAppearance?: WindChimeLiveAppearance | null }) {
+export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl, fallbackSnapshot, fallbackAppearance, localOverlay }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController; fallbackSnapshot?: WindChimeLiveSnapshot | null; fallbackAppearance?: WindChimeLiveAppearance | null; localOverlay?: WindChimeLocalOverlay | null }) {
   const [received, setReceived] = useState<{ client: WindChimeDisplayClient; value: WindChimeDisplayValue } | null>(null);
   // A caller changing accounts/credentials must not paint the previous client's
   // frame while React is waiting to run the effect cleanup.
@@ -110,9 +134,9 @@ export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, sc
   }, [value, snapshot, scrollControl]);
   if (!value || !snapshot) {
     if (!fallbackSnapshot) return null;
-    const testProps = { snapshot: fallbackSnapshot, appearance: fallbackAppearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE, assetUrls: {} };
+    const testProps = { snapshot: fallbackSnapshot, appearance: fallbackAppearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE, assetUrls: {}, localOverlay };
     return <BlankOnError key={`test-card:${fallbackSnapshot.id}`}>{render ? render(testProps) : <WindChimeLiveCard {...testProps} />}</BlankOnError>;
   }
-  const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl };
+  const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl, localOverlay };
   return <BlankOnError key={`${value.frame.epoch}:${value.frame.activation}`}>{render ? render(props) : <WindChimeLiveCard {...props} />}</BlankOnError>;
 }

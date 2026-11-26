@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { create, act } from 'react-test-renderer';
-import { WindChimeLiveControlPanel } from '../dist/broadcast/ControlPanel.js';
+import { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from '../dist/broadcast/ControlPanel.js';
+import { WindChimeLiveCard } from '../dist/broadcast/Display.js';
 import { DEFAULT_WINDCHIME_LIVE_APPEARANCE as appearance } from '../dist/core/live.js';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -268,4 +269,45 @@ test('blind-box solo live mode stays spoiler-free, respects randomDrawEnabled, s
   await act(async () => { await btn('✕ 跳过拒绝').props.onClick(); await new Promise(r => setImmediate(r)); });
   assert.equal(commands.at(-1).action, 'reject');
   assert.equal(commands.at(-1).messageId, 'b2');
+});
+
+test('1.0.0 blindbox compact tile, reading stats, pending count callback, and local overlay card rendering work cleanly', async t => {
+  assert(WINDCHIME_LIVE_MODULES.some(m => m.id === 'blindbox'), 'blindbox module is registered');
+  let reportedPending = -1;
+  const f = await fixture(t, {
+    module: 'blindbox',
+    onPendingCountChange: count => { reportedPending = count; },
+    onScrollDisplay: () => {},
+  });
+  assert.equal(reportedPending, 1);
+  const drawBtn = f.button('拆下一封 ✉');
+  assert(drawBtn, 'compact blindbox tile renders draw button');
+  await act(async () => { await drawBtn.props.onClick(); });
+  const json = JSON.stringify(f.renderer.toJSON());
+  assert(json.includes('预计读'), 'unbox card shows estimated reading time');
+  assert(!json.includes('待播队列（'), 'compact blindbox tile omits bulky full history drawer');
+
+  let card;
+  await act(async () => {
+    card = create(React.createElement(WindChimeLiveCard, {
+      snapshot: { id: 's1', messageId: 'm1', nickname: '小铃', text: '测试本地装饰', linkUrl: null, assets: [] },
+      appearance,
+      assetUrls: {},
+      localOverlay: {
+        enabled: true,
+        badgeUrl: 'data:image/png;base64,iVBORw0KGgo=',
+        badgePosition: 'bottom-right',
+        badgeSize: 72,
+        badgeOpacity: 85,
+        watermarkText: '@风铃频道',
+        backgroundUrl: 'data:image/png;base64,iVBORw0KGgo=',
+        backgroundOpacity: 30,
+      },
+    }));
+  });
+  t.after(() => act(async () => card.unmount()));
+  const cardJson = JSON.stringify(card.toJSON());
+  assert(cardJson.includes('@风铃频道'));
+  assert(cardJson.includes('wc-display-local-bg'));
+  assert(cardJson.includes('wc-display-local-badge'));
 });

@@ -1,7 +1,18 @@
 // This file contains presentation preferences only. It never stores credentials
 // or restores windows/letters automatically after an application restart.
-const TILE_MODULES = Object.freeze({ inbox: '来信列表', review: '信件审阅', queue: '待播列表', transport: '播出控制', appearance: '展示外观' });
+const TILE_MODULES = Object.freeze({
+  blindbox: '盲盒拆信',
+  inbox: '来信列表',
+  review: '信件审阅',
+  queue: '待播列表',
+  transport: '播出控制',
+  appearance: '展示外观',
+});
 const HIDE_SHORTCUT = 'CommandOrControl+Shift+H';
+const VALID_STARTUP_VIEWS = new Set(['inbox', 'studio', 'last']);
+const VALID_LAST_VIEWS = new Set(['inbox', 'studio', 'topics', 'share', 'settings']);
+const VALID_BADGE_POSITIONS = new Set(['top-right', 'top-left', 'bottom-right', 'bottom-left']);
+
 function normalizeShortcut(value, label = '快捷键') {
   if (typeof value !== 'string' || value.length > 80) throw new Error(`请输入有效的${label}`);
   if (!value.trim()) return '';
@@ -17,9 +28,50 @@ function normalizeShortcut(value, label = '快捷键') {
   if (result === HIDE_SHORTCUT) throw new Error('Ctrl+Shift+H 已保留为一键隐藏，请选择其他快捷键');
   return result;
 }
+
 function normalizeNextShortcut(value) {
   return normalizeShortcut(value, '下一封快捷键');
 }
+
+function sanitizeObsBridge(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const out = {};
+  if (value.enabled === true) out.enabled = true;
+  if (Number.isInteger(value.port) && value.port >= 1024 && value.port <= 65535 && value.port !== 17420) {
+    out.port = value.port;
+  }
+  if (typeof value.key === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(value.key)) {
+    out.key = value.key;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function sanitizeLocalOverlay(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const out = {};
+  if (value.enabled === true) out.enabled = true;
+  if (typeof value.badgePosition === 'string' && VALID_BADGE_POSITIONS.has(value.badgePosition) && value.badgePosition !== 'top-right') {
+    out.badgePosition = value.badgePosition;
+  }
+  if (Number.isFinite(value.badgeSize)) {
+    const size = Math.round(Math.min(128, Math.max(32, value.badgeSize)));
+    if (size !== 64) out.badgeSize = size;
+  }
+  if (Number.isFinite(value.badgeOpacity)) {
+    const op = Math.round(Math.min(100, Math.max(10, value.badgeOpacity)));
+    if (op !== 90) out.badgeOpacity = op;
+  }
+  if (typeof value.watermarkText === 'string') {
+    const text = value.watermarkText.replace(/[\r\n\t\x00-\x1f]/g, '').trim().slice(0, 40);
+    if (text) out.watermarkText = text;
+  }
+  if (Number.isFinite(value.backgroundOpacity)) {
+    const bgOp = Math.round(Math.min(80, Math.max(0, value.backgroundOpacity)));
+    if (bgOp !== 35) out.backgroundOpacity = bgOp;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function restoreWorkspace(value) {
   const restored = { version: 1, nextShortcut: '', tiles: {} };
   if (!value || value.version !== 1) return restored;
@@ -27,6 +79,32 @@ function restoreWorkspace(value) {
   if (value.theme === 'dark') restored.theme = 'dark';
   if (value.randomDrawEnabled === true) restored.randomDrawEnabled = true;
   if (value.clearOnBlindDraw === true) restored.clearOnBlindDraw = true;
+  if (value.chimeEnabled === true) restored.chimeEnabled = true;
+  if (Number.isFinite(value.chimeVolume)) {
+    const vol = Math.round(Math.min(100, Math.max(0, value.chimeVolume)));
+    if (vol !== 70) restored.chimeVolume = vol;
+  }
+  if (typeof value.startupView === 'string' && VALID_STARTUP_VIEWS.has(value.startupView) && value.startupView !== 'last') {
+    restored.startupView = value.startupView;
+  }
+  if (typeof value.lastView === 'string' && VALID_LAST_VIEWS.has(value.lastView)) {
+    restored.lastView = value.lastView;
+  }
+  if (value.autoCheckUpdate === false) restored.autoCheckUpdate = false;
+  if (
+    value.displayBounds &&
+    typeof value.displayBounds === 'object' &&
+    Number.isFinite(value.displayBounds.x) &&
+    Number.isFinite(value.displayBounds.y) &&
+    Math.abs(value.displayBounds.x) < 20000 &&
+    Math.abs(value.displayBounds.y) < 20000
+  ) {
+    restored.displayBounds = { x: Math.round(value.displayBounds.x), y: Math.round(value.displayBounds.y) };
+  }
+  const obsBridge = sanitizeObsBridge(value.obsBridge);
+  if (obsBridge) restored.obsBridge = obsBridge;
+  const localOverlay = sanitizeLocalOverlay(value.localOverlay);
+  if (localOverlay) restored.localOverlay = localOverlay;
   const used = new Set([HIDE_SHORTCUT, restored.nextShortcut].filter(Boolean));
   for (const field of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
     try {
@@ -41,10 +119,13 @@ function restoreWorkspace(value) {
     const item = value.tiles?.[module]; if (!item || typeof item !== 'object') continue;
     const bounds = item.bounds;
     restored.tiles[module] = { pinned: item.pinned !== false };
-    if (bounds && ['x','y','width','height'].every(key => Number.isFinite(bounds[key])) && bounds.width >= 320 && bounds.width <= 3000 && bounds.height >= 240 && bounds.height <= 2400 && Math.abs(bounds.x) < 20000 && Math.abs(bounds.y) < 20000) restored.tiles[module].bounds = Object.fromEntries(['x','y','width','height'].map(key => [key, Math.round(bounds[key])]));
+    if (bounds && ['x','y','width','height'].every(key => Number.isFinite(bounds[key])) && bounds.width >= 320 && bounds.width <= 3000 && bounds.height >= 240 && bounds.height <= 2400 && Math.abs(bounds.x) < 20000 && Math.abs(bounds.y) < 20000) {
+      restored.tiles[module].bounds = Object.fromEntries(['x','y','width','height'].map(key => [key, Math.round(bounds[key])]));
+    }
   }
   return restored;
 }
+
 function fitTileBounds(bounds, workAreas) {
   if (!bounds) return {};
   if (!Array.isArray(workAreas) || !workAreas.length) return { width: bounds.width, height: bounds.height };
@@ -52,4 +133,29 @@ function fitTileBounds(bounds, workAreas) {
   const width = Math.max(340, Math.min(bounds.width, area.width)), height = Math.max(260, Math.min(bounds.height, area.height));
   return { width, height, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)), y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)) };
 }
-module.exports = { TILE_MODULES, HIDE_SHORTCUT, normalizeShortcut, normalizeNextShortcut, restoreWorkspace, fitTileBounds };
+
+function fitDisplayPosition(pos, size, workAreas) {
+  if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return {};
+  if (!Array.isArray(workAreas) || !workAreas.length) return { x: Math.round(pos.x), y: Math.round(pos.y) };
+  const w = Math.max(280, Math.round(size?.width || 960));
+  const h = Math.max(180, Math.round(size?.height || 640));
+  const area = workAreas.find(rect => pos.x < rect.x + rect.width && pos.x + w > rect.x && pos.y < rect.y + rect.height && pos.y + h > rect.y) || workAreas[0];
+  const maxX = Math.max(area.x, area.x + area.width - Math.min(w, area.width));
+  const maxY = Math.max(area.y, area.y + area.height - Math.min(h, area.height));
+  return {
+    x: Math.round(Math.max(area.x, Math.min(pos.x, maxX))),
+    y: Math.round(Math.max(area.y, Math.min(pos.y, maxY))),
+  };
+}
+
+module.exports = {
+  TILE_MODULES,
+  HIDE_SHORTCUT,
+  normalizeShortcut,
+  normalizeNextShortcut,
+  sanitizeObsBridge,
+  sanitizeLocalOverlay,
+  restoreWorkspace,
+  fitTileBounds,
+  fitDisplayPosition,
+};

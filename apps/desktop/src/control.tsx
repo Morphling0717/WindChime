@@ -19,9 +19,17 @@ import {
   type OnAirInfo,
   type DesktopTheme,
   type DesktopPrefs,
+  type DesktopRememberedView,
+  type ObsBridgeStatus,
+  type DesktopOverlayState,
+  type PlayHistoryEntry,
+  type UpdaterInfo,
 } from "./bridge";
 import { TileApp } from "./tiles";
 import { Hotkeys } from "./Hotkeys";
+import { ObsGuidePanel } from "./ObsGuidePanel";
+import { LocalOverlaySettings } from "./LocalOverlaySettings";
+import { playWindChime } from "./chime";
 import { Inbox, Topics, Share, GlobalSettings } from "./Management";
 import { parseWindChimeConnectionKey } from "../../../src/core/connection-key";
 import "./glass.css";
@@ -141,8 +149,50 @@ function App() {
   const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
   const [onAir, setOnAir] = useState<OnAirInfo | null>(null);
   const [theme, setTheme] = useState<DesktopTheme>("light");
-  const [prefs, setPrefs] = useState<DesktopPrefs>({ randomDrawEnabled: false, clearOnBlindDraw: false });
+  const [prefs, setPrefs] = useState<DesktopPrefs>({
+    randomDrawEnabled: false,
+    clearOnBlindDraw: false,
+    chimeEnabled: false,
+    chimeVolume: 70,
+    startupView: "last",
+    lastView: null,
+    autoCheckUpdate: true,
+  });
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [testCardActive, setTestCardActive] = useState(false);
+  const [obsStatus, setObsStatus] = useState<ObsBridgeStatus>({
+    enabled: false,
+    running: false,
+    port: 17420,
+    url: "",
+    clientCount: 0,
+    error: "",
+  });
+  const [obsGuideOpen, setObsGuideOpen] = useState(false);
+  const [overlay, setOverlay] = useState<DesktopOverlayState>({
+    enabled: false,
+    badgeUrl: null,
+    badgePosition: "top-right",
+    badgeSize: 64,
+    badgeOpacity: 90,
+    watermarkText: "",
+    backgroundUrl: null,
+    backgroundOpacity: 35,
+    hasBadge: false,
+    hasBackground: false,
+    version: 0,
+  });
+  const [history, setHistory] = useState<PlayHistoryEntry[]>([]);
+  const [updaterInfo, setUpdaterInfo] = useState<UpdaterInfo | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [expiryDismissedId, setExpiryDismissedId] = useState("");
+  const [pendingCount, setPendingCount] = useState(0);
+  const prevPendingRef = useRef<{ topicKey: string; count: number } | null>(null);
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  const userNavigatedRef = useRef(false);
+  const startupAppliedRef = useRef(false);
   const [settingsTab, setSettingsTab] = useState<"appearance" | "controls" | "safety" | "grants">("appearance");
   const [studioMode, setStudioMode] = useState<"blindbox" | "workbench">("blindbox");
   useEffect(() => {
@@ -158,13 +208,44 @@ function App() {
     return bridge.onThemeChanged(setTheme);
   }, []);
   useEffect(() => {
-    void unwrap(bridge.getPrefs()).then(setPrefs).catch(() => {});
+    void unwrap(bridge.getPrefs())
+      .then((value) => {
+        setPrefs(value);
+        setPrefsLoaded(true);
+      })
+      .catch(() => setPrefsLoaded(true));
     return bridge.onPrefsChanged(setPrefs);
   }, []);
   useEffect(() => {
     void unwrap(bridge.getTestCard()).then(setTestCardActive).catch(() => {});
     return bridge.onTestCardChanged(setTestCardActive);
   }, []);
+  useEffect(() => {
+    void unwrap(bridge.getObsStatus()).then(setObsStatus).catch(() => {});
+    return bridge.onObsStatusChanged(setObsStatus);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getOverlay()).then(setOverlay).catch(() => {});
+    return bridge.onOverlayChanged(setOverlay);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getHistory()).then(setHistory).catch(() => {});
+    return bridge.onHistoryChanged(setHistory);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getUpdaterInfo()).then(setUpdaterInfo).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!prefsLoaded || !prefs.autoCheckUpdate) return;
+    const timer = setTimeout(() => {
+      void unwrap(bridge.checkUpdate())
+        .then((info) => {
+          if (!info.error) setUpdaterInfo(info);
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [prefsLoaded, prefs.autoCheckUpdate]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -177,6 +258,43 @@ function App() {
     setPrefs(current => ({ ...current, ...patch }));
     const saved = await unwrap(bridge.setPrefs(patch));
     setPrefs(saved);
+  }, []);
+  const manualCheckUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    setError("");
+    try {
+      const info = await unwrap(bridge.checkUpdate());
+      setUpdaterInfo(info);
+      setUpdateDismissed(false);
+      if (info.error) setError(info.error);
+      else if (info.hasUpdate) setNotice(`发现新版本 v${info.latestVersion}，可在顶部横幅一键前往下载。`);
+      else setNotice(`当前已是最新版本 v${info.currentVersion}。`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "检查更新失败");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+  const exportPlayHistory = useCallback(async (format: "md" | "csv") => {
+    setError("");
+    try {
+      const saved = await unwrap(bridge.exportHistory({ format }));
+      if (saved) setNotice(format === "md" ? "已导出 Markdown 播报复盘清单。" : "已导出 CSV 播报复盘表格。");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "导出播报复盘失败");
+    }
+  }, []);
+  const clearPlayHistory = useCallback(async () => {
+    if (!(await unwrap(bridge.confirm("确定清空本机保存的全部直播上屏复盘记录？网站原信不受影响。")))) return;
+    setError("");
+    try {
+      const next = await unwrap(bridge.clearHistory());
+      setHistory(next);
+      setNotice("已清空本机播报复盘记录。");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "清空复盘记录失败");
+    }
   }, []);
   const toggleTestCard = useCallback(async (active: boolean) => {
     setError("");
@@ -265,11 +383,75 @@ function App() {
       !(await confirmDiscard())
     )
       return;
+    userNavigatedRef.current = true;
     setStudioDirty(false);
     setTopicDirty(false);
     setSettingsDirty(false);
     setView(next);
+    if (next !== "connections") {
+      void updatePrefs({ lastView: next as DesktopRememberedView }).catch(() => {});
+    }
   };
+  useEffect(() => {
+    if (startupAppliedRef.current || userNavigatedRef.current || !prefsLoaded || !selectedId) return;
+    startupAppliedRef.current = true;
+    const target: View =
+      prefs.startupView === "studio"
+        ? "studio"
+        : prefs.startupView === "inbox"
+          ? "inbox"
+          : prefs.lastView ?? "inbox";
+    if (target !== "inbox") setView(target);
+  }, [prefsLoaded, selectedId, prefs.startupView, prefs.lastView]);
+  const reportPendingCount = useCallback(
+    (count: number) => {
+      const topicKey = `${selectedId ?? ""}:${topicId}`;
+      const prev = prevPendingRef.current;
+      if (prev && prev.topicKey === topicKey && count > prev.count && prefsRef.current.chimeEnabled) {
+        playWindChime(prefsRef.current.chimeVolume);
+      }
+      prevPendingRef.current = { topicKey, count };
+      setPendingCount(count);
+      void unwrap(bridge.updateBadge(count)).catch(() => {});
+    },
+    [selectedId, topicId],
+  );
+  useEffect(() => {
+    prevPendingRef.current = null;
+    setPendingCount(0);
+    void unwrap(bridge.updateBadge(0)).catch(() => {});
+  }, [selectedId, topicId]);
+  useEffect(() => {
+    if (!selectedId || !topicId || view === "studio") return;
+    let disposed = false;
+    let inflight = false;
+    const pollPending = async () => {
+      if (inflight || disposed) return;
+      inflight = true;
+      try {
+        const res = await unwrap(
+          bridge.request({
+            path: `/control/state?topicId=${encodeURIComponent(topicId)}`,
+            method: "GET",
+            connectionId: selectedId,
+          }),
+        ) as { messages?: Array<{ status?: string }> };
+        if (!disposed && Array.isArray(res?.messages)) {
+          reportPendingCount(res.messages.filter((m) => m.status === "pending").length);
+        }
+      } catch {
+      } finally {
+        inflight = false;
+      }
+    };
+    const timer = setInterval(() => void pollPending(), 8000);
+    const initial = setTimeout(() => void pollPending(), 1200);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      clearTimeout(initial);
+    };
+  }, [selectedId, topicId, view, reportPendingCount]);
   const refreshTopics = useCallback(async () => {
     if (!selectedId) return;
     const result = await mailClient.topics.listAdmin({ includeArchived: true });
@@ -466,10 +648,16 @@ function App() {
         ) : selected ? (
           <span
             className="titlebar-onair is-blank"
-            title={status.displayOpen ? "展示窗口已打开，当前画面为空白" : "尚未打开展示窗口"}
+            title={
+              obsStatus.clientCount > 0
+                ? `OBS 浏览器源已连接（${obsStatus.clientCount}），当前画面为空白`
+                : status.displayOpen
+                  ? "展示窗口已打开，当前画面为空白"
+                  : "尚未打开展示窗口或连接 OBS 浏览器源"
+            }
           >
             <i className="titlebar-onair-dot" aria-hidden="true" />
-            <span>{status.displayOpen ? "画面为空白" : "未开展示窗"}</span>
+            <span>{status.displayOpen || obsStatus.clientCount > 0 ? "画面为空白" : "未开展示窗"}</span>
           </span>
         ) : null}
       </div>
@@ -498,15 +686,18 @@ function App() {
           ).map(([id, icon, label]) => (
             <button
               key={id}
-              aria-label={label}
-              title={label}
+              aria-label={id === "studio" && pendingCount > 0 ? `${label}（待拆 ${pendingCount} 封）` : label}
+              title={id === "studio" && pendingCount > 0 ? `${label}（待拆 ${pendingCount} 封）` : label}
+              data-badge={id === "studio" && pendingCount > 0 ? (pendingCount > 99 ? "99+" : String(pendingCount)) : undefined}
               aria-current={view === id ? "page" : undefined}
               disabled={id !== "connections" && id !== "inbox" && !selected}
               onClick={() => void navigate(id)}
             >
               <Icon name={icon} />
               <span>{label}</span>
-              {view === id ? <i className="nav-dot" /> : null}
+              {view === id && !(id === "studio" && pendingCount > 0) ? (
+                <i className="nav-dot" />
+              ) : null}
             </button>
           ))}
         </nav>
@@ -521,11 +712,22 @@ function App() {
             <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
             <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
           </button>
+          <div className="sidebar-version-row">
+            <span>{`v${status.version || updaterInfo?.currentVersion || "1.0.0"}`}</span>
+            <button
+              type="button"
+              className={`sidebar-update-btn${updaterInfo?.hasUpdate ? " has-update" : ""}`}
+              disabled={checkingUpdate}
+              onClick={() => void manualCheckUpdate()}
+            >
+              {checkingUpdate ? "检查中…" : updaterInfo?.hasUpdate ? `新版 v${updaterInfo.latestVersion}` : "检查更新"}
+            </button>
+          </div>
           <div className="capture-note">
             <Icon name="screen" />
             <div>
-              <strong>观众只看到展示窗口</strong>
-              <span>采集 WindChime Display</span>
+              <strong>观众只看到展示端</strong>
+              <span>{obsStatus.clientCount > 0 ? `OBS 浏览器源已连 ${obsStatus.clientCount}` : "采集 WindChime Display / OBS"}</span>
             </div>
           </div>
         </div>
@@ -626,6 +828,30 @@ function App() {
           </button>
         </header>
         <div className="desktop-alerts wc-live">
+          {selected && Number.isFinite(Date.parse(selected.expiresAt)) && (Date.parse(selected.expiresAt) - Date.now()) / 3600000 <= 72 && expiryDismissedId !== selected.id ? (
+            <div className="desktop-banner is-warn" role="status">
+              <span>
+                {Date.parse(selected.expiresAt) <= Date.now()
+                  ? `当前网站「${selected.label}」的连接密钥已过期，请重新生成并导入。`
+                  : `当前网站「${selected.label}」的连接密钥将于 ${Math.max(1, Math.ceil((Date.parse(selected.expiresAt) - Date.now()) / 3600000))} 小时后到期，建议提前更换避免开播断联。`}
+              </span>
+              <div className="desktop-banner-actions">
+                <button type="button" onClick={() => void navigate("connections")}>前往更换密钥</button>
+                <button type="button" className="wc-subtle" onClick={() => setExpiryDismissedId(selected.id)}>知道了</button>
+              </div>
+            </div>
+          ) : null}
+          {updaterInfo?.hasUpdate && !updateDismissed ? (
+            <div className="desktop-banner is-update" role="status">
+              <span>{`发现新版本 v${updaterInfo.latestVersion}（${updaterInfo.title || "点击查看更新说明"}）· 绝不打断当前直播`}</span>
+              <div className="desktop-banner-actions">
+                <button type="button" className="wc-primary" onClick={() => void unwrap(bridge.openRelease(updaterInfo.url)).catch(() => {})}>
+                  前往 GitHub 下载
+                </button>
+                <button type="button" className="wc-subtle" onClick={() => setUpdateDismissed(true)}>稍后</button>
+              </div>
+            </div>
+          ) : null}
           {error ? (
             <p className="wc-error" role="alert">
               {error}
@@ -831,6 +1057,16 @@ function App() {
               </span>
               <div className="wc-actions">
                 <button
+                  type="button"
+                  onClick={() => setObsGuideOpen(open => !open)}
+                >
+                  {obsStatus.clientCount > 0
+                    ? `OBS 浏览器源 · 已连 ${obsStatus.clientCount}`
+                    : obsStatus.running
+                      ? "OBS 浏览器源 · 待机"
+                      : "OBS 采集设置"}
+                </button>
+                <button
                   disabled={busy || Boolean(onAir && !testCardActive)}
                   onClick={() => void toggleTestCard(!testCardActive).catch(() => {})}
                 >
@@ -846,6 +1082,20 @@ function App() {
                 </button>
               </div>
             </div>
+            {view === "studio" && obsGuideOpen ? (
+              <div style={{ marginBottom: 16 }}>
+                <ObsGuidePanel
+                  obsStatus={obsStatus}
+                  displayOpen={status.displayOpen}
+                  testCardActive={testCardActive}
+                  onAir={Boolean(onAir)}
+                  onToggleTestCard={toggleTestCard}
+                  onOpenDisplay={() => act(() => unwrap(bridge.openDisplay()))}
+                  onObsChanged={setObsStatus}
+                  onClose={() => setObsGuideOpen(false)}
+                />
+              </div>
+            ) : null}
             {view === "settings" && (
               <nav className="settings-tabs glass-surface" role="tablist" aria-label="设置分类">
                 {(
@@ -919,6 +1169,13 @@ function App() {
                   randomDrawEnabled={prefs.randomDrawEnabled}
                   clearOnBlindDraw={prefs.clearOnBlindDraw}
                   onToggleClearOnBlindDraw={enabled => void updatePrefs({ clearOnBlindDraw: enabled }).catch(() => {})}
+                  localOverlay={overlay}
+                  obsClientCount={obsStatus.clientCount}
+                  onOpenObsGuide={view === "studio" ? () => setObsGuideOpen(true) : undefined}
+                  onPendingCountChange={view === "studio" ? reportPendingCount : undefined}
+                  sessionHistory={view === "studio" ? history : undefined}
+                  onExportHistory={view === "studio" ? exportPlayHistory : undefined}
+                  onClearHistory={view === "studio" ? clearPlayHistory : undefined}
                   onBlockMessage={
                     view === "studio" && selected.scope === "site"
                       ? async messageId => {
@@ -930,6 +1187,11 @@ function App() {
                       : undefined
                   }
                 />
+                {view === "settings" ? (
+                  <div style={{ marginTop: 18 }}>
+                    <LocalOverlaySettings overlay={overlay} onChange={setOverlay} />
+                  </div>
+                ) : null}
               </div>
             )}
             {topicId && view === "inbox" && (
@@ -966,7 +1228,16 @@ function App() {
             )}
             {view === "settings" && (
               <>
-                <div hidden={settingsTab !== "controls"}>
+                <div hidden={settingsTab !== "controls"} className="desktop-controls-stack">
+                  <ObsGuidePanel
+                    obsStatus={obsStatus}
+                    displayOpen={status.displayOpen}
+                    testCardActive={testCardActive}
+                    onAir={Boolean(onAir)}
+                    onToggleTestCard={toggleTestCard}
+                    onOpenDisplay={() => act(() => unwrap(bridge.openDisplay()))}
+                    onObsChanged={setObsStatus}
+                  />
                   <Hotkeys
                     status={status}
                     onSaved={refreshStatus}

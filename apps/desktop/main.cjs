@@ -2,37 +2,60 @@ const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, M
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const httpNode = require('node:http');
 const { performance } = require('node:perf_hooks');
+const { version: appVersion } = require('./package.json');
 const { normalizeOrigin, validateRequest, restoreSite, verifier, challenge, publicSite } = require('./security.cjs');
 const { parseWindChimeConnectionKey } = require('./build/connection-key.cjs');
-const { TILE_MODULES, HIDE_SHORTCUT, normalizeShortcut, normalizeNextShortcut, restoreWorkspace, fitTileBounds } = require('./workspace.cjs');
+const {
+  TILE_MODULES,
+  HIDE_SHORTCUT,
+  normalizeShortcut,
+  normalizeNextShortcut,
+  sanitizeObsBridge,
+  sanitizeLocalOverlay,
+  restoreWorkspace,
+  fitTileBounds,
+  fitDisplayPosition,
+} = require('./workspace.cjs');
+const { atomicRename, createWorkspaceStore, createVaultStore } = require('./main/vault.cjs');
+const { createShortcutManager } = require('./main/shortcuts.cjs');
+const { createObsBridge } = require('./main/obs-bridge.cjs');
+const { createOverlayStore } = require('./main/overlay-store.cjs');
+const { createSessionHistoryStore } = require('./main/session-history.cjs');
+const { createUpdater } = require('./main/updater.cjs');
+
 const state = { sites: [], selected: null, pairings: new Map(), output: null, connectionError: '' };
-let controlWindow, displayWindow, tray, quitting = false, vaultPath;
-let selectionVersion = 0, outputVersion = 0, switching = false;
-let importVersion = 0;
-let connectionIntent = 0;
-let connectionCommit = null;
+let controlWindow, displayWindow, tray, quitting = false;
+let selectionVersion = 0, outputVersion = 0, switching = false, importVersion = 0;
 const tiles = new Map();
-let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
-let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
-let scrollShortcuts = { up: '', down: '', pause: '' }, scrollRegistered = { up: false, down: false, pause: false }, scrollShortcutError = '';
-let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null, outputTestCard = false, outputAppearance = null, desktopTheme = 'light';
-let desktopPrefs = { randomDrawEnabled: false, clearOnBlindDraw: false };
-let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
-let shortcutConfigTail = Promise.resolve(), shortcutConfigPending = 0;
-let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
+let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false;
+let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null;
+let outputTestCard = false, outputAppearance = null, lastLiveFrame = null, desktopTheme = 'light';
+let desktopPrefs = {
+  randomDrawEnabled: false,
+  clearOnBlindDraw: false,
+  chimeEnabled: false,
+  chimeVolume: 70,
+  startupView: 'last',
+  lastView: null,
+  autoCheckUpdate: true,
+};
+let displayMoveTimer = null;
 const pendingRequests = new Set();
-let writeTail = Promise.resolve(), vaultTail = Promise.resolve();
+let writeTail = Promise.resolve();
 let outputDeadline = 0, outputHeld = false, pendingOutputClears = 0;
 let outputReceiverVersion = 0, outputReceiverId = null, outputEpoch = null, outputSnapshotId = null;
+let obsGrant = null, obsReceiverId = null, obsEpoch = null, obsPollTimer = null, obsPollActive = false, obsPollVersion = 0;
+let lastKnownTopicTitle = '';
 const recoveringWindows = new WeakSet();
 const rendererTerminations = new WeakMap();
 const blankDocument = 'data:text/html;charset=utf-8,' + encodeURIComponent('<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>WindChime Display</title><style>html,body{margin:0;width:100%;height:100%;background:transparent;overflow:hidden}</style></head><body></body></html>');
+
 const squirrelEvent = process.argv.find(arg => /^--squirrel-(install|updated|uninstall|obsolete)$/.test(arg));
 const legacyInstall = /^app-\d+\./i.test(path.basename(path.dirname(process.execPath)));
 if (squirrelEvent) {
   if (squirrelEvent !== '--squirrel-obsolete') {
-    // Notify a running tray instance before Squirrel tries deleting its files.
     if (squirrelEvent === '--squirrel-uninstall') app.requestSingleInstanceLock();
     const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
     const command = squirrelEvent === '--squirrel-uninstall' ? '--removeShortcut' : '--createShortcut';
@@ -42,78 +65,182 @@ if (squirrelEvent) {
   } else app.quit();
   return;
 }
-// Match the guided installer's shortcuts without changing the existing userData
-// name or Windows-encrypted credential format. Legacy lifecycle handling stays above.
+
 if (process.platform === 'win32') app.setAppUserModelId?.('org.windchime.desktop');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', (_, argv) => {
-    // An old Squirrel uninstaller may signal the shared userData single-instance
-    // lock. It must not shut down a newer guided installation during a live show.
     if (argv.includes('--squirrel-uninstall')) { if (legacyInstall) app.quit(); return; }
     controlWindow?.show(); controlWindow?.focus();
   });
   app.whenReady().then(start).catch(error => { console.error('WindChime startup failed:', error.message); app.quit(); });
 }
+
 function selected() { return state.sites.find(site => site.id === state.selected); }
 function activeTopic(site) { return site?.scope === 'site' ? site.selectedTopicId : site?.topicId; }
 function abortRequests() { for (const request of pendingRequests) request.abort(); pendingRequests.clear(); }
 function connectionError(message) { state.connectionError = [state.connectionError, message].filter(Boolean).join('\n'); }
-async function readWorkspace() {
-  try { workspace = restoreWorkspace(JSON.parse(await fs.readFile(workspacePath, 'utf8'))); }
-  catch (error) { if (error.code !== 'ENOENT') connectionError('悬浮磁贴和快捷键设置无法读取，已使用默认设置'); }
+function liveContents(window) {
+  if (!window || window.isDestroyed()) return null;
+  const contents = window.webContents;
+  return contents && !contents.isDestroyed() ? contents : null;
 }
-function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme, candidatePrefs) {
-  const save = workspaceTail.then(async () => {
-    // Build from the latest committed shortcut and current tile preferences at
-    // execution time. A queued tile write cannot capture a tentative shortcut,
-    // or overwrite a newly committed shortcut with an earlier snapshot.
-    const value = {
-      ...workspace,
-      ...(candidateShortcut !== undefined ? { nextShortcut: candidateShortcut } : {}),
-      ...(candidateScroll !== undefined ? candidateScroll : {}),
-      ...(candidateTheme !== undefined ? { theme: candidateTheme } : {}),
-      ...(candidatePrefs !== undefined ? candidatePrefs : {}),
+function broadcastPrivate(channel, payload) {
+  liveContents(controlWindow)?.send?.(channel, payload);
+  for (const tile of tiles.values()) liveContents(tile.window)?.send?.(channel, payload);
+}
+
+let workspacePath = '', vaultPath = '', historyPath = '', overlayDir = '';
+const workspaceStore = createWorkspaceStore({
+  fs,
+  getPath: () => workspacePath,
+  restoreWorkspace,
+  sanitizeObsBridge,
+  sanitizeLocalOverlay,
+  onReadError: connectionError,
+  setTimeoutFn: setTimeout,
+});
+
+const vaultStore = createVaultStore({
+  fs,
+  safeStorage,
+  restoreSite,
+  publicSite,
+  getVaultPath: () => vaultPath,
+  state,
+  activeTopic,
+  selected,
+  onReadError: connectionError,
+  confirmDirty,
+  dirtyTiles,
+  getSelectionVersion: () => selectionVersion,
+  isSwitching: () => switching,
+  setTimeoutFn: setTimeout,
+  onConnectionCommitted: async previous => {
+    disposeTiles();
+    ++selectionVersion;
+    switching = true;
+    lastKnownTopicTitle = '';
+    abortRequests();
+    stopObsPoller();
+    obsBridge.disconnectAll();
+    closeOutput();
+    sessionHistory.resetSessionDedupe();
+    try { await hideSite(previous).catch(() => {}); } finally { switching = false; }
+  },
+});
+
+const overlayStore = createOverlayStore({
+  fs,
+  path,
+  nativeImage,
+  dialog,
+  getDir: () => overlayDir,
+  getConfig: () => workspaceStore.get().localOverlay,
+  saveConfig: config => workspaceStore.save({ localOverlay: config }),
+  onChanged: statePayload => {
+    broadcastPrivate('overlay:changed', statePayload);
+    liveContents(displayWindow)?.send?.('output:overlay', statePayload);
+    obsBridge.pushOverlay();
+  },
+});
+
+const sessionHistory = createSessionHistoryStore({
+  fs,
+  getPath: () => historyPath,
+  atomicRename,
+  crypto,
+  onChanged: list => broadcastPrivate('history:changed', list),
+  setTimeoutFn: setTimeout,
+});
+
+const updater = createUpdater({
+  fetch,
+  shell,
+  currentVersion: appVersion,
+  setTimeoutFn: setTimeout,
+  clearTimeoutFn: clearTimeout,
+});
+
+const obsBridge = createObsBridge({
+  http: httpNode,
+  crypto,
+  fs,
+  path,
+  buildDir: path.join(__dirname, 'build'),
+  getInitialState: basePath => ({
+    overlay: overlayStore.getObsPayload(basePath),
+    frame: lastLiveFrame && outputSnapshotId ? { ...lastLiveFrame, basePath } : null,
+    testCard: outputTestCard && !outputSnapshotId ? { active: true, appearance: outputAppearance } : null,
+  }),
+  fetchDisplayAsset: async (assetId, activation) => {
+    const scope = selected();
+    if (!scope || !outputSnapshotId) return null;
+    const grant = state.output || obsGrant;
+    const receiverId = state.output ? outputReceiverId : obsReceiverId;
+    if (!grant || !receiverId) return null;
+    const query = new URLSearchParams({ receiverId, ...(activation ? { activation } : {}) });
+    const result = await http(`${scope.origin}/api/mail/live`, `/display/assets/${encodeURIComponent(assetId)}?${query.toString()}`, 'GET', undefined, grant.token, { binary: true, timeout: 4000 });
+    return { bytes: Buffer.from(result.image, 'base64'), mimeType: result.mimeType };
+  },
+  getOverlayBytes: slot => overlayStore.getBytes(slot),
+  getOverlayPayload: basePath => overlayStore.getObsPayload(basePath),
+  onScrollMetrics: metrics => broadcastScrollState(sanitizeScrollMetrics(metrics)),
+  onClientCountChange: count => {
+    if (count > 0 && (!displayWindow || displayWindow.isDestroyed())) {
+      void startObsPoller();
+    } else if (count === 0) {
+      stopObsPoller();
+    }
+  },
+  onStatusChange: status => broadcastPrivate('obs:status-changed', status),
+  setIntervalFn: setInterval,
+  clearIntervalFn: typeof clearInterval === 'function' ? clearInterval : () => {},
+});
+
+const shortcuts = createShortcutManager({
+  globalShortcut,
+  HIDE_SHORTCUT,
+  normalizeShortcut,
+  normalizeNextShortcut,
+  saveWorkspace: patch => workspaceStore.save(patch),
+  onHide: () => hide().catch(() => {}),
+  onScrollCommand: cmd => { sendDisplayScroll(cmd); },
+  onConnectionError: connectionError,
+  setTimeoutFn: setTimeout,
+  clearTimeoutFn: clearTimeout,
+  onNextLetter: async isCurrentVersion => {
+    const scope = context();
+    const receiverVersion = outputReceiverVersion;
+    const assertReady = () => {
+      assertCurrent(scope);
+      const nativeReady = !!(displayWindow && !displayWindow.isDestroyed() && state.output && outputReceiverId);
+      const obsReady = !!(obsBridge.getClientCount() > 0 && obsGrant && obsReceiverId);
+      if (
+        !isCurrentVersion() ||
+        receiverVersion !== outputReceiverVersion ||
+        pendingOutputClears ||
+        outputHeld ||
+        (!nativeReady && !obsReady) ||
+        outputDeadline <= performance.now()
+      ) {
+        throw new Error('展示窗口未就绪或操作已取消，请连接展示窗口后重新按下一封');
+      }
     };
-    for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
-      if (!value[key]) delete value[key];
-    }
-    if (value.theme !== 'dark') delete value.theme;
-    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
-      if (value[key] !== true) delete value[key];
-    }
-    const temporary = `${workspacePath}.tmp`;
-    await fs.writeFile(temporary, JSON.stringify(value));
-    for (let attempt = 0; ; attempt++) {
-      try { await fs.rename(temporary, workspacePath); break; }
-      catch (err) {
-        if ((err?.code === 'EPERM' || err?.code === 'EBUSY') && attempt < 4) {
-          await new Promise(resolve => setTimeout(resolve, 35 * (attempt + 1)));
-          continue;
-        }
-        throw err;
+    assertReady();
+    await writeCommand(async () => {
+      assertReady();
+      const current = await siteRequest(scope.site, { path: `/control/state?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' });
+      assertReady();
+      if (current.topicId !== activeTopic(scope.site) || !Number.isInteger(current.revision) || current.receivers < 1) {
+        throw new Error('当前话题没有在线展示窗口，请先连接展示窗口');
       }
-    }
-    if (candidateShortcut !== undefined) workspace.nextShortcut = candidateShortcut;
-    if (candidateScroll !== undefined) {
-      for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
-        if (candidateScroll[key]) workspace[key] = candidateScroll[key];
-        else delete workspace[key];
-      }
-    }
-    if (candidateTheme !== undefined) {
-      if (candidateTheme === 'dark') workspace.theme = 'dark';
-      else delete workspace.theme;
-    }
-    if (candidatePrefs !== undefined) {
-      for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
-        if (candidatePrefs[key] === true) workspace[key] = true;
-        else if (key in candidatePrefs) delete workspace[key];
-      }
-    }
-  });
-  workspaceTail = save.catch(() => {}); return save;
-}
+      await siteRequest(scope.site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(scope.site), action: 'next', expectedRevision: current.revision, operationId: crypto.randomUUID() } });
+      assertReady();
+    });
+  },
+});
+
 function tileFor(window) { return [...tiles.values()].find(tile => tile.window === window); }
 function tileMetadata(tile) { return { module: tile.module, pinned: tile.pinned, dirty: tile.dirty, connectionId: tile.scope.site.id, topicId: tile.topicId, contextVersion: tile.scope.version }; }
 function assertTile(tile) { if (tiles.get(tile.module) !== tile || !isCurrent(tile.scope) || tile.topicId !== activeTopic(selected())) throw Object.assign(new Error('磁贴所属信箱已切换，请重新打开磁贴'), { code: 'CONNECTION_CHANGED' }); }
@@ -126,9 +253,10 @@ async function confirmDirty(tileList, message, includeMain = false, parent = con
 }
 function dirtyTiles() { return [...tiles.values()].filter(tile => tile.dirty); }
 function rememberTile(tile) {
-  const bounds = !tile.window.isDestroyed() ? tile.window.getBounds?.() : workspace.tiles[tile.module]?.bounds;
-  workspace.tiles[tile.module] = { pinned: tile.pinned, ...(bounds ? { bounds } : {}) };
-  void saveWorkspace().catch(() => { connectionError('磁贴位置未能保存'); });
+  const ws = workspaceStore.get();
+  const bounds = !tile.window.isDestroyed() ? tile.window.getBounds?.() : ws.tiles[tile.module]?.bounds;
+  const nextTiles = { ...ws.tiles, [tile.module]: { pinned: tile.pinned, ...(bounds ? { bounds } : {}) } };
+  void workspaceStore.save({ tiles: nextTiles }).catch(() => { connectionError('磁贴位置未能保存'); });
 }
 function disposeTiles() {
   selectedMessageId = null; mainDirty = false; mainReviewDirty = false; mainOtherDirty = false;
@@ -139,12 +267,28 @@ async function openTile(module) {
   if (!Object.prototype.hasOwnProperty.call(TILE_MODULES, module)) throw new Error('未知磁贴模块');
   const scope = context(); if (!activeTopic(scope.site)) throw new Error('请先选择话题');
   const existing = tiles.get(module); if (existing) { assertTile(existing); existing.window.show(); existing.window.focus(); return tileMetadata(existing); }
-  const preferences = workspace.tiles[module] || {}, partition = `windchime-private-tile-${crypto.randomUUID()}`;
+  const preferences = workspaceStore.get().tiles[module] || {}, partition = `windchime-private-tile-${crypto.randomUUID()}`;
   const stableTitle = `WindChime Private · ${TILE_MODULES[module]}`;
-  const window = new BrowserWindow({ width: module === 'review' || module === 'appearance' ? 760 : 480, height: module === 'transport' ? 560 : 720, minWidth: 340, minHeight: 260, ...fitTileBounds(preferences.bounds, screen?.getAllDisplays().map(display => display.workArea)), title: stableTitle, frame: false, resizable: true, alwaysOnTop: preferences.pinned !== false, icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5', autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
-  const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false }; tiles.set(module, tile); secureWindow(window, partition);
-  // The shared private HTML title must never replace the module-specific
-  // native capture title or make a private tile look like the public output.
+  const defaultWidth = module === 'review' || module === 'appearance' ? 760 : module === 'blindbox' ? 380 : 480;
+  const defaultHeight = module === 'transport' ? 560 : module === 'blindbox' ? 560 : 720;
+  const window = new BrowserWindow({
+    width: defaultWidth,
+    height: defaultHeight,
+    minWidth: module === 'blindbox' ? 320 : 340,
+    minHeight: module === 'blindbox' ? 380 : 260,
+    ...fitTileBounds(preferences.bounds, screen?.getAllDisplays().map(display => display.workArea)),
+    title: stableTitle,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: preferences.pinned !== false,
+    icon: path.join(__dirname, 'build/icon.ico'),
+    backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+    autoHideMenuBar: true,
+    show: false,
+    webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false },
+  });
+  const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false };
+  tiles.set(module, tile); secureWindow(window, partition);
   window.on('page-title-updated', event => event.preventDefault());
   for (const event of ['moved', 'resized']) window.on(event, () => { if (tiles.get(module) === tile) rememberTile(tile); });
   window.on('close', event => {
@@ -168,8 +312,6 @@ async function chooseMessage(messageId, connectionId, contextVersion, parent = c
   if (messageId !== null && (typeof messageId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(messageId))) throw new Error('无效信件');
   if (messageId === selectedMessageId) return selectedMessageId;
   const old = selectedMessageId;
-  // Validate membership before inspecting dirty editors. A slow website must
-  // not bypass edits made in another private window while this read is pending.
   if (messageId !== null) { await siteRequest(scope.site, { path: `/control/messages/${encodeURIComponent(messageId)}?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' }); assertSelection(); }
   if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
   const review = tiles.get('review');
@@ -177,6 +319,7 @@ async function chooseMessage(messageId, connectionId, contextVersion, parent = c
   if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
   selectedMessageId = messageId; if (review) review.dirty = false; return selectedMessageId;
 }
+
 function sanitizeScrollCommand(command) {
   if (!command || typeof command !== 'object') throw new Error('无效滚动指令');
   if (command.type === 'ratio') {
@@ -194,8 +337,7 @@ function sanitizeScrollCommand(command) {
   throw new Error('未知滚动指令');
 }
 function sanitizeScrollMetrics(metrics) {
-  if (metrics === null) return null;
-  if (!metrics || typeof metrics !== 'object') return null;
+  if (metrics === null || !metrics || typeof metrics !== 'object') return null;
   const phases = ['top', 'scrolling', 'bottom', 'still', 'manual'];
   if (!phases.includes(metrics.phase)) return null;
   const num = (v, min, max) => Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : 0;
@@ -212,8 +354,7 @@ function sanitizeScrollMetrics(metrics) {
 }
 function broadcastScrollState(next) {
   outputScrollState = next;
-  liveContents(controlWindow)?.send?.('display:scroll-state', next);
-  for (const tile of tiles.values()) liveContents(tile.window)?.send?.('display:scroll-state', next);
+  broadcastPrivate('display:scroll-state', next);
 }
 function broadcastOnAir(next) {
   const prev = outputOnAir;
@@ -227,9 +368,10 @@ function broadcastOnAir(next) {
 function broadcastTestCard(active) {
   const next = Boolean(active);
   outputTestCard = next;
-  liveContents(displayWindow)?.send?.('output:test-card', { active: next, appearance: outputAppearance });
-  liveContents(controlWindow)?.send?.('display:test-card-state', next);
-  for (const tile of tiles.values()) liveContents(tile.window)?.send?.('display:test-card-state', next);
+  const payload = { active: next, appearance: outputAppearance };
+  liveContents(displayWindow)?.send?.('output:test-card', payload);
+  obsBridge.pushTestCard(payload);
+  broadcastPrivate('display:test-card-state', next);
 }
 function snapshotToOnAir(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') return null;
@@ -252,214 +394,14 @@ function applyWindowTheme(theme) {
 }
 function sendDisplayScroll(command) {
   const sanitized = sanitizeScrollCommand(command);
-  if (!displayWindow || displayWindow.isDestroyed() || !state.output || outputHeld || !outputSnapshotId) return false;
-  liveContents(displayWindow)?.send?.('output:scroll', sanitized);
+  const nativeReady = !!(displayWindow && !displayWindow.isDestroyed() && state.output && !outputHeld && outputSnapshotId);
+  const obsReady = !!(obsBridge.getClientCount() > 0 && !outputHeld && outputSnapshotId);
+  if (!nativeReady && !obsReady) return false;
+  if (nativeReady) liveContents(displayWindow)?.send?.('output:scroll', sanitized);
+  if (obsReady) obsBridge.pushScroll(sanitized);
   return true;
 }
-function scrollHotkeyCommand(slot) {
-  return slot === 'up' ? { type: 'step', delta: -0.45 } : slot === 'down' ? { type: 'step', delta: 0.45 } : { type: 'togglePause' };
-}
-function registerScrollBinding(slot, accelerator) {
-  if (!accelerator) return true;
-  try {
-    return !!globalShortcut.register(accelerator, () => {
-      if (!shortcutRecording && scrollRegistered[slot] && scrollShortcuts[slot] === accelerator) {
-        try { sendDisplayScroll(scrollHotkeyCommand(slot)); } catch {}
-      }
-    });
-  } catch { return false; }
-}
-async function configureScrollShortcuts(input) {
-  if (shortcutRecording) throw new Error('请先结束快捷键录制');
-  if (!input || typeof input !== 'object') throw new Error('无效滚动快捷键设置');
-  shortcutConfigPending++;
-  const operation = shortcutConfigTail.then(async () => {
-    if (shortcutRecording) throw new Error('请先结束快捷键录制');
-    const candidate = {
-      up: input.up !== undefined ? normalizeShortcut(input.up, '向上滚动快捷键') : scrollShortcuts.up,
-      down: input.down !== undefined ? normalizeShortcut(input.down, '向下滚动快捷键') : scrollShortcuts.down,
-      pause: input.pause !== undefined ? normalizeShortcut(input.pause, '暂停滚动快捷键') : scrollShortcuts.pause,
-    };
-    const seen = new Set([HIDE_SHORTCUT, nextShortcut].filter(Boolean));
-    for (const slot of ['up', 'down', 'pause']) {
-      const value = candidate[slot];
-      if (!value) continue;
-      if (seen.has(value)) throw new Error('快捷键与已有热键冲突，请选择其他组合键');
-      seen.add(value);
-    }
-    const newlyRegistered = [];
-    try {
-      for (const slot of ['up', 'down', 'pause']) {
-        const value = candidate[slot];
-        if (!value) continue;
-        if (value === scrollShortcuts[slot] && scrollRegistered[slot]) continue;
-        if (!registerScrollBinding(slot, value)) throw new Error('滚动快捷键已被系统或其他应用占用，原设置保持不变');
-        newlyRegistered.push(value);
-      }
-    } catch (error) {
-      for (const key of newlyRegistered) globalShortcut.unregister(key);
-      scrollShortcutError = error.message;
-      throw error;
-    }
-    const previous = { ...scrollShortcuts };
-    try {
-      await saveWorkspace(undefined, {
-        scrollUpShortcut: candidate.up,
-        scrollDownShortcut: candidate.down,
-        scrollPauseShortcut: candidate.pause,
-      });
-    } catch {
-      for (const key of newlyRegistered) globalShortcut.unregister(key);
-      scrollShortcutError = '滚动快捷键设置无法保存，原设置保持不变';
-      throw new Error(scrollShortcutError);
-    }
-    for (const slot of ['up', 'down', 'pause']) {
-      const oldKey = previous[slot];
-      if (oldKey && oldKey !== candidate[slot] && !Object.values(candidate).includes(oldKey)) {
-        globalShortcut.unregister(oldKey);
-      }
-    }
-    scrollShortcuts = candidate;
-    scrollRegistered = { up: !!candidate.up, down: !!candidate.down, pause: !!candidate.pause };
-    scrollShortcutError = '';
-    return { ...scrollShortcuts, error: '' };
-  });
-  shortcutConfigTail = operation.catch(() => {});
-  try { return await operation; } finally { shortcutConfigPending--; }
-}
-async function configureNextShortcut(value) {
-  if (shortcutRecording) throw new Error('请先结束快捷键录制');
-  // A remounted settings view may submit again while the previous disk write
-  // is pending. Serialize registration, persistence and rollback together so
-  // each request observes the last committed shortcut, not an obsolete one.
-  shortcutConfigPending++;
-  const operation = shortcutConfigTail.then(async () => {
-    if (shortcutRecording) throw new Error('请先结束快捷键录制');
-    const normalized = normalizeNextShortcut(value);
-    if (normalized && Object.values(scrollShortcuts).includes(normalized)) {
-      shortcutError = '快捷键与滚动热键冲突，请选择其他组合键';
-      throw new Error(shortcutError);
-    }
-    if (normalized === nextShortcut && (!normalized || nextRegistered)) { shortcutError = ''; return nextShortcut; }
-    if (normalized) {
-      // Reserve the OS binding first, but activate it only after persistence.
-      // The previously committed binding remains usable while this save waits.
-      try { if (!globalShortcut.register(normalized, () => { if (nextRegistered && nextShortcut === normalized) void nextLetter(); })) throw new Error(); }
-      catch { shortcutError = '快捷键已被系统或其他应用占用，原快捷键保持不变'; throw new Error(shortcutError); }
-    }
-    const previous = nextShortcut;
-    try { await saveWorkspace(normalized); } catch { if (normalized) globalShortcut.unregister(normalized); shortcutError = '快捷键设置无法保存，原快捷键保持不变'; throw new Error(shortcutError); }
-    if (previous && previous !== normalized) globalShortcut.unregister(previous);
-    nextVersion++; nextShortcut = normalized; nextRegistered = !!normalized; shortcutError = ''; return normalized;
-  });
-  shortcutConfigTail = operation.catch(() => {});
-  try { return await operation; } finally { shortcutConfigPending--; }
-}
-function recordNextShortcut(recording) {
-  if (typeof recording !== 'boolean') throw new Error('无效录制状态');
-  if (recording && shortcutConfigPending) throw new Error('热键正在保存，请稍后开始录制');
-  clearTimeout(shortcutRecordingTimer);
-  if (recording) {
-    nextVersion++; shortcutRecording = true;
-    if (nextShortcut && nextRegistered) { globalShortcut.unregister(nextShortcut); nextRegistered = false; }
-    for (const slot of ['up', 'down', 'pause']) {
-      if (scrollShortcuts[slot] && scrollRegistered[slot]) { globalShortcut.unregister(scrollShortcuts[slot]); scrollRegistered[slot] = false; }
-    }
-    shortcutRecordingTimer = setTimeout(() => recordNextShortcut(false), 30000); shortcutRecordingTimer.unref?.();
-  } else if (shortcutRecording) {
-    shortcutRecording = false;
-    if (nextShortcut) {
-      try { if (!globalShortcut.register(nextShortcut, () => { void nextLetter(); })) throw new Error(); nextRegistered = true; }
-      catch { nextRegistered = false; shortcutError = '录制结束后无法恢复原下一封快捷键，请在设置中重新选择'; }
-    }
-    for (const slot of ['up', 'down', 'pause']) {
-      if (scrollShortcuts[slot]) {
-        if (registerScrollBinding(slot, scrollShortcuts[slot])) scrollRegistered[slot] = true;
-        else { scrollRegistered[slot] = false; scrollShortcutError = '录制结束后无法恢复部分滚动快捷键，请在设置中重新选择'; }
-      }
-    }
-  }
-  return shortcutRecording;
-}
-async function nextLetter() {
-  if (shortcutRecording) return;
-  const now = performance.now(); if (nextPending || now - lastNextAt < 600) return;
-  lastNextAt = now; nextPending = true; nextActionError = '';
-  try {
-    const scope = context(), version = nextVersion, receiverVersion = outputReceiverVersion;
-    const assertReady = () => { assertCurrent(scope); if (version !== nextVersion || receiverVersion !== outputReceiverVersion || pendingOutputClears || outputHeld || !displayWindow || !state.output || !outputReceiverId || outputDeadline <= performance.now()) throw new Error('展示窗口未就绪或操作已取消，请连接展示窗口后重新按下一封'); };
-    assertReady();
-    await writeCommand(async () => {
-      assertReady();
-      const current = await siteRequest(scope.site, { path: `/control/state?topicId=${encodeURIComponent(activeTopic(scope.site))}`, method: 'GET' }); assertReady();
-      if (current.topicId !== activeTopic(scope.site) || !Number.isInteger(current.revision) || current.receivers < 1) throw new Error('当前话题没有在线展示窗口，请先连接展示窗口');
-      await siteRequest(scope.site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(scope.site), action: 'next', expectedRevision: current.revision, operationId: crypto.randomUUID() } }); assertReady();
-    });
-  } catch (error) { nextActionError = error.message || '下一封操作失败，请检查网站连接'; }
-  finally { nextPending = false; }
-}
-function encryptVault(sites, selectedId) {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('系统凭据加密暂不可用，无法保存设备授权');
-  return safeStorage.encryptString(JSON.stringify({ version: 1, sites, selected: selectedId }));
-}
-function queueVault(operation) {
-  const write = vaultTail.then(operation);
-  vaultTail = write.catch(() => {}); return write;
-}
-async function waitForConnectionCommit() { while (connectionCommit) await connectionCommit; }
-function connectionChanged() { return Object.assign(new Error('信箱选择已更新，旧操作已取消'), { code: 'CONNECTION_CHANGED' }); }
-function connectionAttempt() {
-  const intent = ++connectionIntent, version = selectionVersion, sites = state.sites;
-  return () => { if (intent !== connectionIntent || version !== selectionVersion || sites !== state.sites || switching) throw connectionChanged(); };
-}
-function persistConnections(sites, selectedId, assertAttempt) {
-  return queueVault(async () => {
-    assertAttempt();
-    const previous = selected(), next = sites.find(site => site.id === selectedId);
-    const changing = state.selected !== selectedId || activeTopic(previous) !== activeTopic(next);
-    const temporary = `${vaultPath}.tmp`;
-    try { await fs.writeFile(temporary, encryptVault(sites, selectedId)); }
-    catch { throw Object.assign(new Error('设备授权无法保存，原连接保持不变'), { code: 'CREDENTIAL_SAVE_FAILED' }); }
-    assertAttempt();
-    // Check every private editor at the actual commit boundary, including edits
-    // made while network validation or the temporary encrypted write was pending.
-    if (changing) {
-      await confirmDirty(dirtyTiles(), '切换信箱会放弃主窗口和悬浮磁贴中未保存的修改。', true);
-      assertAttempt();
-    }
-    let release;
-    connectionCommit = new Promise(resolve => { release = resolve; });
-    try {
-      try { await fs.rename(temporary, vaultPath); }
-      catch { throw Object.assign(new Error('设备授权无法保存，原连接保持不变'), { code: 'CREDENTIAL_SAVE_FAILED' }); }
-      // Publish only after the encrypted file commits. Other connection changes
-      // wait through publication and the old output's withdrawal.
-      state.sites = sites;
-      state.selected = selectedId;
-      if (changing) {
-        disposeTiles(); ++selectionVersion; switching = true; abortRequests(); closeOutput();
-        try { await hideSite(previous).catch(() => {}); } finally { switching = false; }
-      }
-      return next ? publicSite(next) : null;
-    } finally { connectionCommit = null; release(); }
-  });
-}
-function persistImportedSite(site, assertAttempt) {
-  const sites = state.sites.some(item => item.id === site.id) ? state.sites.map(item => item.id === site.id ? site : item) : [...state.sites, site];
-  return persistConnections(sites, site.id, assertAttempt);
-}
-async function readVault() {
-  try {
-    const ciphertext = await fs.readFile(vaultPath);
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('系统凭据加密暂不可用');
-    const stored = JSON.parse(safeStorage.decryptString(ciphertext));
-    if (stored.version !== 1 || !Array.isArray(stored.sites)) throw new Error('未知设备凭据格式');
-    let invalid = false;
-    state.sites = stored.sites.flatMap(site => { try { return [restoreSite(site)]; } catch { invalid = true; return []; } });
-    state.selected = state.sites.some(site => site.id === stored.selected) ? stored.selected : null;
-    if (invalid) connectionError('部分本机加密凭据无法读取，请重新连接相应信箱');
-  } catch (error) { if (error.code !== 'ENOENT') connectionError('本机加密凭据无法读取，请重新连接信箱'); }
-}
+
 async function http(base, relative, method = 'GET', body, token, { binary = false, timeout = 8000, scoped = false } = {}) {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout);
   if (scoped) pendingRequests.add(controller);
@@ -484,6 +426,7 @@ async function http(base, relative, method = 'GET', body, token, { binary = fals
     throw Object.assign(new Error('无法连接网站，请检查网络、HTTPS 证书和网站地址'), { code: 'REMOTE_UNREACHABLE', status: 0 });
   } finally { clearTimeout(timer); pendingRequests.delete(controller); }
 }
+
 function connectionFailure(error) {
   const messages = {
     OPERATION_CANCELLED: '已取消连接，原信箱及未保存内容仍然保留',
@@ -503,13 +446,14 @@ function connectionFailure(error) {
   const message = messages[code] || (error.status === 404 ? '未找到风铃接口（HTTP 404），请检查网站地址和部署版本' : error.status === 401 ? '连接密钥无效、已过期或已撤销，请在网页重新生成' : error.status === 403 ? '此密钥没有管理信箱的权限' : error.status === 429 ? '连接过于频繁，请稍后重试' : '连接失败，请检查网站状态后重试');
   return Object.assign(new Error(message), { code, status: error.status || 0 });
 }
+
 async function importConnectionKey(input) {
   let key;
   try { key = parseWindChimeConnectionKey(input); } catch { throw Object.assign(new Error('连接密钥格式无效或版本不支持，请复制网页生成的完整密钥'), { code: 'CONNECTION_KEY_INVALID', status: 0 }); }
-  await waitForConnectionCommit();
+  await vaultStore.waitForCommit();
   const attempt = ++importVersion, selectedVersion = selectionVersion, sites = state.sites;
-  const assertConnection = connectionAttempt();
-  const assertAttempt = () => { assertConnection(); if (attempt !== importVersion || selectedVersion !== selectionVersion || sites !== state.sites || switching) throw connectionChanged(); };
+  const assertConnection = vaultStore.beginAttempt();
+  const assertAttempt = () => { assertConnection(); if (attempt !== importVersion || selectedVersion !== selectionVersion || sites !== state.sites || switching) throw vaultStore.connectionChanged(); };
   try {
     if (!safeStorage.isEncryptionAvailable()) throw Object.assign(new Error(), { code: 'CREDENTIAL_ENCRYPTION_UNAVAILABLE' });
     const capability = await http(`${key.origin}/api/mail/live`, '/capabilities'); assertAttempt();
@@ -523,10 +467,11 @@ async function importConnectionKey(input) {
     if (!Number.isFinite(Date.parse(identity.expiresAt)) || Date.parse(identity.expiresAt) <= Date.now()) throw Object.assign(new Error(), { code: 'CONNECTION_KEY_EXPIRED' });
     const existing = state.sites.find(site => site.origin === key.origin && site.siteId === key.siteId && site.token === key.token && site.topicId === identity.topicId);
     const site = restoreSite({ id: existing?.id ?? crypto.randomUUID(), origin: key.origin, siteId: identity.siteId, scope, topicId: identity.topicId, selectedTopicId: existing?.selectedTopicId ?? null, mailManagement: capability.features?.mailManagement === true, token: key.token, label: identity.label || identity.topicTitle || new URL(key.origin).hostname, expiresAt: identity.expiresAt });
-    await persistImportedSite(site, assertAttempt);
+    await vaultStore.persistImported(site, assertAttempt);
     return publicSite(site);
   } catch (error) { throw connectionFailure(error); }
 }
+
 function requireSite() { if (switching) throw new Error('正在切换信箱，请稍候'); const site = selected(); if (!site) throw new Error('请先连接并选择信箱'); return site; }
 function context() { return { site: requireSite(), version: selectionVersion }; }
 function isCurrent(value) { return !switching && value.version === selectionVersion && value.site.id === state.selected; }
@@ -548,14 +493,134 @@ function handle(channel, kind, operation, bound = false) {
     catch (error) { return { ok: false, error: error.message || '操作失败', code: error.code || 'DESKTOP_ERROR', status: error.status || 0 }; }
   });
 }
-function liveContents(window) {
-  if (!window || window.isDestroyed()) return null;
-  const contents = window.webContents;
-  return contents && !contents.isDestroyed() ? contents : null;
+
+function applyConfirmedFrame(result, site, source = 'native') {
+  const nextSnapshotId = result.snapshot?.id ?? null;
+  if (nextSnapshotId !== outputSnapshotId) broadcastScrollState(null);
+  if (nextSnapshotId && outputTestCard) broadcastTestCard(false);
+  outputSnapshotId = nextSnapshotId;
+  broadcastOnAir(snapshotToOnAir(result.snapshot));
+  if (result.appearance && typeof result.appearance === 'object') {
+    outputAppearance = result.appearance;
+    if (outputTestCard && !nextSnapshotId) {
+      const payload = { active: true, appearance: outputAppearance };
+      liveContents(displayWindow)?.send?.('output:test-card', payload);
+      obsBridge.pushTestCard(payload);
+    }
+  }
+  if (nextSnapshotId) {
+    lastLiveFrame = {
+      snapshot: result.snapshot,
+      appearance: result.appearance || outputAppearance,
+      activation: result.activation,
+      epoch: result.epoch,
+    };
+    const key = obsBridge.getKey();
+    if (obsBridge.getClientCount() > 0 && key) {
+      obsBridge.pushFrame({ ...lastLiveFrame, basePath: `/obs/${key}` });
+    }
+    void sessionHistory.record({
+      snapshot: result.snapshot,
+      siteLabel: site?.label || '',
+      topicTitle: lastKnownTopicTitle || activeTopic(site) || '',
+    }).catch(() => {});
+  } else {
+    lastLiveFrame = null;
+    if (source === 'obs' && !outputTestCard) obsBridge.pushBlank();
+  }
 }
+
+function stopObsPoller() {
+  obsPollVersion++;
+  obsPollActive = false;
+  clearTimeout(obsPollTimer);
+  obsPollTimer = null;
+  obsGrant = null;
+  obsReceiverId = null;
+  obsEpoch = null;
+}
+
+async function startObsPoller() {
+  if (obsPollActive || quitting || pendingOutputClears || outputHeld || (displayWindow && !displayWindow.isDestroyed())) return;
+  const site = selected();
+  if (!site || !activeTopic(site) || obsBridge.getClientCount() === 0) return;
+  obsPollActive = true;
+  const pollVersion = ++obsPollVersion;
+  const scope = { site, version: selectionVersion };
+
+  const alive = () =>
+    obsPollActive &&
+    pollVersion === obsPollVersion &&
+    !quitting &&
+    !pendingOutputClears &&
+    !outputHeld &&
+    isCurrent(scope) &&
+    obsBridge.getClientCount() > 0 &&
+    (!displayWindow || displayWindow.isDestroyed());
+
+  const schedule = ms => {
+    clearTimeout(obsPollTimer);
+    if (!alive()) return;
+    obsPollTimer = setTimeout(() => void tick(), ms);
+    obsPollTimer.unref?.();
+  };
+
+  async function tick() {
+    if (!alive()) { stopObsPoller(); return; }
+    try {
+      if (!obsGrant) {
+        const grant = await siteRequest(scope.site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(scope.site), kind: 'display', label: 'OBS 本地浏览器源' } });
+        if (!alive()) return;
+        obsGrant = grant;
+      }
+      const startedAt = performance.now();
+      if (!obsReceiverId) {
+        const opened = await http(`${scope.site.origin}/api/mail/live`, '/display/open', 'POST', {}, obsGrant.token, { timeout: 2400 });
+        if (!alive()) return;
+        if (typeof opened.receiverId !== 'string' || typeof opened.epoch !== 'string') throw new Error('展示接收端无效');
+        obsReceiverId = opened.receiverId;
+        obsEpoch = opened.epoch;
+        confirmOutputLease(opened, startedAt);
+      }
+      const frame = await http(`${scope.site.origin}/api/mail/live`, `/display/frame?receiverId=${encodeURIComponent(obsReceiverId)}`, 'GET', undefined, obsGrant.token, { timeout: 2400 });
+      if (!alive()) return;
+      if (frame.receiverId !== obsReceiverId || frame.epoch !== obsEpoch) {
+        obsReceiverId = null;
+        obsEpoch = null;
+        obsBridge.pushBlank();
+        schedule(500);
+        return;
+      }
+      confirmOutputLease(frame, startedAt);
+      if (outputSnapshotId && !frame.snapshot) {
+        outputSnapshotId = null;
+        lastLiveFrame = null;
+        broadcastScrollState(null);
+        broadcastOnAir(null);
+        obsBridge.pushBlank();
+      } else {
+        applyConfirmedFrame(frame, scope.site, 'obs');
+      }
+      schedule(500);
+    } catch (error) {
+      if (!alive()) return;
+      outputSnapshotId = null;
+      lastLiveFrame = null;
+      outputDeadline = 0;
+      broadcastScrollState(null);
+      broadcastOnAir(null);
+      obsBridge.pushBlank();
+      obsReceiverId = null;
+      obsEpoch = null;
+      if (error?.status === 401 || error?.status === 403) obsGrant = null;
+      schedule(1200);
+    }
+  }
+
+  void tick();
+}
+
 function terminateRenderer(window) {
-  // Electron may destroy WebContents before its BrowserWindow reports closed.
-  // A destroyed renderer needs no termination and must never be reloaded.
   const contents = liveContents(window); if (!contents) return Promise.resolve(false);
   const pending = rendererTerminations.get(window); if (pending) return pending;
   if (contents.isCrashed()) return Promise.resolve(true);
@@ -581,28 +646,25 @@ async function paintHeldOutput(held) {
   try {
     if (!await terminateRenderer(window)) { if (owned()) closeOutput(window); return false; }
     if (!current()) return false;
-    // WGC can cache a hidden/crashed window's last frame. Paint a new empty
-    // surface while the website write is pending, with no receiver or script.
     await Promise.race([window.loadURL(blankDocument), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('空白画面加载超时')), 500); })]);
     if (!current()) return false;
     window.showInactive(); return true;
   } catch {
-    // If an empty compositor cannot be established, remove the capture HWND.
     if (owned()) closeOutput(window); return false;
   } finally { clearTimeout(timer); }
 }
 function blank(paint = true) {
-  nextVersion++;
+  shortcuts.bumpNextVersion();
   const held = { window: displayWindow, version: ++outputVersion, painted: Promise.resolve(false) };
   outputDeadline = 0; outputHeld = true;
-  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
+  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null;
+  stopObsPoller();
   broadcastScrollState(null);
   broadcastOnAir(null);
   if (outputTestCard) broadcastTestCard(false);
+  obsBridge.pushBlank();
   if (displayWindow && !displayWindow.isDestroyed()) {
     displayWindow.hide();
-    // Discard the backing renderer immediately, even if the site's hide request
-    // is still pending. No new receiver is opened until that request succeeds.
     void terminateRenderer(displayWindow).catch(() => {});
   }
   if (paint) held.painted = paintHeldOutput(held);
@@ -610,36 +672,36 @@ function blank(paint = true) {
 }
 async function resumeOutput(held) {
   await held.painted;
-  if (!quitting && !pendingOutputClears && held.version === outputVersion && held.window === displayWindow) await recoverOutput(held.window);
+  if (!quitting && !pendingOutputClears && held.version === outputVersion) {
+    if (held.window === displayWindow && displayWindow) await recoverOutput(held.window);
+    else {
+      outputHeld = false;
+      if (obsBridge.getClientCount() > 0) void startObsPoller();
+    }
+  }
 }
 async function clearOutputWith(operation) {
   const held = blank(); pendingOutputClears++;
   let result;
   try { result = await operation(); } finally { pendingOutputClears--; }
-  // Keep the native surface hidden until the server has processed preceding
-  // writes and the hide/end action. Failure intentionally leaves it hidden.
   await resumeOutput(held); return result;
 }
 async function recoverOutput(window = displayWindow, crashed = false) {
   if (quitting || pendingOutputClears || !window || window !== displayWindow || window.isDestroyed() || recoveringWindows.has(window)) return;
   const contents = liveContents(window); if (!contents) { closeOutput(window); return; }
   recoveringWindows.add(window); outputDeadline = 0; outputHeld = true;
-  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
+  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null;
   broadcastScrollState(null);
   broadcastOnAir(null);
   if (outputTestCard) broadcastTestCard(false);
+  obsBridge.pushBlank();
   const version = ++outputVersion;
   const owned = () => window === displayWindow && version === outputVersion;
   const current = () => owned() && !quitting && !pendingOutputClears && liveContents(window) === contents;
-  // A renderer timer or IPC message cannot clear a frozen compositor. Hide the
-  // native window first, then discard its renderer and return with a fresh,
-  // blank receiver in the same capture window. Display partitions are unique.
   window.hide();
   try {
     if (!crashed && !await terminateRenderer(window)) { if (owned()) closeOutput(window); return; }
     if (!current()) return;
-    // Wait for render-process-gone before reloading: immediate reload can race
-    // asynchronous termination and leave Chromium's replacement frame dead.
     await new Promise((resolve, reject) => {
       const cleanup = () => { clearTimeout(timer); contents.removeListener('did-finish-load', loaded); contents.removeListener('did-fail-load', failed); contents.removeListener('destroyed', destroyed); };
       const loaded = () => { cleanup(); resolve(); };
@@ -649,20 +711,24 @@ async function recoverOutput(window = displayWindow, crashed = false) {
       contents.once('did-finish-load', loaded); contents.on('did-fail-load', failed); contents.once('destroyed', destroyed);
       void window.loadFile(path.join(__dirname, 'build/display.html')).catch(error => { cleanup(); reject(error); });
     });
-    if (current()) { outputHeld = false; window.showInactive(); }
+    if (current()) {
+      outputHeld = false;
+      liveContents(window)?.send?.('output:overlay', overlayStore.get());
+      window.showInactive();
+    }
   } catch (error) {
-    // Failed recovery stays hidden; it must not reveal a stale backing surface.
     console.error('WindChime display recovery failed:', error.message);
     if (owned()) closeOutput(window);
   } finally { recoveringWindows.delete(window); }
 }
 function confirmOutputLease(result, startedAt) {
   if (!Number.isFinite(result?.leaseMs) || result.leaseMs <= 0) throw new Error('展示租期无效');
-  // Start at request dispatch, not response receipt, so a delayed response
-  // cannot prolong the last confirmed frame. Reserve time for renderer startup
-  // and native capture to receive the replacement transparent compositor frame.
   outputDeadline = startedAt + Math.min(result.leaseMs, 3000) - 400;
-  if (performance.now() >= outputDeadline) { void recoverOutput(); throw new Error('展示租期已失效'); }
+  if (performance.now() >= outputDeadline) {
+    if (displayWindow && !displayWindow.isDestroyed()) void recoverOutput();
+    else obsBridge.pushBlank();
+    throw new Error('展示租期已失效');
+  }
 }
 function syncDisplaySize(appearance) {
   if (!displayWindow || displayWindow.isDestroyed() || !appearance || typeof appearance !== 'object') return;
@@ -682,26 +748,26 @@ function hideSite(site) {
   return writeCommand(() => siteRequest(site, { path: '/control/action', method: 'POST', body: { topicId: activeTopic(site), action: 'hide', expectedRevision: 0, operationId: crypto.randomUUID() } }));
 }
 async function selectSite(id) {
-  await waitForConnectionCommit();
+  await vaultStore.waitForCommit();
   if (id !== null && !state.sites.some(site => site.id === id)) throw new Error('信箱不存在');
-  const assertAttempt = connectionAttempt();
+  const assertAttempt = vaultStore.beginAttempt();
   if (!switching && state.selected === id) return selected() ? publicSite(selected()) : null;
-  return persistConnections(state.sites, id, assertAttempt);
+  return vaultStore.persist(state.sites, id, assertAttempt);
 }
 async function selectTopic(id, connectionId) {
-  await waitForConnectionCommit();
+  await vaultStore.waitForCommit();
   const scope = context(), site = scope.site;
   if (connectionId !== site.id) throw new Error('网站已切换，旧话题选择已取消');
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(id)) throw new Error('无效话题');
   if (site.scope !== 'site' && id !== site.topicId) throw new Error('旧版话题密钥只能访问原话题，请在网站生成站点密钥');
   if (activeTopic(site) === id) return publicSite(site);
-  const assertAttempt = connectionAttempt();
-  // Verify membership before disturbing the currently selected mailbox.
+  const assertAttempt = vaultStore.beginAttempt();
   const topic = await siteRequest(site, { path: `/control/topics/${encodeURIComponent(id)}`, method: 'GET' });
-  await waitForConnectionCommit(); assertCurrent(scope); assertAttempt();
+  await vaultStore.waitForCommit(); assertCurrent(scope); assertAttempt();
   if (topic.id !== id) throw new Error('网站返回了不匹配的话题');
+  lastKnownTopicTitle = typeof topic.title === 'string' ? topic.title : '';
   const next = { ...site, selectedTopicId: id };
-  return persistConnections(state.sites.map(item => item.id === site.id ? next : item), site.id, assertAttempt);
+  return vaultStore.persist(state.sites.map(item => item.id === site.id ? next : item), site.id, assertAttempt);
 }
 async function hide() {
   return clearOutputWith(() => hideSite(selected()));
@@ -713,48 +779,125 @@ function secureWindow(window, partition) {
   const isolated = session.fromPartition(partition);
   isolated.setPermissionRequestHandler((_, __, callback) => callback(false));
   isolated.setPermissionCheckHandler(() => false);
-  // Local renderers never make network requests. The main process has an allowlist.
   isolated.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] }, (_, callback) => callback({ cancel: true }));
 }
 async function openDisplay(initiatingTile) {
   if (initiatingTile) assertTile(initiatingTile);
   if (pendingOutputClears) throw new Error('正在隐藏展示，请稍候');
   if (displayWindow && !displayWindow.isDestroyed() && state.output) { if (outputHeld) await recoverOutput(); else displayWindow.show(); return; }
-  const scope = context(), site = scope.site; closeOutput(); const version = outputVersion;
+  const scope = context(), site = scope.site;
+  stopObsPoller();
+  closeOutput();
+  const version = outputVersion;
   if (!activeTopic(site)) throw new Error('请先选择话题');
   const grant = await siteRequest(site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(site), kind: 'display', label: '桌面展示窗口' } });
   assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); if (version !== outputVersion) throw new Error('展示请求已取消');
   state.output = grant;
   const partition = `windchime-display-${crypto.randomUUID()}`;
   displaySize = { width: 960, height: 640 };
-  displayWindow = new BrowserWindow({ width: 960, height: 640, title: 'WindChime Display', transparent: true, backgroundColor: '#00000000', show: false, frame: false, webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false } });
+  const savedPos = fitDisplayPosition(workspaceStore.get().displayBounds, displaySize, screen?.getAllDisplays().map(d => d.workArea));
+  displayWindow = new BrowserWindow({
+    width: 960,
+    height: 640,
+    ...savedPos,
+    title: 'WindChime Display',
+    transparent: true,
+    backgroundColor: '#00000000',
+    show: false,
+    frame: false,
+    webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false },
+  });
   secureWindow(displayWindow, partition);
   const window = displayWindow;
-  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputAppearance = null; outputDeadline = 0; outputVersion++; broadcastScrollState(null); broadcastOnAir(null); if (outputTestCard) broadcastTestCard(false); if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
+  window.on('moved', () => {
+    if (displayWindow !== window || window.isDestroyed()) return;
+    clearTimeout(displayMoveTimer);
+    displayMoveTimer = setTimeout(() => {
+      if (displayWindow !== window || window.isDestroyed()) return;
+      const b = window.getBounds?.();
+      if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
+        void workspaceStore.save({ displayBounds: { x: Math.round(b.x), y: Math.round(b.y) } }).catch(() => {});
+      }
+    }, 250);
+    displayMoveTimer.unref?.();
+  });
+  window.on('closed', () => {
+    if (displayWindow !== window) return;
+    displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 };
+    outputAppearance = null; outputDeadline = 0; outputVersion++; lastLiveFrame = null;
+    broadcastScrollState(null); broadcastOnAir(null);
+    if (outputTestCard) broadcastTestCard(false);
+    obsBridge.pushBlank();
+    if (obsBridge.getClientCount() > 0 && isCurrent(scope)) void startObsPoller();
+    else if (isCurrent(scope)) void hideSite(site).catch(() => {});
+  });
   window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
   window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
   await window.loadFile(path.join(__dirname, 'build/display.html'));
   assertCurrent(scope); if (displayWindow !== window || version !== outputVersion || window.isDestroyed()) throw new Error('展示窗口已关闭');
+  liveContents(window)?.send?.('output:overlay', overlayStore.get());
   window.showInactive();
 }
+
 async function start() {
-  vaultPath = path.join(app.getPath('userData'), 'devices.v1.enc'); await readVault();
-  workspacePath = path.join(app.getPath('userData'), 'workspace.v1.json'); await readWorkspace();
-  desktopTheme = workspace.theme === 'dark' ? 'dark' : 'light';
+  const userDataDir = app.getPath('userData');
+  vaultPath = path.join(userDataDir, 'devices.v1.enc');
+  workspacePath = path.join(userDataDir, 'workspace.v1.json');
+  historyPath = path.join(userDataDir, 'play-history.v1.json');
+  overlayDir = path.join(userDataDir, 'local-overlay');
+
+  await vaultStore.read();
+  const ws = await workspaceStore.read();
+  await overlayStore.read();
+  await sessionHistory.read();
+
+  desktopTheme = ws.theme === 'dark' ? 'dark' : 'light';
   desktopPrefs = {
-    randomDrawEnabled: workspace.randomDrawEnabled === true,
-    clearOnBlindDraw: workspace.clearOnBlindDraw === true,
+    randomDrawEnabled: ws.randomDrawEnabled === true,
+    clearOnBlindDraw: ws.clearOnBlindDraw === true,
+    chimeEnabled: ws.chimeEnabled === true,
+    chimeVolume: Number.isFinite(ws.chimeVolume) ? ws.chimeVolume : 70,
+    startupView: ws.startupView === 'inbox' || ws.startupView === 'studio' ? ws.startupView : 'last',
+    lastView: ws.lastView ?? null,
+    autoCheckUpdate: ws.autoCheckUpdate !== false,
   };
-  // Only explicit poster preferences use persistent browser storage. Network,
-  // credentials, remote pages and inbox persistence remain unavailable here.
+
+  if (ws.obsBridge) {
+    try {
+      await obsBridge.configure({
+        enabled: ws.obsBridge.enabled === true,
+        port: ws.obsBridge.port ?? 17420,
+        key: ws.obsBridge.key,
+      });
+    } catch (error) {
+      connectionError(error.message || '本地 OBS 浏览器源启动失败');
+    }
+  }
+
   const partition = 'persist:windchime-private';
-  controlWindow = new BrowserWindow({ width: 1440, height: 1000, minWidth: 760, minHeight: 620, title: '风铃 · 私人控制台', icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+  controlWindow = new BrowserWindow({
+    width: 1440,
+    height: 1000,
+    minWidth: 760,
+    minHeight: 620,
+    title: '风铃 · 私人控制台',
+    icon: path.join(__dirname, 'build/icon.ico'),
+    backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
     ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: desktopTheme === 'dark' ? '#b8ccd6' : '#46616f', height: 48 }, autoHideMenuBar: true } : {}),
-    webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
+    webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false },
+  });
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
-  for (const event of ['blur', 'hide', 'closed']) controlWindow.on(event, () => recordNextShortcut(false));
-  ipcMain.handle('sites:list', async event => { try { const window = assertWindow(event, 'private'); return { ok: true, data: { items: (tileFor(window) ? state.sites.filter(site => site.id === state.selected) : state.sites).map(publicSite), selectedId: state.selected } }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  for (const event of ['blur', 'hide', 'closed']) controlWindow.on(event, () => shortcuts.setRecording(false, () => performance.now()));
+
+  ipcMain.handle('sites:list', async event => {
+    try {
+      const window = assertWindow(event, 'private');
+      return { ok: true, data: { items: (tileFor(window) ? state.sites.filter(site => site.id === state.selected) : state.sites).map(publicSite), selectedId: state.selected } };
+    } catch (error) {
+      return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' };
+    }
+  });
   handle('sites:import-key', 'control', importConnectionKey);
   handle('sites:pair', 'control', async input => {
     const origin = normalizeOrigin(input.origin); const label = String(input.label || new URL(origin).hostname).slice(0, 80);
@@ -766,35 +909,33 @@ async function start() {
   });
   handle('sites:pair-status', 'control', async id => {
     const pairing = state.pairings.get(id); if (!pairing) return { status: 'expired' };
-    const pendingIntent = connectionIntent, pendingVersion = selectionVersion, pendingSites = state.sites;
+    const pendingIntent = vaultStore.getIntent(), pendingVersion = selectionVersion, pendingSites = state.sites;
     if (!pairing.approvedSite) {
       const result = await http(`${pairing.origin}/api/mail/live`, '/devices/poll', 'POST', { deviceCode: pairing.deviceCode, verifier: pairing.verifier });
       if (result.status !== 'approved') return { status: result.status };
       pairing.approvedSite = restoreSite({ id: crypto.randomUUID(), label: pairing.label, origin: pairing.origin, siteId: pairing.siteId, topicId: result.topicId, token: result.token, expiresAt: result.expiresAt });
     }
     const site = pairing.approvedSite;
-    await waitForConnectionCommit();
+    await vaultStore.waitForCommit();
     if (state.pairings.get(id) !== pairing) return { status: 'expired' };
-    if (pendingIntent !== connectionIntent || pendingVersion !== selectionVersion || pendingSites !== state.sites) throw connectionChanged();
-    const assertConnection = connectionAttempt();
-    const assertAttempt = () => { assertConnection(); if (state.pairings.get(id) !== pairing) throw connectionChanged(); };
-    await persistImportedSite(site, assertAttempt);
+    if (pendingIntent !== vaultStore.getIntent() || pendingVersion !== selectionVersion || pendingSites !== state.sites) throw vaultStore.connectionChanged();
+    const assertConnection = vaultStore.beginAttempt();
+    const assertAttempt = () => { assertConnection(); if (state.pairings.get(id) !== pairing) throw vaultStore.connectionChanged(); };
+    await vaultStore.persistImported(site, assertAttempt);
     state.pairings.delete(id); return { status: 'approved', site: publicSite(site) };
   });
   handle('sites:pair-cancel', 'control', async id => {
     const approvedId = state.pairings.get(id)?.approvedSite?.id;
     state.pairings.delete(id);
-    // A completed atomic rename cannot be cancelled. Wait for publication so
-    // the caller refreshes the actual connection, rather than an obsolete list.
-    await waitForConnectionCommit();
+    await vaultStore.waitForCommit();
     return { connected: !!approvedId && state.sites.some(site => site.id === approvedId) };
   });
-  handle('sites:select', 'control', async id => { if (connectionCommit) await waitForConnectionCommit(); return selectSite(id); });
+  handle('sites:select', 'control', async id => { if (vaultStore.hasPendingCommit()) await vaultStore.waitForCommit(); return selectSite(id); });
   handle('sites:select-topic', 'control', selectTopic);
   handle('sites:forget', 'control', async id => {
-    await waitForConnectionCommit();
-    const assertAttempt = connectionAttempt(), sites = state.sites.filter(site => site.id !== id);
-    await persistConnections(sites, id === state.selected ? sites[0]?.id ?? null : state.selected, assertAttempt);
+    await vaultStore.waitForCommit();
+    const assertAttempt = vaultStore.beginAttempt(), sites = state.sites.filter(site => site.id !== id);
+    await vaultStore.persist(sites, id === state.selected ? sites[0]?.id ?? null : state.selected, assertAttempt);
   });
   handle('control:request', 'private', async (window, input) => {
     const initiatingTile = tileFor(window);
@@ -804,7 +945,12 @@ async function start() {
     try {
       const execute = () => { assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); return siteRequest(site, request, { binary: request.path.startsWith('/control/assets/') }); };
       const perform = () => request.method === 'GET' ? execute() : writeCommand(execute);
-      const result = await (request.body?.action === 'hide' || request.body?.action === 'end' ? clearOutputWith(perform) : perform()); assertCurrent(scope); return result;
+      const result = await (request.body?.action === 'hide' || request.body?.action === 'end' ? clearOutputWith(perform) : perform());
+      assertCurrent(scope);
+      if (request.method === 'GET' && request.path.startsWith('/control/topics/') && typeof result?.title === 'string') {
+        lastKnownTopicTitle = result.title;
+      }
+      return result;
     } catch (error) { if (isCurrent(scope) && (error.status === 401 || error.status === 403)) { blank(); state.output = null; } throw error; }
   }, true);
   handle('control:hide', 'private', hide);
@@ -829,7 +975,10 @@ async function start() {
     const enabled = Boolean(active);
     if (enabled) {
       if (outputSnapshotId) throw new Error('当前正在播出真实来信，请先一键隐藏后再发送测试卡');
-      if (!displayWindow || displayWindow.isDestroyed() || !state.output) await openDisplay(tileFor(window));
+      const hasObs = obsBridge.getClientCount() > 0;
+      if (!hasObs && (!displayWindow || displayWindow.isDestroyed() || !state.output)) {
+        await openDisplay(tileFor(window));
+      }
       broadcastTestCard(true);
       return true;
     }
@@ -837,6 +986,7 @@ async function start() {
     return false;
   }, true);
   handle('display:scroll-metrics', 'display', metrics => { broadcastScrollState(sanitizeScrollMetrics(metrics)); });
+  handle('display:overlay-get', 'display', () => overlayStore.get());
   handle('display:request', 'display', async input => {
     const scope = context(), version = outputVersion;
     const request = validateRequest(input, 'display'); const output = state.output; if (!output) throw new Error('展示未连接');
@@ -859,25 +1009,14 @@ async function start() {
       if (opening) {
         if (typeof result.receiverId !== 'string' || typeof result.epoch !== 'string') throw new Error('展示接收端无效');
         outputReceiverId = result.receiverId; outputEpoch = result.epoch;
+        liveContents(displayWindow)?.send?.('output:overlay', overlayStore.get());
         if (outputTestCard) liveContents(displayWindow)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
       }
       if (request.path.startsWith('/display/frame?')) {
         if (result.receiverId !== outputReceiverId || result.epoch !== outputEpoch) throw new Error('展示接收端已更新');
-        // Do not trust a running JS timer as evidence that an old GPU surface
-        // was cleared. Withdrawals replace the native renderer as well.
         if (outputSnapshotId && !result.snapshot) { void recoverOutput(); throw new Error('当前展示已撤下'); }
-        const nextSnapshotId = result.snapshot?.id ?? null;
-        if (nextSnapshotId !== outputSnapshotId) broadcastScrollState(null);
-        if (nextSnapshotId && outputTestCard) broadcastTestCard(false);
-        outputSnapshotId = nextSnapshotId;
-        broadcastOnAir(snapshotToOnAir(result.snapshot));
         output.frameActivation = result.activation;
-        if (result.appearance && typeof result.appearance === 'object') {
-          outputAppearance = result.appearance;
-          if (outputTestCard && !nextSnapshotId) {
-            liveContents(displayWindow)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
-          }
-        }
+        applyConfirmedFrame(result, scope.site, 'native');
         syncDisplaySize(result.appearance);
       }
       if (opening || request.path.startsWith('/display/frame?')) confirmOutputLease(result, startedAt);
@@ -885,15 +1024,37 @@ async function start() {
     } catch (error) {
       if (isCurrent(scope) && version === outputVersion && output === state.output && receiverVersion === outputReceiverVersion) {
         if (error.status === 401 || error.status === 403) { blank(); state.output = null; }
-        // A cancelled renderer request still finishes in the main process. An
-        // old image failure must not withdraw a newer activation; grant failures
-        // above still invalidate the current output, regardless of the image.
         else if (ownsAsset() && (outputSnapshotId || outputDeadline)) void recoverOutput();
       }
       throw error;
     }
   });
-  ipcMain.handle('app:status', async event => { try { const window = assertWindow(event, 'private'); const tile = tileFor(window); return { ok: true, data: { connectionError: state.connectionError, displayOpen: !!displayWindow, shortcut: 'Ctrl+Shift+H', nextShortcut, shortcutRecording, shortcutError, nextActionError, nextPending, tiles: [...tiles.values()].map(tileMetadata), tile: tile ? tileMetadata(tile) : null, selectedMessageId, contextVersion: selectionVersion } }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+
+  ipcMain.handle('app:status', async event => {
+    try {
+      const window = assertWindow(event, 'private');
+      const tile = tileFor(window);
+      const sc = shortcuts.getStatus();
+      const obs = obsBridge.getStatus();
+      return {
+        ok: true,
+        data: {
+          version: appVersion,
+          connectionError: state.connectionError,
+          displayOpen: !!displayWindow,
+          obsRunning: obs.running,
+          obsClients: obs.clientCount,
+          ...sc,
+          tiles: [...tiles.values()].map(tileMetadata),
+          tile: tile ? tileMetadata(tile) : null,
+          selectedMessageId,
+          contextVersion: selectionVersion,
+        },
+      };
+    } catch (error) {
+      return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' };
+    }
+  });
   handle('tiles:open', 'control', openTile);
   ipcMain.handle('tiles:close', async (event, module) => { try { const window = assertWindow(event, 'private'), own = tileFor(window); if (own && own.module !== module) throw new Error('不可关闭其他磁贴'); await closeTile(module); return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
   ipcMain.handle('tiles:pin', async (event, module, pinned) => { try { const window = assertWindow(event, 'private'), own = tileFor(window), tile = tiles.get(module); if (!tile || typeof pinned !== 'boolean' || (own && own !== tile)) throw new Error('无效磁贴'); assertTile(tile); tile.pinned = pinned; tile.window.setAlwaysOnTop(pinned); rememberTile(tile); return { ok: true, data: tileMetadata(tile) }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
@@ -905,13 +1066,9 @@ async function start() {
         if (typeof dirty !== 'boolean') throw new Error('无效编辑状态');
         tile.dirty = dirty;
       } else if (typeof dirty === 'boolean') {
-        mainReviewDirty = dirty;
-        mainOtherDirty = false;
-        mainDirty = dirty;
+        mainReviewDirty = dirty; mainOtherDirty = false; mainDirty = dirty;
       } else if (dirty && typeof dirty === 'object' && typeof dirty.review === 'boolean' && typeof dirty.other === 'boolean') {
-        mainReviewDirty = dirty.review;
-        mainOtherDirty = dirty.other;
-        mainDirty = dirty.review || dirty.other;
+        mainReviewDirty = dirty.review; mainOtherDirty = dirty.other; mainDirty = dirty.review || dirty.other;
       } else {
         throw new Error('无效编辑状态');
       }
@@ -919,46 +1076,113 @@ async function start() {
     } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; }
   });
   handle('control:select-message', 'private', (window, id, connectionId, contextVersion) => chooseMessage(id, connectionId, contextVersion, window), true);
-  handle('app:next-shortcut', 'control', configureNextShortcut);
-  handle('app:scroll-shortcuts', 'control', () => ({ ...scrollShortcuts, error: scrollShortcutError }));
-  handle('app:scroll-shortcuts-set', 'control', configureScrollShortcuts);
-  handle('app:shortcut-recording', 'control', recordNextShortcut);
+  handle('app:next-shortcut', 'control', value => shortcuts.configureNext(value, () => performance.now()));
+  handle('app:scroll-shortcuts', 'control', () => shortcuts.getScrollStatus());
+  handle('app:scroll-shortcuts-set', 'control', input => shortcuts.configureScroll(input));
+  handle('app:shortcut-recording', 'control', recording => shortcuts.setRecording(recording, () => performance.now()));
   handle('app:theme-get', 'private', () => desktopTheme);
   handle('app:theme-set', 'private', async theme => {
     if (theme !== 'light' && theme !== 'dark') throw new Error('无效外观主题');
     desktopTheme = theme;
     applyWindowTheme(theme);
-    await saveWorkspace(undefined, undefined, theme);
-    liveContents(controlWindow)?.send?.('app:theme-changed', theme);
-    for (const tile of tiles.values()) liveContents(tile.window)?.send?.('app:theme-changed', theme);
+    await workspaceStore.save({ theme });
+    broadcastPrivate('app:theme-changed', theme);
     return theme;
   });
   handle('app:prefs-get', 'private', () => ({ ...desktopPrefs }));
   handle('app:prefs-set', 'private', async patch => {
     if (!patch || typeof patch !== 'object') throw new Error('无效偏好设置');
     const next = { ...desktopPrefs };
-    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw']) {
+    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw', 'chimeEnabled', 'autoCheckUpdate']) {
       if (key in patch) {
         if (typeof patch[key] !== 'boolean') throw new Error('无效偏好设置');
         next[key] = patch[key];
       }
     }
+    if ('chimeVolume' in patch) {
+      if (!Number.isFinite(patch.chimeVolume) || patch.chimeVolume < 0 || patch.chimeVolume > 100) throw new Error('无效提示音量');
+      next.chimeVolume = Math.round(patch.chimeVolume);
+    }
+    if ('startupView' in patch) {
+      if (!['inbox', 'studio', 'last'].includes(patch.startupView)) throw new Error('无效启动页');
+      next.startupView = patch.startupView;
+    }
+    if ('lastView' in patch) {
+      if (patch.lastView !== null && !['inbox', 'studio', 'topics', 'share', 'settings'].includes(patch.lastView)) throw new Error('无效页面记录');
+      next.lastView = patch.lastView;
+    }
     desktopPrefs = next;
-    await saveWorkspace(undefined, undefined, undefined, next);
-    liveContents(controlWindow)?.send?.('app:prefs-changed', { ...next });
-    for (const tile of tiles.values()) liveContents(tile.window)?.send?.('app:prefs-changed', { ...next });
+    await workspaceStore.save({
+      randomDrawEnabled: next.randomDrawEnabled,
+      clearOnBlindDraw: next.clearOnBlindDraw,
+      chimeEnabled: next.chimeEnabled,
+      chimeVolume: next.chimeVolume,
+      startupView: next.startupView,
+      lastView: next.lastView,
+      autoCheckUpdate: next.autoCheckUpdate,
+    });
+    broadcastPrivate('app:prefs-changed', { ...next });
     return { ...next };
   });
+  handle('app:badge-update', 'control', count => {
+    const n = Number.isInteger(count) && count > 0 ? Math.min(9999, count) : 0;
+    tray?.setToolTip?.(n > 0 ? `风铃 · 未拆 ${n} 封 · Ctrl+Shift+H 一键隐藏` : '风铃 · Ctrl+Shift+H 一键隐藏');
+    return n;
+  });
+
+  // OBS local browser source IPC
+  handle('obs:status', 'private', () => obsBridge.getStatus());
+  handle('obs:configure', 'control', async patch => {
+    const { status, persisted } = await obsBridge.configure(patch);
+    await workspaceStore.save({ obsBridge: persisted });
+    return status;
+  });
+  handle('obs:reset-key', 'control', async () => {
+    const { status, persisted } = await obsBridge.resetKey();
+    await workspaceStore.save({ obsBridge: persisted });
+    return status;
+  });
+
+  // Local display overlay decoration IPC
+  handle('overlay:get', 'private', () => overlayStore.get());
+  handle('overlay:set', 'control', patch => overlayStore.update(patch));
+  handle('overlay:pick', 'control', (window, slot) => overlayStore.pick(slot, window), true);
+  handle('overlay:clear', 'control', slot => overlayStore.clear(slot));
+
+  // Local session broadcast history IPC
+  handle('history:list', 'private', () => sessionHistory.list());
+  handle('history:export', 'control', async input => {
+    const format = input?.format === 'csv' ? 'csv' : 'md';
+    const dateKey = typeof input?.dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dateKey) ? input.dateKey : undefined;
+    const content = format === 'csv' ? sessionHistory.exportCsv(dateKey) : sessionHistory.exportMarkdown(dateKey);
+    const defaultName = `风铃播报复盘-${dateKey || new Date().toISOString().slice(0, 10)}.${format}`;
+    const result = await dialog.showSaveDialog(controlWindow, {
+      title: '导出风铃播报复盘',
+      defaultPath: defaultName,
+      filters: [{ name: format === 'csv' ? 'CSV 表格' : 'Markdown 文档', extensions: [format] }],
+    });
+    if (result.canceled || !result.filePath) return false;
+    await fs.writeFile(result.filePath, Buffer.from(content, 'utf8'));
+    return true;
+  });
+  handle('history:clear', 'control', () => sessionHistory.clear());
+
+  // In-app update check IPC
+  handle('updater:info', 'private', () => updater.getInfo());
+  handle('updater:check', 'control', () => updater.check());
+  handle('updater:open-release', 'control', url => updater.openRelease(url));
+
   handle('app:confirm', 'private', async (window, input) => {
     if (!input || typeof input.message !== 'string' || input.message.length > 500) throw new Error('无效确认内容');
     const answer = await dialog.showMessageBox(window, { type: 'warning', title: '风铃', message: input.message, buttons: ['取消', '继续'], defaultId: 0, cancelId: 0, noLink: true });
     return answer.response === 1;
   }, true);
   handle('files:save', 'control', async input => {
-    if (!input || !['png', 'csv'].includes(input.kind) || typeof input.name !== 'string' || !/^[^<>:"/\\|?*\x00-\x1f]{1,100}$/.test(input.name)) throw new Error('无效导出文件');
-    const bytes = input.kind === 'csv' && typeof input.content === 'string' ? Buffer.from(input.content, 'utf8') : input.bytes instanceof Uint8Array ? Buffer.from(input.bytes) : null;
+    if (!input || !['png', 'csv', 'md'].includes(input.kind) || typeof input.name !== 'string' || !/^[^<>:"/\\|?*\x00-\x1f]{1,100}$/.test(input.name)) throw new Error('无效导出文件');
+    const bytes = (input.kind === 'csv' || input.kind === 'md') && typeof input.content === 'string' ? Buffer.from(input.content, 'utf8') : input.bytes instanceof Uint8Array ? Buffer.from(input.bytes) : null;
     if (!bytes || bytes.length > 20 * 1024 * 1024 || (input.kind === 'png' && !bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])))) throw new Error('无效导出内容');
-    const result = await dialog.showSaveDialog(controlWindow, { title: '保存风铃导出文件', defaultPath: input.name.replace(/\.(?:csv|png)$/i, '') + '.' + input.kind, filters: [{ name: input.kind === 'png' ? 'PNG 图片' : 'CSV 表格', extensions: [input.kind] }] });
+    const filterName = input.kind === 'png' ? 'PNG 图片' : input.kind === 'csv' ? 'CSV 表格' : 'Markdown 文档';
+    const result = await dialog.showSaveDialog(controlWindow, { title: '保存风铃导出文件', defaultPath: input.name.replace(/\.(?:csv|png|md)$/i, '') + '.' + input.kind, filters: [{ name: filterName, extensions: [input.kind] }] });
     if (result.canceled || !result.filePath) return false; await fs.writeFile(result.filePath, bytes); return true;
   });
   handle('files:avatar', 'control', async () => {
@@ -980,31 +1204,42 @@ async function start() {
     const url = new URL(share.submissionUrl); if (url.origin !== scope.site.origin || url.username || url.password || url.hash || url.search || !/^(?:\/|\/m\/[A-Za-z0-9_-]+)$/.test(url.pathname) || !['http:', 'https:'].includes(url.protocol)) throw new Error('网站返回了不安全的投稿地址');
     await shell.openExternal(url.href); return true;
   });
+
   await controlWindow.loadFile(path.join(__dirname, 'build/control.html'));
-  tray = new Tray(path.join(__dirname, 'build/tray.png')); tray.setToolTip('风铃 · Ctrl+Shift+H 一键隐藏');
-  tray.setContextMenu(Menu.buildFromTemplate([{ label: '打开私人控制台', click: () => controlWindow.show() }, { label: '■ 一键隐藏', click: () => void hide().catch(() => {}) }, { label: '退出并结束展示', click: () => app.quit() }]));
+  tray = new Tray(path.join(__dirname, 'build/tray.png'));
+  tray.setToolTip('风铃 · Ctrl+Shift+H 一键隐藏');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '打开私人控制台', click: () => controlWindow.show() },
+    { label: '■ 一键隐藏', click: () => void hide().catch(() => {}) },
+    { label: '退出并结束展示', click: () => app.quit() },
+  ]));
   tray.on('double-click', () => controlWindow.show());
-  try { if (!globalShortcut.register(HIDE_SHORTCUT, () => void hide().catch(() => {}))) connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
-  catch { connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
-  if (workspace.nextShortcut) { try { if (!globalShortcut.register(workspace.nextShortcut, () => { void nextLetter(); })) throw new Error(); nextShortcut = workspace.nextShortcut; nextRegistered = true; } catch { shortcutError = '保存的下一封快捷键无法注册，请在设置中选择其他快捷键'; } }
-  const savedScroll = { up: workspace.scrollUpShortcut || '', down: workspace.scrollDownShortcut || '', pause: workspace.scrollPauseShortcut || '' };
-  for (const slot of ['up', 'down', 'pause']) {
-    if (!savedScroll[slot]) continue;
-    scrollShortcuts[slot] = savedScroll[slot];
-    if (registerScrollBinding(slot, savedScroll[slot])) scrollRegistered[slot] = true;
-    else scrollShortcutError = '部分保存的滚动快捷键无法注册，请在设置中重新选择';
-  }
+  shortcuts.registerInitial(ws, () => performance.now());
+
   powerMonitor.on('suspend', blank);
   powerMonitor.on('resume', () => { const held = blank(false); void resumeOutput(held); });
-  // Main-process timers keep running if renderer timers/compositing stall.
-  setInterval(() => { if (outputDeadline && performance.now() >= outputDeadline) void recoverOutput(); }, 100).unref();
+  setInterval(() => {
+    if (outputDeadline && performance.now() >= outputDeadline) {
+      if (displayWindow && !displayWindow.isDestroyed()) void recoverOutput();
+      else {
+        outputDeadline = 0;
+        outputSnapshotId = null;
+        lastLiveFrame = null;
+        broadcastScrollState(null);
+        broadcastOnAir(null);
+        obsBridge.pushBlank();
+      }
+    }
+  }, 100).unref();
 }
+
 app.on('before-quit', event => {
   if (quitting) return; event.preventDefault(); quitting = true;
-  const site = selected(); closeOutput();
+  const site = selected();
+  stopObsPoller();
+  void obsBridge.stop().catch(() => {});
+  closeOutput();
   disposeTiles();
-  // Exit removes the output HWND. It must not start blank-document painting or
-  // receiver recovery while Electron is already tearing down its WebContents.
   Promise.race([hideSite(site).catch(() => {}), new Promise(resolve => setTimeout(resolve, 2000))]).finally(() => { globalShortcut.unregisterAll(); app.quit(); });
 });
 app.on('window-all-closed', () => { if (!tray) app.quit(); });
