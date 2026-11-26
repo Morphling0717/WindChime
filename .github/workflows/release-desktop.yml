@@ -95,10 +95,18 @@ jobs:
           $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { $env:INPUT_TAG }
           $relDir = "out\releases\$version"
           $sums = Get-Content "$relDir\SHA256SUMS.txt" -Raw
+          $changelogSection = ''
+          $changelogPath = Join-Path (Resolve-Path '..\..') 'CHANGELOG.md'
+          if (Test-Path $changelogPath) {
+            $rawLog = Get-Content $changelogPath -Raw -Encoding UTF8
+            $m = [regex]::Match($rawLog, '(?ms)^##\s+' + [regex]::Escape($version) + '\b[^\r\n]*\r?\n(.*?)(?=^##\s+|\z)')
+            if ($m.Success) { $changelogSection = $m.Groups[1].Value.Trim() }
+          }
+          $changelogBlock = if ($changelogSection) { "$changelogSection`n`n---`n" } else { '' }
           $notes = @"
           ## 风铃 WindChime $version
 
-          - 支持从旧版直接运行安装程序覆盖升级，已有网站连接密钥、热键、深色模式与本地配置完整保留。
+          $changelogBlock- 支持从旧版直接运行安装程序覆盖升级，已有网站连接密钥、热键、深色模式与本地配置完整保留。
           - **Windows SmartScreen 提示说明**：若首次安装出现「Windows 已保护你的电脑」，点击「更多信息 → 仍要运行」即可，并可对照下方 ``SHA256SUMS.txt`` 校验文件完整性。
 
           ### SHA-256 校验值
