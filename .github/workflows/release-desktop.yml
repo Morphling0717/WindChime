@@ -57,13 +57,16 @@ jobs:
           node scripts/verify-portable.cjs
 
       - name: Optional Authenticode code signing (enabled when WIN_CERT_BASE64 secret is configured)
-        if: ${{ secrets.WIN_CERT_BASE64 != '' && secrets.WIN_CERT_PASSWORD != '' }}
         working-directory: apps/desktop
         shell: pwsh
         env:
           WIN_CERT_BASE64: ${{ secrets.WIN_CERT_BASE64 }}
           WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
         run: |
+          if (-not $env:WIN_CERT_BASE64 -or -not $env:WIN_CERT_PASSWORD) {
+            Write-Host 'WIN_CERT_BASE64/WIN_CERT_PASSWORD not configured; skipping Authenticode signing.'
+            exit 0
+          }
           $version = (Get-Content package.json | ConvertFrom-Json).version
           $relDir = "out\releases\$version"
           $setup = "$relDir\WindChime-Setup-$version.exe"
@@ -130,7 +133,6 @@ jobs:
           }
 
       - name: Sign and publish China-mirror update feed to windchime.uliuli.cn
-        if: ${{ secrets.WINDCHIME_UPDATE_PRIVATE_KEY != '' && secrets.MIA_SSH_KEY != '' && secrets.MIA_SSH_HOST != '' }}
         working-directory: apps/desktop
         shell: pwsh
         env:
@@ -138,6 +140,10 @@ jobs:
           MIA_SSH_KEY: ${{ secrets.MIA_SSH_KEY }}
           MIA_SSH_HOST: ${{ secrets.MIA_SSH_HOST }}
         run: |
+          if (-not $env:WINDCHIME_UPDATE_PRIVATE_KEY -or -not $env:MIA_SSH_KEY -or -not $env:MIA_SSH_HOST) {
+            Write-Host 'China mirror secrets not configured; skipping windchime.uliuli.cn publish.'
+            exit 0
+          }
           $version = (Get-Content package.json | ConvertFrom-Json).version
           $relDir = "out\releases\$version"
           $setup = "$relDir\WindChime-Setup-$version.exe"
