@@ -94,3 +94,46 @@ test('equal fresh polling objects do not restart scrolling, but new appearance r
     globalThis.requestAnimationFrame = oldRequest; globalThis.cancelAnimationFrame = oldCancel; globalThis.IS_REACT_ACT_ENVIRONMENT = oldAct;
   }
 });
+
+test('manual teleprompter ratio/step commands take over smoothly without fighting auto-scroll and work even when autoScroll is disabled', () => {
+  for (const enabled of [true, false]) {
+    let listener = null;
+    const reports = [];
+    const control = {
+      subscribe: fn => { listener = fn; return () => { listener = null; }; },
+      onMetrics: metrics => reports.push(metrics),
+    };
+    const f = fixture({ enabled, control });
+    f.advance(0);
+    if (enabled) {
+      f.advance(100);
+      f.advance(200);
+      assert.equal(f.viewport.scrollTop, 20);
+    }
+    listener({ type: 'ratio', ratio: 0.6 });
+    for (let i = 0; i < 15; i++) f.advance(16);
+    assert.equal(f.viewport.scrollTop, 60);
+    assert.equal(f.viewport.dataset.scrollPhase, 'manual');
+    assert.equal(reports.at(-1).paused, true);
+    // Holding steady in manual mode does not auto-scroll or jump back to top after long pauses
+    f.advance(4000);
+    assert.equal(f.viewport.scrollTop, 60);
+    // Step up and top work smoothly
+    listener({ type: 'step', delta: -0.2 });
+    for (let i = 0; i < 15; i++) f.advance(16);
+    assert.equal(f.viewport.scrollTop, 20);
+    listener({ type: 'top' });
+    for (let i = 0; i < 15; i++) f.advance(16);
+    assert.equal(f.viewport.scrollTop, 0);
+    // Resuming auto-scroll continues from current offset rather than jumping
+    listener({ type: 'ratio', ratio: 0.4 });
+    for (let i = 0; i < 15; i++) f.advance(16);
+    assert.equal(f.viewport.scrollTop, 40);
+    listener({ type: 'togglePause', paused: false });
+    f.advance(100);
+    assert.equal(f.viewport.scrollTop, 50);
+    assert.equal(f.viewport.dataset.scrollPhase, 'scrolling');
+    f.stop();
+    assert.equal(listener, null);
+  }
+});

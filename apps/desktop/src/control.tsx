@@ -4,6 +4,10 @@ import { createWindChimeLiveClient } from "../../../src/client/live";
 import { createWindChimeClient } from "../../../src/client";
 import type { WindChimeAdminTopic } from "../../../src/core";
 import { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from "../../../src/broadcast/ControlPanel";
+import type {
+  WindChimeDisplayScrollCommand,
+  WindChimeDisplayScrollMetrics,
+} from "../../../src/broadcast/scroll-loop";
 import { windChimeControlCss } from "../../../src/broadcast/styles";
 import {
   assetTransport,
@@ -12,6 +16,8 @@ import {
   managementFetch,
   type Site,
   type DesktopStatus,
+  type OnAirInfo,
+  type DesktopTheme,
 } from "./bridge";
 import { TileApp } from "./tiles";
 import { Hotkeys } from "./Hotkeys";
@@ -26,7 +32,7 @@ function Icon({
   name,
   size = 20,
 }: {
-  name: "inbox" | "link" | "palette" | "screen" | "hide" | "shield" | "arrow";
+  name: "inbox" | "link" | "palette" | "screen" | "hide" | "shield" | "arrow" | "moon" | "sun";
   size?: number;
 }) {
   const paths = {
@@ -68,6 +74,13 @@ function Icon({
       </>
     ),
     arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,
+    moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />,
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" />
+      </>
+    ),
   };
   return (
     <svg
@@ -124,6 +137,33 @@ function App() {
     nextShortcut: '', shortcutError: '', nextActionError: '',
     selectedMessageId: null, contextVersion: 0, tiles: [], tile: null,
   });
+  const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
+  const [onAir, setOnAir] = useState<OnAirInfo | null>(null);
+  const [theme, setTheme] = useState<DesktopTheme>("light");
+  useEffect(() => {
+    void unwrap(bridge.getScrollState()).then(setScrollState).catch(() => {});
+    return bridge.onScrollState(setScrollState);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getOnAir()).then(setOnAir).catch(() => {});
+    return bridge.onOnAir(setOnAir);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getTheme()).then(setTheme).catch(() => {});
+    return bridge.onThemeChanged(setTheme);
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const toggleTheme = () => {
+    const next: DesktopTheme = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    void unwrap(bridge.setTheme(next)).catch(() => {});
+  };
+  const scrollDisplay = useCallback(
+    (command: WindChimeDisplayScrollCommand) => unwrap(bridge.scrollDisplay(command)),
+    [],
+  );
   const refreshStatus = useCallback(async () => { setStatus(await unwrap(bridge.status())); }, []);
   useEffect(() => {
     void unwrap(
@@ -152,9 +192,13 @@ function App() {
     [selectedId],
   );
   const refresh = useCallback(async () => {
-    const result = await unwrap(bridge.sites());
+    const [result, currentStatus] = await Promise.all([
+      unwrap(bridge.sites()),
+      unwrap(bridge.status()),
+    ]);
     setSites(result.items);
     setSelectedId(result.selectedId);
+    setStatus(currentStatus);
   }, []);
   const act = async (operation: () => Promise<unknown>, success = "") => {
     setBusy(true);
@@ -364,13 +408,32 @@ function App() {
     studio: "直播工作台",
   }[view];
   return (
-    <div className="wc-desktop" data-view={view}>
+    <div className="wc-desktop" data-view={view} data-theme={theme}>
       <style>{windChimeControlCss}</style>
       <div className="desktop-titlebar">
         <span>风铃桌面控制台</span>
         <span className="titlebar-private">
           <Icon name="shield" size={12} /> 私人控制台
         </span>
+        {onAir ? (
+          <button
+            type="button"
+            className="titlebar-onair is-live"
+            title={`正在播出：${onAir.nickname || "匿名来信"} — ${onAir.textPreview}（点击前往直播工作台）`}
+            onClick={() => void navigate("studio")}
+          >
+            <i className="titlebar-onair-dot" aria-hidden="true" />
+            <span>正在播出：{onAir.nickname || onAir.textPreview || "已批准信件"}</span>
+          </button>
+        ) : selected ? (
+          <span
+            className="titlebar-onair is-blank"
+            title={status.displayOpen ? "展示窗口已打开，当前画面为空白" : "尚未打开展示窗口"}
+          >
+            <i className="titlebar-onair-dot" aria-hidden="true" />
+            <span>{status.displayOpen ? "画面为空白" : "未开展示窗"}</span>
+          </span>
+        ) : null}
       </div>
       <button
         className="desktop-end"
@@ -426,6 +489,16 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <button
+            type="button"
+            className="sidebar-theme-toggle"
+            aria-label={theme === "dark" ? "切换浅色外观" : "切换深色外观"}
+            title={theme === "dark" ? "切换浅色外观" : "切换深色外观"}
+            onClick={toggleTheme}
+          >
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+            <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
+          </button>
           <div className="capture-note">
             <Icon name="screen" />
             <div>
@@ -760,6 +833,8 @@ function App() {
                   onOpenTile={view === 'studio' ? module => unwrap(bridge.openTile(module)) : undefined}
                   selectedMessageId={view === "studio" ? status.selectedMessageId : undefined}
                   onSelectMessage={view === "studio" ? async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); } : undefined}
+                  scrollState={view === "studio" ? scrollState : undefined}
+                  onScrollDisplay={view === "studio" ? scrollDisplay : undefined}
                 />
               </div>
             )}

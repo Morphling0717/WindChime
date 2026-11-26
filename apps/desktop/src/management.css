@@ -397,3 +397,53 @@
 .desktop-end:disabled {
   opacity: 0.45;
 }
+.wc-desktop[data-theme="dark"] .desktop-end {
+  background: #1d2d3d;
+  border-color: #344b60;
+  color: #c8dce6;
+}
+.wc-desktop[data-theme="dark"] .context-field {
+  color: #95aebc;
+}
+.wc-desktop[data-theme="dark"] .context-field select {
+  background: #101a25;
+  border-color: #314659;
+  color: #e4eff5;
+}
+.wc-desktop[data-theme="dark"] .context-field small {
+  color: #88a1af;
+}
+.wc-desktop[data-theme="dark"] .management {
+  color: #e0ecf3;
+}
+.wc-desktop[data-theme="dark"] .management-filters button[aria-pressed="true"] {
+  background: #1d4449 !important;
+  color: #9bece5 !important;
+  border-color: #3f848b !important;
+}
+.wc-desktop[data-theme="dark"] .inbox-row p {
+  color: #a4bac6;
+}
+.wc-desktop[data-theme="dark"] .inbox-row small,
+.wc-desktop[data-theme="dark"] .empty-copy,
+.wc-desktop[data-theme="dark"] .setting-toggle small,
+.wc-desktop[data-theme="dark"] .blocked-sender > small,
+.wc-desktop[data-theme="dark"] .original-image figcaption {
+  color: #8aa3b1;
+}
+.wc-desktop[data-theme="dark"] .inbox-row.is-current {
+  background: linear-gradient(120deg, #1d3845, #182d3a);
+  border-color: #3e7080;
+}
+.wc-desktop[data-theme="dark"] .original-mail {
+  color: #e6f1f7;
+}
+.wc-desktop[data-theme="dark"] .original-link,
+.wc-desktop[data-theme="dark"] .topic-note {
+  background: #101923;
+  color: #c4d8e3;
+}
+.wc-desktop[data-theme="dark"] .setting-toggle,
+.wc-desktop[data-theme="dark"] .blocked-sender {
+  border-bottom-color: #2b3f51;
+}

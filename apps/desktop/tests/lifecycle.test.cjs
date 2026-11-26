@@ -11,7 +11,7 @@ async function harness(options={}) {
   const handlers=new Map(),windows=[],requests=[],intervals=[],vaultWrites=[],vaultCommits=[],shortcuts=[],workspaceWrites=[],workspaceCommits=[],unregistered=[],confirmations=[];let sequence=0,route,blankLoadGate,trayIcon,quitCount=0,now=0,persistence={},temporaryVault,temporaryWorkspace,confirmation=options.confirmation??0;
   const app=new EventEmitter();Object.assign(app,{requestSingleInstanceLock:()=>true,whenReady:async()=>{},getPath:()=>'/fixture',getName:()=> 'Fixture',quit:()=>{quitCount++;}});
   class Window extends EventEmitter {
-    constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},setWindowOpenHandler:()=>{},isDestroyed:()=>!!this.contentsDestroyed,isCrashed:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');return !!this.crashed;},reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
+    constructor(options){super();this.options=options;this.loadCount=0;this.hideCount=0;this.crashCount=0;this.showCount=0;this.sent=[];this.webContents=new EventEmitter();Object.assign(this.webContents,{id:++sequence,mainFrame:{},send:(channel,...args)=>{this.sent.push({channel,args});},setWindowOpenHandler:()=>{},isDestroyed:()=>!!this.contentsDestroyed,isCrashed:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');return !!this.crashed;},reload:()=>{void this.loadFile().then(()=>this.webContents.emit('did-finish-load'));},forcefullyCrashRenderer:()=>{if(this.contentsDestroyed)throw new TypeError('Object has been destroyed');this.crashCount++;if(!deferredCrash)this.finishCrash();}});windows.push(this);}
     finishCrash(){this.crashed=true;this.webContents.emit('render-process-gone');}
     async loadFile(file,loadOptions){this.loadedFile=file;this.loadOptions=loadOptions;this.loadCount++;this.crashed=false;if(this.options.title==='WindChime Display')await handlers.get('display:request')({sender:this.webContents,senderFrame:this.webContents.mainFrame},{path:'/display/open',method:'POST',body:{}});this.webContents.emit('did-finish-load');}
     async loadURL(url){this.blankUrl=url;this.crashed=false;this.blankLoadCount=(this.blankLoadCount??0)+1;await blankLoadGate?.(this);this.webContents.emit('did-finish-load');}
@@ -775,4 +775,56 @@ test('display window resizes content area to match frame appearance maxWidth and
   assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
   assert.deepEqual(output.contentSize,{width:480,height:860});
   assert.equal(output.resizeCount,2);
+});
+
+test('teleprompter scroll IPC syncs private windows and display window safely, and scroll hotkeys respect conflicts and blanking',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  await h.invoke('tiles:open',['transport']);const tile=h.windows.at(-1);
+  // No active snapshot: scroll commands are ignored and display window cannot invoke control scroll IPC
+  assert.equal((await h.invoke('display:scroll',[{type:'ratio',ratio:0.5}],output)).ok,false);
+  assert((await h.invoke('display:scroll',[{type:'ratio',ratio:0.5}],tile)).ok);
+  assert.equal(output.sent.filter(m=>m.channel==='output:scroll').length,0);
+  // Activate a snapshot on display
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,snapshot:{id:'snap-1',text:'long letter'}}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert((await h.invoke('display:scroll',[{type:'ratio',ratio:0.75}],tile)).ok);
+  assert.deepEqual({...output.sent.filter(m=>m.channel==='output:scroll').at(-1).args[0]},{type:'ratio',ratio:0.75});
+  // Display reports metrics -> broadcast to main control and transport tile
+  assert((await h.invoke('display:scroll-metrics',[{ratio:0.75,offset:150,maximum:200,viewportHeight:200,contentHeight:400,paused:true,autoEnabled:true,phase:'manual'}],output)).ok);
+  assert.equal((await h.invoke('display:scroll-state',[],tile)).data.ratio,0.75);
+  assert.equal(tile.sent.filter(m=>m.channel==='display:scroll-state').at(-1).args[0].paused,true);
+  // Configure scroll hotkeys and test conflict rejection
+  assert((await h.invoke('app:next-shortcut',['Ctrl+Alt+N'])).ok);
+  assert.equal((await h.invoke('app:scroll-shortcuts-set',[{up:'Ctrl+Alt+N'}])).ok,false);
+  assert((await h.invoke('app:scroll-shortcuts-set',[{up:'Alt+Up',down:'Alt+Down',pause:'Alt+Space'}])).ok);
+  const downBinding=h.shortcuts.find(item=>item.key==='Alt+Down');
+  downBinding.callback();
+  assert.deepEqual({...output.sent.filter(m=>m.channel==='output:scroll').at(-1).args[0]},{type:'step',delta:0.45});
+  // Hide clears scroll state and stops further scroll commands
+  h.setRoute(null);
+  assert((await h.invoke('control:hide')).ok);
+  assert.equal((await h.invoke('display:scroll-state')).data,null);
+});
+
+test('on-air status and dark theme IPC synchronize across control and tiles without leaking to display',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  await h.invoke('tiles:open',['transport']);const tile=h.windows.at(-1);
+  // On-air status tracks active snapshot and clears on hide
+  assert.equal((await h.invoke('display:on-air')).data,null);
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,snapshot:{id:'snap-9',messageId:'msg-9',nickname:'小风',text:'测试在播内容'}}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  const live=(await h.invoke('display:on-air')).data;
+  assert.equal(live.nickname,'小风');assert.equal(live.messageId,'msg-9');
+  assert.equal(h.windows[0].sent.filter(m=>m.channel==='display:on-air').at(-1).args[0].snapshotId,'snap-9');
+  h.setRoute(null);
+  assert((await h.invoke('control:hide')).ok);
+  assert.equal((await h.invoke('display:on-air')).data,null);
+  // Theme preference validates, persists, broadcasts to control & tiles, and rejects display window
+  assert.equal((await h.invoke('app:theme-get')).data,'light');
+  assert.equal((await h.invoke('app:theme-set',['invalid'])).ok,false);
+  assert.equal((await h.invoke('app:theme-set',['dark'],output)).ok,false);
+  assert.equal((await h.invoke('app:theme-set',['dark'],tile)).data,'dark');
+  assert.equal((await h.invoke('app:theme-get')).data,'dark');
+  assert.equal(h.windows[0].sent.filter(m=>m.channel==='app:theme-changed').at(-1).args[0],'dark');
+  assert.equal(tile.sent.filter(m=>m.channel==='app:theme-changed').at(-1).args[0],'dark');
 });

@@ -2,8 +2,8 @@
 // or restores windows/letters automatically after an application restart.
 const TILE_MODULES = Object.freeze({ inbox: '来信列表', review: '信件审阅', queue: '待播列表', transport: '播出控制', appearance: '展示外观' });
 const HIDE_SHORTCUT = 'CommandOrControl+Shift+H';
-function normalizeNextShortcut(value) {
-  if (typeof value !== 'string' || value.length > 80) throw new Error('请输入有效的下一封快捷键');
+function normalizeShortcut(value, label = '快捷键') {
+  if (typeof value !== 'string' || value.length > 80) throw new Error(`请输入有效的${label}`);
   if (!value.trim()) return '';
   const tokens = value.trim().split('+').map(part => part.trim());
   const aliases = { ctrl: 'CommandOrControl', control: 'CommandOrControl', cmdorctrl: 'CommandOrControl', commandorcontrol: 'CommandOrControl', shift: 'Shift', alt: 'Alt', option: 'Alt', super: 'Super', meta: 'Super', command: 'Super', cmd: 'Super' };
@@ -17,10 +17,24 @@ function normalizeNextShortcut(value) {
   if (result === HIDE_SHORTCUT) throw new Error('Ctrl+Shift+H 已保留为一键隐藏，请选择其他快捷键');
   return result;
 }
+function normalizeNextShortcut(value) {
+  return normalizeShortcut(value, '下一封快捷键');
+}
 function restoreWorkspace(value) {
   const restored = { version: 1, nextShortcut: '', tiles: {} };
   if (!value || value.version !== 1) return restored;
   try { restored.nextShortcut = normalizeNextShortcut(value.nextShortcut ?? ''); } catch {}
+  if (value.theme === 'dark') restored.theme = 'dark';
+  const used = new Set([HIDE_SHORTCUT, restored.nextShortcut].filter(Boolean));
+  for (const field of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
+    try {
+      const normalized = normalizeShortcut(value[field] ?? '');
+      if (normalized && !used.has(normalized)) {
+        used.add(normalized);
+        restored[field] = normalized;
+      }
+    } catch {}
+  }
   for (const module of Object.keys(TILE_MODULES)) {
     const item = value.tiles?.[module]; if (!item || typeof item !== 'object') continue;
     const bounds = item.bounds;
@@ -36,4 +50,4 @@ function fitTileBounds(bounds, workAreas) {
   const width = Math.max(340, Math.min(bounds.width, area.width)), height = Math.max(260, Math.min(bounds.height, area.height));
   return { width, height, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)), y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)) };
 }
-module.exports = { TILE_MODULES, HIDE_SHORTCUT, normalizeNextShortcut, restoreWorkspace, fitTileBounds };
+module.exports = { TILE_MODULES, HIDE_SHORTCUT, normalizeShortcut, normalizeNextShortcut, restoreWorkspace, fitTileBounds };

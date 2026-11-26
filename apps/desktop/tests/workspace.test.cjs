@@ -23,3 +23,34 @@ test('saved tile bounds stay reachable after a monitor is removed and preserve v
   assert.deepEqual(fitTileBounds({x:3000,y:2000,width:2000,height:2000},[primary]),{x:0,y:0,width:1920,height:1040});
   assert.deepEqual(fitTileBounds(original),{width:500,height:700});
 });
+
+test('workspace restores optional scroll shortcuts and drops duplicates or conflicts', () => {
+  const restored = restoreWorkspace({
+    version: 1,
+    nextShortcut: 'Ctrl+Alt+N',
+    scrollUpShortcut: 'Alt+Up',
+    scrollDownShortcut: 'Alt+Down',
+    scrollPauseShortcut: 'Alt+Space',
+    tiles: {},
+  });
+  assert.equal(restored.scrollUpShortcut, 'Alt+Up');
+  assert.equal(restored.scrollDownShortcut, 'Alt+Down');
+  assert.equal(restored.scrollPauseShortcut, 'Alt+Space');
+  const deduped = restoreWorkspace({
+    version: 1,
+    nextShortcut: 'Alt+Up',
+    scrollUpShortcut: 'Alt+Up',
+    scrollDownShortcut: 'Ctrl+Shift+H',
+    scrollPauseShortcut: 'Alt+Down',
+    tiles: {},
+  });
+  assert.equal(deduped.scrollUpShortcut, undefined);
+  assert.equal(deduped.scrollDownShortcut, undefined);
+  assert.equal(deduped.scrollPauseShortcut, 'Alt+Down');
+});
+
+test('workspace restores dark theme preference and omits default or invalid values', () => {
+  assert.equal(restoreWorkspace({ version: 1, theme: 'dark', tiles: {} }).theme, 'dark');
+  assert.equal(restoreWorkspace({ version: 1, theme: 'light', tiles: {} }).theme, undefined);
+  assert.equal(restoreWorkspace({ version: 1, theme: 'neon', tiles: {} }).theme, undefined);
+});

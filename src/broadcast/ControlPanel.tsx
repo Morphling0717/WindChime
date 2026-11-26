@@ -2,13 +2,21 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WindChimeLiveClient } from '../client/live.js';
 import { encodeWindChimeConnectionKey } from '../core/connection-key.js';
-import type { WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
+import type { WindChimeLiveControlState, WindChimeLiveDraft, WindChimeLiveGrant, WindChimeLiveMessage, WindChimeLiveSnapshot } from '../core/live.js';
 import { useWindChimeLiveControl } from '../react/live.js';
 import { WindChimeLiveCard } from './Display.js';
 import { windChimeControlCss } from './styles.js';
 import { AppearanceEditor } from './AppearanceEditor.js';
+import { OnAirTeleprompter } from './Teleprompter.js';
+import type { WindChimeDisplayScrollCommand, WindChimeDisplayScrollMetrics } from './scroll-loop.js';
 
 const statusLabels = { pending: '未审核', approved: '已批准', rejected: '已拒绝' };
+function readLocalFlag(key: string) {
+  try { return typeof window !== 'undefined' && typeof window.localStorage?.getItem === 'function' && window.localStorage.getItem(key) === '1'; } catch { return false; }
+}
+function writeLocalFlag(key: string, value: boolean) {
+  try { if (typeof window !== 'undefined' && typeof window.localStorage?.setItem === 'function') window.localStorage.setItem(key, value ? '1' : '0'); } catch {}
+}
 type Studio = ReturnType<typeof useWindChimeLiveControl>;
 type PrivateAsset = { url: string; mimeType: string; width: number; height: number };
 function usePrivateAssets(client: WindChimeLiveClient, topicId: string, ids: string[], retryKey = 0) {
@@ -74,10 +82,38 @@ function useSourceOnlyAssets(client: WindChimeLiveClient, topicId: string, ids: 
   }, [client, topicId, signature, retryKey]);
   return loaded?.client === client && loaded.topicId === topicId && loaded.signature === signature && loaded.retryKey === retryKey ? loaded.assets : {};
 }
-function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blockedTermsEnabled }: { message: WindChimeLiveMessage; studio: Studio; client: WindChimeLiveClient; topicId: string; onDirtyChange: (dirty: boolean) => void; blockedTermsEnabled: boolean }) {
+function ReviewEditor({
+  message,
+  studio,
+  client,
+  topicId,
+  onDirtyChange,
+  blockedTermsEnabled,
+  nextPendingId,
+  pendingRemaining,
+  autoAdvance,
+  onToggleAutoAdvance,
+  onSelectNextPending,
+  onAfterDecision,
+}: {
+  message: WindChimeLiveMessage;
+  studio: Studio;
+  client: WindChimeLiveClient;
+  topicId: string;
+  onDirtyChange: (dirty: boolean) => void;
+  blockedTermsEnabled: boolean;
+  nextPendingId?: string | null;
+  pendingRemaining?: number;
+  autoAdvance?: boolean;
+  onToggleAutoAdvance?: (enabled: boolean) => void;
+  onSelectNextPending?: (id: string) => void;
+  onAfterDecision?: (messageId: string, nextState: WindChimeLiveControlState) => void;
+}) {
   const [{ draft, basis }, setEditor] = useState(() => ({ draft: structuredClone(message.draft), basis: { draft: structuredClone(message.draft), revision: message.draftRevision } }));
   const setDraft = (value: WindChimeLiveDraft | ((before: WindChimeLiveDraft) => WindChimeLiveDraft)) => setEditor(before => ({ ...before, draft: typeof value === 'function' ? value(before.draft) : value }));
   const setBasis = (value: { draft: WindChimeLiveDraft; revision: number }) => setEditor(before => ({ ...before, basis: value }));
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [markError, setMarkError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [assetRetry, setAssetRetry] = useState(0);
@@ -110,7 +146,29 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
         };
       });
     }
+    if (result && (action === 'approve' || action === 'reject')) {
+      onAfterDecision?.(message.id, result);
+    }
     return !!result;
+  };
+  const saveAndApprove = async () => {
+    const submittedDraft = structuredClone(draft), submittedRevision = basis.revision;
+    const savedState = await studio.actWithResult({ action: 'draft', messageId: message.id, expectedDraftRevision: submittedRevision, draft: submittedDraft });
+    if (!savedState) return;
+    const saved = savedState.messages.find(item => item.id === message.id);
+    if (!saved || saved.draftRevision !== submittedRevision + 1) return;
+    setEditor(before => {
+      if (before.basis.revision !== submittedRevision) return before;
+      return {
+        draft: JSON.stringify(before.draft) === JSON.stringify(submittedDraft) ? structuredClone(saved.draft) : before.draft,
+        basis: { draft: structuredClone(saved.draft), revision: saved.draftRevision },
+      };
+    });
+    // Never approve an older draft if the host kept typing while saving.
+    if (JSON.stringify(draftRef.current) !== JSON.stringify(submittedDraft)) return;
+    onDirtyChange(false);
+    const approved = await studio.actWithResult({ action: 'approve', messageId: message.id, expectedDraftRevision: saved.draftRevision });
+    if (approved) onAfterDecision?.(message.id, approved);
   };
   const mark = async (patch: { isRead?: boolean; isFavorited?: boolean }) => { setMarkError(''); try { await client.message(topicId, message.id, patch); } catch (e) { setMarkError(e instanceof Error ? e.message : '标记失败'); } };
   const upload = async (file: File) => {
@@ -140,10 +198,19 @@ function ReviewEditor({ message, studio, client, topicId, onDirtyChange, blocked
     {draft.assets.map((a, index) => <div key={a.id} className="wc-stack"><div className="wc-asset">{urls[a.id] ? <img src={urls[a.id]} alt="将上屏的已保存图片" /> : <span className="wc-muted">{draftAssetsResult.error ? '图片加载失败' : '图片载入中'}</span>}<label>图片 {index + 1} 说明<input value={a.caption} maxLength={200} onChange={e => setDraft({ ...draft, assets: draft.assets.map((item, at) => at === index ? { ...item, caption: e.target.value } : item) })} /></label></div><div className="wc-actions"><button disabled={uploading} onClick={() => { replaceIndex.current = index; fileInput.current?.click(); }}>替换图片</button><button disabled={uploading} aria-label={`移除图片 ${index + 1}`} onClick={() => setDraft({ ...draft, assets: draft.assets.filter((_, at) => at !== index) })}>移除</button><button disabled={uploading || index === 0} aria-label={`上移图片 ${index + 1}`} onClick={() => reorderAsset(index, index - 1)}>↑</button><button disabled={uploading || index === draft.assets.length - 1} aria-label={`下移图片 ${index + 1}`} onClick={() => reorderAsset(index, index + 1)}>↓</button></div></div>)}
     <button disabled={uploading || draft.assets.length >= 3 || !studio.connected} onClick={() => { replaceIndex.current = null; fileInput.current?.click(); }}>{uploading ? '正在保存审核图片…' : '添加展示图片（最多 3 张）'}</button>
     {message.source.assets.some(a => !draft.assets.some(d => d.id === a.id)) ? <button className="wc-subtle" onClick={() => setDraft({ ...draft, assets: structuredClone(message.source.assets) })}>恢复投稿附件</button> : null}
-    <div className="wc-actions"><button disabled={!dirty || conflict || uploading || studio.pending || !studio.connected || !draft.text.trim()} onClick={() => void act('draft')}>保存展示稿</button><span className="wc-muted">{dirty ? '有未保存改动；保存后需重新批准' : '展示稿已保存'}</span></div>
+    <div className="wc-actions"><button disabled={!dirty || conflict || uploading || studio.pending || !studio.connected || !draft.text.trim()} onClick={() => void act('draft')}>保存展示稿</button><span className="wc-muted">{dirty ? '有未保存改动；可保存或直接保存并批准' : '展示稿已保存'}</span></div>
     <details open><summary>预览 · 不会上屏</summary><div className="wc-preview"><WindChimeLiveCard snapshot={snapshot} appearance={studio.state!.appearance} assetUrls={urls} /></div></details>
-    <div className="wc-actions"><button className="wc-primary" disabled={dirty || conflict || uploading || studio.pending || !studio.connected || message.status === 'approved' || draft.assets.some(a => !urls[a.id])} onClick={() => void act('approve')}>批准进入待播</button><button disabled={studio.pending || message.status === 'rejected'} onClick={() => void act('reject')}>拒绝</button>{message.status === 'approved' ? <button className="wc-danger" onClick={() => void act('revoke')}>撤销批准并撤下</button> : null}</div>
     <p className="wc-muted">批准后仍需在待播列表点击「上屏」。已读、收藏{blockedTermsEnabled ? '和敏感词标记' : ''}与播出批准相互独立。</p>
+    <div className="wc-review-sticky-bar">
+      <div className="wc-actions">
+        {dirty ? <button className="wc-primary" disabled={conflict || uploading || studio.pending || !studio.connected || !draft.text.trim() || draft.assets.some(a => !urls[a.id])} onClick={() => void saveAndApprove()}>保存并批准</button> : null}
+        <button className={dirty ? '' : 'wc-primary'} disabled={dirty || conflict || uploading || studio.pending || !studio.connected || message.status === 'approved' || draft.assets.some(a => !urls[a.id])} onClick={() => void act('approve')}>批准进入待播</button>
+        <button disabled={studio.pending || message.status === 'rejected'} onClick={() => void act('reject')}>拒绝</button>
+        {message.status === 'approved' ? <button className="wc-danger" onClick={() => void act('revoke')}>撤销批准并撤下</button> : null}
+        {nextPendingId && onSelectNextPending ? <button type="button" className="wc-subtle" style={{ marginLeft: 'auto' }} disabled={studio.pending} onClick={() => onSelectNextPending(nextPendingId)}>下一封待审 →{pendingRemaining ? ` (${pendingRemaining})` : ''}</button> : null}
+      </div>
+      {onToggleAutoAdvance ? <label className="wc-checkbox wc-inline-toggle"><input type="checkbox" checked={autoAdvance === true} onChange={e => onToggleAutoAdvance(e.target.checked)} /><span>批准/拒绝后自动跳下一封待审</span></label> : null}
+    </div>
   </div>;
 }
 type ConnectionsProps = Pick<WindChimeLiveControlPanelProps, 'client' | 'topicId' | 'displayUrl' | 'onOpenDisplay' | 'onCopyDisplayLink' | 'onBindGateway' | 'deviceCode' | 'canApproveDevices' | 'enablePlatformIntegration'>;
@@ -250,19 +317,35 @@ export type WindChimeLiveControlPanelProps = {
   /** Hosts can synchronize review selection across private windows. The host must confirm dirty editors. */
   selectedMessageId?: string | null;
   onSelectMessage?: (id: string) => Promise<void>;
+  /** Desktop hosts can synchronize on-air teleprompter scroll position with the local display window. */
+  scrollState?: WindChimeDisplayScrollMetrics | null;
+  onScrollDisplay?: (command: WindChimeDisplayScrollCommand) => Promise<void> | void;
 };
 /** Private control surface. Hosts can reuse the hook/client for wholly custom UIs. */
 export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps) {
   const { client, topicId, title = '风铃直播信箱' } = props;
   const studio = useWindChimeLiveControl(client, topicId);
-  const [localSelection, setSelection] = useState(''); const [filter, setFilter] = useState('all'); const [dragging, setDragging] = useState('');
+  const [localSelection, setSelection] = useState(''); const [filter, setFilter] = useState('all'); const [search, setSearch] = useState(''); const [dragging, setDragging] = useState('');
+  const [playedIds, setPlayedIds] = useState<string[]>([]);
+  const [autoAdvance, setAutoAdvance] = useState(() => readLocalFlag('windchime:auto-advance-review'));
+  const [autoMarkRead, setAutoMarkRead] = useState(() => readLocalFlag('windchime:auto-mark-read'));
+  const autoMarkedRef = useRef(new Set<string>());
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selection = props.selectedMessageId === undefined ? localSelection : props.selectedMessageId ?? '';
   const includes = (module: WindChimeLiveModule) => props.module === undefined || props.module === module;
   const [auxiliaryError, setAuxiliaryError] = useState('');
   const [reviewDirty, setReviewDirty] = useState(false);
   const [appearanceDirty, setAppearanceDirty] = useState(false);
   useEffect(() => { props.onDirtyChange?.(reviewDirty || appearanceDirty); }, [reviewDirty, appearanceDirty, props.onDirtyChange]);
-  useEffect(() => () => props.onDirtyChange?.(false), [props.onDirtyChange]);
+  useEffect(() => () => {
+    props.onDirtyChange?.(false);
+    if (advanceTimerRef.current !== null) clearTimeout(advanceTimerRef.current);
+  }, [props.onDirtyChange]);
+  useEffect(() => {
+    setPlayedIds([]);
+    autoMarkedRef.current.clear();
+    if (advanceTimerRef.current !== null) { clearTimeout(advanceTimerRef.current); advanceTimerRef.current = null; }
+  }, [topicId]);
   const select = async (id: string) => {
     if (selection === id) return;
     if (props.onSelectMessage) {
@@ -275,12 +358,69 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
   };
   const state = studio.state;
   const selected = state?.messages.find(m => m.id === selection);
-  const visible = state?.messages.filter(m => filter === 'all' || m.status === filter) ?? [];
+  const onAir = state?.current ? state.messages.find(m => m.id === state.current!.messageId) ?? null : null;
+  useEffect(() => {
+    const currentId = state?.current?.messageId;
+    if (!currentId) return;
+    setPlayedIds(prev => (prev.includes(currentId) ? prev : [...prev, currentId]));
+  }, [state?.current?.messageId]);
+  useEffect(() => {
+    if (!autoMarkRead || !studio.connected || !onAir || onAir.isRead) return;
+    if (typeof client.message !== 'function') return;
+    if (autoMarkedRef.current.has(onAir.id)) return;
+    autoMarkedRef.current.add(onAir.id);
+    void client.message(topicId, onAir.id, { isRead: true }).catch(() => {
+      autoMarkedRef.current.delete(onAir.id);
+    });
+  }, [autoMarkRead, studio.connected, onAir?.id, onAir?.isRead, client, topicId]);
+  const allMessages = state?.messages ?? [];
+  const counts = {
+    all: allMessages.length,
+    pending: allMessages.filter(m => m.status === 'pending').length,
+    approved: allMessages.filter(m => m.status === 'approved').length,
+    rejected: allMessages.filter(m => m.status === 'rejected').length,
+  };
+  const needle = search.trim().toLowerCase();
+  const visible = allMessages.filter(m => {
+    if (filter !== 'all' && m.status !== filter) return false;
+    if (!needle) return true;
+    return [m.draft.nickname, m.source.nickname, m.draft.text, m.source.text].some(part => (part ?? '').toLowerCase().includes(needle));
+  });
   const queue = state?.queue.map(id => state.messages.find(m => m.id === id)).filter((m): m is WindChimeLiveMessage => !!m) ?? [];
+  const playedSet = new Set(playedIds);
+  const unplayedCount = queue.filter(m => !playedSet.has(m.id)).length;
+  const currentQueueIndex = state?.current ? state.queue.indexOf(state.current.messageId) : -1;
+  const prevMessageId = currentQueueIndex > 0 ? state!.queue[currentQueueIndex - 1] ?? null : null;
+  const otherPending = allMessages.filter(m => m.status === 'pending' && m.id !== selection);
+  const nextPendingId = otherPending[0]?.id ?? null;
+  const pendingRemaining = otherPending.length;
+  const toggleAutoAdvance = (enabled: boolean) => { setAutoAdvance(enabled); writeLocalFlag('windchime:auto-advance-review', enabled); };
+  const toggleAutoMarkRead = (enabled: boolean) => { setAutoMarkRead(enabled); writeLocalFlag('windchime:auto-mark-read', enabled); };
+  const handleAfterDecision = (decidedId: string, nextState: WindChimeLiveControlState) => {
+    if (!autoAdvance) return;
+    const candidate = nextState.messages.find(m => m.status === 'pending' && m.id !== decidedId);
+    if (!candidate) return;
+    if (advanceTimerRef.current !== null) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(() => {
+      advanceTimerRef.current = null;
+      void select(candidate.id);
+    }, 60);
+  };
   const shift = (from: number, to: number) => { if (!state || to < 0 || to >= state.queue.length || from === to) return; const order = [...state.queue]; order.splice(to, 0, order.splice(from, 1)[0]!); void studio.act({ action: 'reorder', order }); };
   const openTile = (module: WindChimeLiveModule) => {
     setAuxiliaryError('');
     void props.onOpenTile?.(module).catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开磁贴'));
+  };
+  const openDisplaySafe = props.onOpenDisplay
+    ? () => {
+        setAuxiliaryError('');
+        void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口'));
+      }
+    : null;
+  const needsDisplayGuide = Boolean(state && state.receivers === 0);
+  const endShow = () => {
+    setPlayedIds([]);
+    void studio.act({ action: 'end' });
   };
   const hideDisplay = () => {
     setAuxiliaryError('');
@@ -288,20 +428,33 @@ export function WindChimeLiveControlPanel(props: WindChimeLiveControlPanelProps)
     else void studio.act({ action: 'hide' });
   };
   return <section className="wc-live" data-module={props.module} aria-label="风铃私人审核控制台"><style>{windChimeControlCss}</style>
-    {props.module ? null : <header className="wc-top"><h2>{title}</h2><div className="wc-actions"><button onClick={() => void studio.act({ action: 'end' })}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={hideDisplay}>■ 一键隐藏</button></div></header>}
+    {props.module ? null : <header className="wc-top"><h2>{title}</h2><div className="wc-actions"><button onClick={endShow}>结束展示</button><button className="wc-danger" style={{ fontSize: 17, padding: '12px 22px' }} onClick={hideDisplay}>■ 一键隐藏</button></div></header>}
     <div className="wc-status" role="status"><span><i className={`wc-led${studio.connected ? ' on' : ''}`} />{studio.connected ? '控制已连接' : '连接状态未确认'}</span><span>{state?.receivers ?? 0} 个展示端就绪</span><strong style={{ marginLeft: 'auto', fontSize: 12 }}>{state?.current ? '正在展示已批准信件' : '观众画面为空白'}</strong></div>
     {studio.error || auxiliaryError ? <div className="wc-error" role="alert">{studio.error || auxiliaryError}</div> : null}
     {props.onOpenTile && !props.module ? <nav className="wc-tile-launcher" aria-label="悬浮磁贴"><strong>悬浮磁贴</strong><span className="wc-muted">在独立窗口中操作，可置顶</span><div className="wc-actions">{WINDCHIME_LIVE_MODULES.map(item => <button key={item.id} aria-label={`打开${item.title}磁贴`} onClick={() => openTile(item.id)}>{item.title} ↗</button>)}</div></nav> : null}
-    {props.module === 'transport' ? <section className="wc-panel wc-transport-panel"><div className="wc-pad wc-transport-actions">
-      <button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>
-      <button className="wc-danger" onClick={hideDisplay}>■ 一键隐藏</button><button onClick={() => void studio.act({ action: 'end' })}>结束展示</button>
-      {props.onOpenDisplay ? <button onClick={() => { setAuxiliaryError(''); void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口')); }}>打开独立展示窗口</button> : null}
-      <p className="wc-muted">{queue.length} 封已批准 · 列表末尾自动清空</p>
-    </div></section> : null}
+    {props.module === 'transport' ? <>
+      <section className="wc-panel wc-transport-panel"><div className="wc-pad wc-transport-actions">
+        <button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>
+        <button className="wc-danger" onClick={hideDisplay}>■ 一键隐藏</button>
+        <button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={() => { if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId }); }}>← 上一封</button>
+        <button onClick={endShow}>结束展示</button>
+        {needsDisplayGuide ? (
+          <div className="wc-display-guide" role="status">
+            <span>尚未打开展示窗口，打开后即可上屏。</span>
+            {openDisplaySafe ? <button type="button" className="wc-primary wc-queue-small" onClick={openDisplaySafe}>打开独立展示窗口</button> : null}
+          </div>
+        ) : openDisplaySafe ? (
+          <button style={{ gridColumn: '1 / -1' }} onClick={openDisplaySafe}>打开独立展示窗口</button>
+        ) : null}
+        <p className="wc-muted">{queue.length} 封已批准 · 剩余 {unplayedCount} 封未播 · 列表末尾自动清空</p>
+      </div></section>
+      {props.onScrollDisplay ? <OnAirTeleprompter client={client} topicId={topicId} message={onAir} scrollState={props.scrollState} onScrollDisplay={props.onScrollDisplay} compact /> : null}
+    </> : null}
+    {!props.module && props.onScrollDisplay && onAir ? <OnAirTeleprompter client={client} topicId={topicId} message={onAir} scrollState={props.scrollState} onScrollDisplay={props.onScrollDisplay} /> : null}
     {includes('inbox') || includes('review') || includes('queue') ? <div className="wc-columns">
-      {includes('inbox') ? <section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封</span></div><div className="wc-tabs" aria-label="审核状态">{[['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']].map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? '此分类暂无来信' : '正在连接信箱…'}</p> : null}</div></section> : null}
-      {includes('review') ? <section className="wc-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} /> : <p className="wc-empty">{props.module ? '在来信磁贴或主工作台选择一封来信。' : '选择左侧一封来信，审阅最终展示内容。'}</p>}</section> : null}
-      {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><button className="wc-primary" disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button>{props.onOpenDisplay ? <button onClick={() => { setAuxiliaryError(''); void props.onOpenDisplay!().catch(error => setAuxiliaryError(error instanceof Error ? error.message : '无法打开展示窗口')); }}>打开独立展示窗口</button> : null}</div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">暂无已批准信件。批准后需手动上屏。</p> : null}</aside> : null}
+      {includes('inbox') ? <section className="wc-panel"><div className="wc-panel-head"><h3>来信审核</h3><span className="wc-muted">{state?.messages.length ?? 0} 封</span></div><div className="wc-tabs" aria-label="审核状态">{([['all', '全部'], ['pending', '未审核'], ['approved', '已批准'], ['rejected', '已拒绝']] as const).map(([key, label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}<span className="wc-tab-count">{counts[key]}</span></button>)}</div><div className="wc-mail-search"><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索昵称或正文…" aria-label="搜索审核来信" /></div><div className="wc-mail-list">{visible.map(m => <button key={m.id} className="wc-mail" aria-current={selection === m.id} onClick={() => void select(m.id)}><div className="wc-mail-title"><strong>{m.draft.nickname || '匿名来信'}</strong><span className="wc-mail-badges">{m.draft.assets.length > 0 ? <span className="wc-tag wc-img-badge" aria-label={`含 ${m.draft.assets.length} 张图片`}>{`图 ${m.draft.assets.length}`}</span> : null}<span className={`wc-tag ${m.status}`}>{statusLabels[m.status]}</span></span></div><div className="wc-snippet">{m.source.text}</div><div className="wc-muted" style={{ marginTop: 8, fontSize: 10 }}>{new Date(m.createdAt).toLocaleString('zh-CN')}</div></button>)}{!visible.length ? <p className="wc-empty">{state ? (needle ? '没有匹配的来信' : '此分类暂无来信') : '正在连接信箱…'}</p> : null}</div></section> : null}
+      {includes('review') ? <section className="wc-panel wc-review-panel"><div className="wc-panel-head"><h3>审阅与预览</h3><span className="wc-muted">此区域仅主播可见</span></div>{selected ? <ReviewEditor key={`${topicId}:${selected.id}`} message={selected} studio={studio} client={client} topicId={topicId} onDirtyChange={setReviewDirty} blockedTermsEnabled={props.blockedTermsEnabled === true} nextPendingId={nextPendingId} pendingRemaining={pendingRemaining} autoAdvance={autoAdvance} onToggleAutoAdvance={toggleAutoAdvance} onSelectNextPending={id => void select(id)} onAfterDecision={handleAfterDecision} /> : <p className="wc-empty">{props.module ? '在来信磁贴或主工作台选择一封来信。' : '选择左侧一封来信，审阅最终展示内容。'}</p>}</section> : null}
+      {includes('queue') ? <aside className="wc-panel wc-queue-panel"><div className="wc-panel-head"><h3>待播顺序</h3><span className="wc-muted">{queue.length} 封已批准 · 剩 {unplayedCount} 封未播</span></div><div className="wc-pad wc-stack"><p className="wc-muted">拖动或使用箭头排序。已播放信件保留在列表中，可随时重新上屏。</p><div className="wc-actions"><button className="wc-primary" style={{ flex: 1 }} disabled={!studio.connected || !state?.receivers || studio.pending} onClick={() => void studio.act({ action: 'next' })}>下一封 →</button><button disabled={!studio.connected || !state?.receivers || studio.pending || !prevMessageId} onClick={() => { if (prevMessageId) void studio.act({ action: 'show', messageId: prevMessageId }); }}>← 上一封</button></div>{needsDisplayGuide ? <div className="wc-display-guide" role="status"><span>尚未打开展示窗口，打开后即可上屏。</span>{openDisplaySafe ? <button type="button" className="wc-primary" onClick={openDisplaySafe}>打开独立展示窗口</button> : null}</div> : openDisplaySafe ? <button onClick={openDisplaySafe}>打开独立展示窗口</button> : null}<label className="wc-checkbox wc-inline-toggle"><input type="checkbox" checked={autoMarkRead} onChange={e => toggleAutoMarkRead(e.target.checked)} /><span>上屏时自动标为已读</span></label></div><ol className="wc-queue">{queue.map((m, index) => <li key={m.id} data-played={playedSet.has(m.id) ? 'true' : undefined} draggable={!studio.pending} onDragStart={() => setDragging(m.id)} onDragOver={e => e.preventDefault()} onDrop={() => { shift(state!.queue.indexOf(dragging), index); setDragging(''); }} aria-current={state?.current?.messageId === m.id}><div className="wc-mail-title"><strong>{index + 1}. {m.draft.nickname || '匿名来信'}</strong>{state?.current?.messageId === m.id ? <span className="wc-tag approved">正在播出</span> : playedSet.has(m.id) ? <span className="wc-tag wc-tag-played">已播</span> : null}</div><p className="wc-snippet">{m.draft.text}</p><div className="wc-actions" style={{ marginTop: 10 }}><button className="wc-primary wc-queue-small" disabled={studio.pending || !studio.connected || !state?.receivers} onClick={() => void studio.act({ action: 'show', messageId: m.id })}>上屏</button><button className="wc-queue-small" onClick={() => void select(m.id)}>审阅</button><button className="wc-queue-small" disabled={studio.pending || index === 0} aria-label={`上移第 ${index + 1} 封`} onClick={() => shift(index, index - 1)}>↑</button><button className="wc-queue-small" disabled={studio.pending || index === queue.length - 1} aria-label={`下移第 ${index + 1} 封`} onClick={() => shift(index, index + 1)}>↓</button><button className="wc-queue-small" onClick={() => void studio.act({ action: 'revoke', messageId: m.id })}>撤销批准</button></div></li>)}</ol>{!queue.length ? <p className="wc-empty">暂无已批准信件。批准后需手动上屏。</p> : null}</aside> : null}
     </div> : null}
     {!props.module || includes('appearance') ? <div className="wc-grid2 wc-settings">
       {includes('appearance') ? <section className="wc-panel"><div className="wc-panel-head"><h3>展示外观</h3></div><div className="wc-pad">{state ? <AppearanceEditor key={topicId} studio={studio} onDirtyChange={setAppearanceDirty} /> : null}</div></section> : null}

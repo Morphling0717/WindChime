@@ -29,6 +29,7 @@ async function run(){
   await evaluate('Array.from(document.querySelectorAll("button")).find(button=>button.textContent==="保存海报 PNG").click()');
   await until(async()=>{try{return (await fs.stat(savedPath)).size>10000;}catch{return false;}},'actual PNG saved after restart');
   assert.equal(BrowserWindow.getAllWindows().length,1,'restart does not open output');
+  control.show();control.focus();await until(()=>evaluate('document.visibilityState==="visible"'),'visible for capture');await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');await pause(400);
   await fs.writeFile(path.join(output,'poster-restored-ui.png'),(await control.webContents.capturePage()).toPNG());
   const report={passed:true,electron:process.versions.electron,independentProcess:true,checks:['title/signature/avatar restored by shared poster configuration in second Electron process','default website values do not overwrite saved poster preferences','PNG actually written after restart','restart opens only private controller; no display opened'],savedPath,bytes:(await fs.stat(savedPath)).size};await fs.writeFile(path.join(output,'poster-restart-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));app.exit(0);
 }

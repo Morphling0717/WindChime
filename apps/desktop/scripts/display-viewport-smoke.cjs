@@ -36,6 +36,7 @@ async function run() {
   window = new BrowserWindow({ width: 640, height: 420, frame: false, show: false, title: 'WindChime Display Test', webPreferences: { preload: path.resolve(__dirname, '../preload-display.cjs'), sandbox: true, nodeIntegration: false, contextIsolation: true, backgroundThrottling: false, partition: 'display-size-fixture' } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('console-message', (_event, level, message) => { if (level === 3) errors.push(message); });
+  ipcMain.handle('display:scroll-metrics', () => ({ ok: true }));
   ipcMain.handle('display:request', (event, input) => {
     if (!window || window.isDestroyed()) return { ok: false, code: 'DISPLAY_CLOSED', error: 'Output fixture closed', status: 410 };
     assert.equal(event.sender, window.webContents);

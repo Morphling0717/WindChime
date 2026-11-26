@@ -5,12 +5,17 @@ import type { WindChimeLiveAppearance, WindChimeLiveSnapshot } from '../core/liv
 import { WindChimeDisplayReceiver, type WindChimeDisplayValue } from './receiver.js';
 import { resolveLiveLayout, resolveLiveViewportSize } from './appearance.js';
 import { windChimeDisplayCss } from './display-styles.js';
-import { startDisplayScroll } from './scroll-loop.js';
+import { startDisplayScroll, type WindChimeDisplayScrollController } from './scroll-loop.js';
 
-export type WindChimeLiveRenderProps = { snapshot: WindChimeLiveSnapshot; appearance: WindChimeLiveAppearance; assetUrls: Readonly<Record<string, string>> };
+export type WindChimeLiveRenderProps = {
+  snapshot: WindChimeLiveSnapshot;
+  appearance: WindChimeLiveAppearance;
+  assetUrls: Readonly<Record<string, string>>;
+  scrollControl?: WindChimeDisplayScrollController;
+};
 const metric = (value: number | undefined, fallback: number, min: number, max: number) => Number.isFinite(value) ? Math.min(max, Math.max(min, value!)) : fallback;
 
-function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRenderProps) {
+function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl }: WindChimeLiveRenderProps) {
   const viewport = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
   const assets = snapshot.assets.filter(asset => assetUrls[asset.id]);
   useEffect(() => {
@@ -20,8 +25,9 @@ function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRende
       speed: metric(appearance.scrollSpeed, 24, 5, 120),
       startPauseMs: metric(appearance.scrollStartPauseMs, 2000, 0, 15000),
       endPauseMs: metric(appearance.scrollEndPauseMs, 2500, 0, 15000),
+      control: scrollControl,
     });
-  }, []); // The parent remounts this subtree whenever the approved content or appearance changes.
+  }, [scrollControl]); // The parent remounts this subtree whenever the approved content or appearance changes.
   return <div className="wc-display-body">
     <div className="wc-display-viewport" ref={viewport} data-scroll-phase="top">
       <div className="wc-display-grid" ref={content}>
@@ -43,7 +49,7 @@ function ScrollingLetter({ snapshot, appearance, assetUrls }: WindChimeLiveRende
     </div> : null}
   </div>;
 }
-export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChimeLiveRenderProps) {
+export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollControl }: WindChimeLiveRenderProps) {
   const theme = appearance.theme ?? 'pure';
   const size = resolveLiveViewportSize(appearance);
   const style: CSSProperties = {
@@ -75,7 +81,7 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls }: WindChime
       <svg className="wc-display-ornament wc-display-arch" viewBox="0 0 90 122" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 120V47a36 36 0 0 1 72 0v73M18 120V47a27 27 0 0 1 54 0v73M45 12v108M9 62h72M9 94h72" /></svg>
       <svg className="wc-display-ornament wc-display-star" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 0v16M0 8h16M3 3l10 10M3 13 13 3" /></svg>
     </> : null}
-    <ScrollingLetter key={JSON.stringify([snapshot, appearance, assetUrls])} snapshot={snapshot} appearance={appearance} assetUrls={assetUrls} />
+    <ScrollingLetter key={JSON.stringify([snapshot, appearance, assetUrls])} snapshot={snapshot} appearance={appearance} assetUrls={assetUrls} scrollControl={scrollControl} />
   </article>;
 }
 class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -84,7 +90,7 @@ class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean 
   render() { return this.state.failed ? null : this.props.children; }
 }
 /** Capture only this isolated output. No login, notification or error UI is rendered. */
-export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000 }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number }) {
+export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController }) {
   const [received, setReceived] = useState<{ client: WindChimeDisplayClient; value: WindChimeDisplayValue } | null>(null);
   // A caller changing accounts/credentials must not paint the previous client's
   // frame while React is waiting to run the effect cleanup.
@@ -99,7 +105,10 @@ export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000 }: 
     return () => { receiver.stop(); window.removeEventListener('offline', reset); window.removeEventListener('pagehide', reset); window.removeEventListener('pageshow', restore); document.removeEventListener('freeze', reset); document.removeEventListener('resume', reset); };
   }, [client, pollIntervalMs]);
   const snapshot = value?.frame.snapshot;
+  useEffect(() => {
+    if (!value || !snapshot) scrollControl?.onMetrics?.(null);
+  }, [value, snapshot, scrollControl]);
   if (!value || !snapshot) return null;
-  const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls };
+  const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl };
   return <BlankOnError key={`${value.frame.epoch}:${value.frame.activation}`}>{render ? render(props) : <WindChimeLiveCard {...props} />}</BlankOnError>;
 }

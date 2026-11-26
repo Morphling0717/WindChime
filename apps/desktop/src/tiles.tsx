@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createWindChimeLiveClient } from '../../../src/client/live';
 import { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES, type WindChimeLiveModule } from '../../../src/broadcast/ControlPanel';
-import { assetTransport, shortcutLabel, transport, unwrap, type DesktopStatus, type Site } from './bridge';
+import type {
+  WindChimeDisplayScrollCommand,
+  WindChimeDisplayScrollMetrics,
+} from '../../../src/broadcast/scroll-loop';
+import { assetTransport, shortcutLabel, transport, unwrap, type DesktopStatus, type DesktopTheme, type Site } from './bridge';
 import './tiles.css';
 
 const bridge = window.windchimeDesktop;
@@ -14,7 +18,30 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
   const [busy, setBusy] = useState(false);
   const [keywordEnabled, setKeywordEnabled] = useState(false);
   const [topicTitle, setTopicTitle] = useState('');
+  const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
+  const [theme, setTheme] = useState<DesktopTheme>('light');
   const alive = useRef(true);
+  useEffect(() => {
+    void unwrap(bridge.getTheme()).then(value => { if (alive.current) setTheme(value); }).catch(() => {});
+    return bridge.onThemeChanged(value => { if (alive.current) setTheme(value); });
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const toggleTheme = () => {
+    const next: DesktopTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    void unwrap(bridge.setTheme(next)).catch(() => {});
+  };
+  useEffect(() => {
+    if (module !== 'transport') return;
+    void unwrap(bridge.getScrollState()).then(value => { if (alive.current) setScrollState(value); }).catch(() => {});
+    return bridge.onScrollState(value => { if (alive.current) setScrollState(value); });
+  }, [module]);
+  const scrollDisplay = useCallback(
+    (command: WindChimeDisplayScrollCommand) => unwrap(bridge.scrollDisplay(command)),
+    [],
+  );
   const refresh = useCallback(async () => {
     const current = await unwrap(bridge.status());
     if (alive.current) setStatus(current);
@@ -70,10 +97,11 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     finally { if (alive.current) setBusy(false); }
   };
   const title = WINDCHIME_LIVE_MODULES.find(item => item.id === module)!.title;
-  return <div className="wc-desktop wc-tile" data-tile={module}>
+  return <div className="wc-desktop wc-tile" data-tile={module} data-theme={theme}>
     <header className="tile-titlebar">
       <div className="tile-title"><small>风铃 · 私人磁贴</small><strong>{title}</strong></div>
       <div className="tile-window-actions">
+        <button type="button" className="tile-theme-btn" aria-label={theme === 'dark' ? '切换浅色外观' : '切换深色外观'} title={theme === 'dark' ? '切换浅色外观' : '切换深色外观'} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
         <button disabled={busy || !tile} aria-label={tile?.pinned ? '取消置顶' : '固定在最上方'} aria-pressed={tile?.pinned === true} onClick={() => void perform(() => unwrap(bridge.setTilePinned(module, !tile?.pinned)))}>{tile?.pinned ? '已置顶' : '置顶'}</button>
         <button className="tile-close" aria-label="关闭磁贴" disabled={busy} onClick={() => void perform(() => unwrap(bridge.closeTile(module)))}>×</button>
       </div>
@@ -85,6 +113,8 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
         selectedMessageId={status.selectedMessageId} onSelectMessage={async id => { await unwrap(bridge.selectMessage(id, tile.connectionId, tile.contextVersion)); await refresh(); }}
         onDirtyChange={dirtyChanged} onConfirmDiscard={() => unwrap(bridge.confirm('有尚未保存的修改，放弃修改并继续？'))}
         onOpenDisplay={() => unwrap(bridge.openDisplay())} onHideDisplay={() => unwrap(bridge.hide())} canApproveDevices={false} blockedTermsEnabled={keywordEnabled}
+        scrollState={module === 'transport' ? scrollState : undefined}
+        onScrollDisplay={module === 'transport' ? scrollDisplay : undefined}
       /> : <p className="tile-wait">正在确认网站与话题…</p>}
     </main>
     <footer className="tile-footer"><span>私人操作 · 采集请选 WindChime Display</span>{module === 'transport' ? <span>下一封：{shortcutLabel(status?.nextShortcut || '') || '未设置热键'}</span> : null}</footer>

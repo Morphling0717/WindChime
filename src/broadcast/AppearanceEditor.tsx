@@ -185,7 +185,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
 
     <fieldset className="wc-appearance-section">
       <legend>展示视窗与长信</legend>
-      <p className="wc-appearance-section-note">长信只有文字滚动到底，停留后回到顶部。图片保持原比例，固定显示在下方；仅循环当前来信，不切换下一封。</p>
+      <p className="wc-appearance-section-note">长信可自动循环滚动，也可在「直播工作台」或置顶「播出控制」磁贴中用滚轮 / 按钮 / 热键随时手动接管。图片保持原比例，固定显示在下方。</p>
       <div className="wc-appearance-fields wc-appearance-dimensions" role="group" aria-label="展示尺寸">
         <NumberField label="展示宽度" value={appearance.maxWidth ?? 1200} min={280} max={1920} onChange={value => change('maxWidth', value)} />
         <NumberField label="展示高度" value={appearance.viewportHeight ?? 640} min={180} max={1080} onChange={value => change('viewportHeight', value)} />
@@ -198,7 +198,7 @@ export function AppearanceEditor({ studio, onDirtyChange }: { studio: Studio; on
       </div>
       <p className="wc-appearance-caption">图片占比调整下方图片区域的高度；较矮的窗口会自动为文字留出空间。没有图片时，文字使用完整空间。</p>
       <label className="wc-appearance-check"><input type="checkbox" checked={appearance.autoScroll ?? true} onChange={event => change('autoScroll', event.currentTarget.checked)} />长信自动循环滚动</label>
-      {appearance.autoScroll === false ? <p className="wc-appearance-caption">已关闭滚动：超出视窗的内容不会显示，请缩小字号或增大展示高度。</p> : null}
+      {appearance.autoScroll === false ? <p className="wc-appearance-caption">已关闭自动滚动：信件上屏后将停在顶部，可在「直播工作台」或置顶「播出控制」磁贴中手动滑轮/翻页控制进度。</p> : null}
     </fieldset>
 
     <details className="wc-appearance-advanced">

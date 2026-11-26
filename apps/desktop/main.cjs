@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const { performance } = require('node:perf_hooks');
 const { normalizeOrigin, validateRequest, restoreSite, verifier, challenge, publicSite } = require('./security.cjs');
 const { parseWindChimeConnectionKey } = require('./build/connection-key.cjs');
-const { TILE_MODULES, HIDE_SHORTCUT, normalizeNextShortcut, restoreWorkspace, fitTileBounds } = require('./workspace.cjs');
+const { TILE_MODULES, HIDE_SHORTCUT, normalizeShortcut, normalizeNextShortcut, restoreWorkspace, fitTileBounds } = require('./workspace.cjs');
 const state = { sites: [], selected: null, pairings: new Map(), output: null, connectionError: '' };
 let controlWindow, displayWindow, tray, quitting = false, vaultPath;
 let selectionVersion = 0, outputVersion = 0, switching = false;
@@ -15,7 +15,8 @@ let connectionCommit = null;
 const tiles = new Map();
 let workspace = restoreWorkspace(null), workspacePath, workspaceTail = Promise.resolve();
 let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false, nextShortcut = '', shortcutError = '', nextActionError = '';
-let displaySize = { width: 960, height: 640 };
+let scrollShortcuts = { up: '', down: '', pause: '' }, scrollRegistered = { up: false, down: false, pause: false }, scrollShortcutError = '';
+let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null, desktopTheme = 'light';
 let shortcutRecording = false, shortcutRecordingTimer, nextRegistered = false;
 let shortcutConfigTail = Promise.resolve(), shortcutConfigPending = 0;
 let nextVersion = 0, nextPending = false, lastNextAt = -Infinity;
@@ -61,15 +62,34 @@ async function readWorkspace() {
   try { workspace = restoreWorkspace(JSON.parse(await fs.readFile(workspacePath, 'utf8'))); }
   catch (error) { if (error.code !== 'ENOENT') connectionError('悬浮磁贴和快捷键设置无法读取，已使用默认设置'); }
 }
-function saveWorkspace(candidateShortcut) {
+function saveWorkspace(candidateShortcut, candidateScroll, candidateTheme) {
   const save = workspaceTail.then(async () => {
     // Build from the latest committed shortcut and current tile preferences at
     // execution time. A queued tile write cannot capture a tentative shortcut,
     // or overwrite a newly committed shortcut with an earlier snapshot.
-    const value = candidateShortcut === undefined ? workspace : { ...workspace, nextShortcut: candidateShortcut };
+    const value = {
+      ...workspace,
+      ...(candidateShortcut !== undefined ? { nextShortcut: candidateShortcut } : {}),
+      ...(candidateScroll !== undefined ? candidateScroll : {}),
+      ...(candidateTheme !== undefined ? { theme: candidateTheme } : {}),
+    };
+    for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
+      if (!value[key]) delete value[key];
+    }
+    if (value.theme !== 'dark') delete value.theme;
     const temporary = `${workspacePath}.tmp`;
     await fs.writeFile(temporary, JSON.stringify(value)); await fs.rename(temporary, workspacePath);
     if (candidateShortcut !== undefined) workspace.nextShortcut = candidateShortcut;
+    if (candidateScroll !== undefined) {
+      for (const key of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
+        if (candidateScroll[key]) workspace[key] = candidateScroll[key];
+        else delete workspace[key];
+      }
+    }
+    if (candidateTheme !== undefined) {
+      if (candidateTheme === 'dark') workspace.theme = 'dark';
+      else delete workspace.theme;
+    }
   });
   workspaceTail = save.catch(() => {}); return save;
 }
@@ -100,7 +120,7 @@ async function openTile(module) {
   const existing = tiles.get(module); if (existing) { assertTile(existing); existing.window.show(); existing.window.focus(); return tileMetadata(existing); }
   const preferences = workspace.tiles[module] || {}, partition = `windchime-private-tile-${crypto.randomUUID()}`;
   const stableTitle = `WindChime Private · ${TILE_MODULES[module]}`;
-  const window = new BrowserWindow({ width: module === 'review' || module === 'appearance' ? 760 : 480, height: module === 'transport' ? 360 : 720, minWidth: 340, minHeight: 260, ...fitTileBounds(preferences.bounds, screen?.getAllDisplays().map(display => display.workArea)), title: stableTitle, frame: false, resizable: true, alwaysOnTop: preferences.pinned !== false, icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: '#e9f1f5', autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
+  const window = new BrowserWindow({ width: module === 'review' || module === 'appearance' ? 760 : 480, height: module === 'transport' ? 560 : 720, minWidth: 340, minHeight: 260, ...fitTileBounds(preferences.bounds, screen?.getAllDisplays().map(display => display.workArea)), title: stableTitle, frame: false, resizable: true, alwaysOnTop: preferences.pinned !== false, icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5', autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
   const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false }; tiles.set(module, tile); secureWindow(window, partition);
   // The shared private HTML title must never replace the module-specific
   // native capture title or make a private tile look like the public output.
@@ -136,6 +156,149 @@ async function chooseMessage(messageId, connectionId, contextVersion, parent = c
   if (old !== selectedMessageId) throw Object.assign(new Error('当前信件已更新，请重新选择'), { code: 'CONNECTION_CHANGED' });
   selectedMessageId = messageId; if (review) review.dirty = false; return selectedMessageId;
 }
+function sanitizeScrollCommand(command) {
+  if (!command || typeof command !== 'object') throw new Error('无效滚动指令');
+  if (command.type === 'ratio') {
+    if (!Number.isFinite(command.ratio)) throw new Error('无效滚动位置');
+    return { type: 'ratio', ratio: Math.min(1, Math.max(0, command.ratio)) };
+  }
+  if (command.type === 'step') {
+    if (!Number.isFinite(command.delta)) throw new Error('无效滚动步长');
+    return { type: 'step', delta: Math.min(2, Math.max(-2, command.delta)) };
+  }
+  if (command.type === 'top') return { type: 'top' };
+  if (command.type === 'togglePause') {
+    return typeof command.paused === 'boolean' ? { type: 'togglePause', paused: command.paused } : { type: 'togglePause' };
+  }
+  throw new Error('未知滚动指令');
+}
+function sanitizeScrollMetrics(metrics) {
+  if (metrics === null) return null;
+  if (!metrics || typeof metrics !== 'object') return null;
+  const phases = ['top', 'scrolling', 'bottom', 'still', 'manual'];
+  if (!phases.includes(metrics.phase)) return null;
+  const num = (v, min, max) => Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : 0;
+  return {
+    ratio: num(metrics.ratio, 0, 1),
+    offset: num(metrics.offset, 0, 100000),
+    maximum: num(metrics.maximum, 0, 100000),
+    viewportHeight: num(metrics.viewportHeight, 0, 10000),
+    contentHeight: num(metrics.contentHeight, 0, 100000),
+    paused: Boolean(metrics.paused),
+    autoEnabled: Boolean(metrics.autoEnabled),
+    phase: metrics.phase,
+  };
+}
+function broadcastScrollState(next) {
+  outputScrollState = next;
+  liveContents(controlWindow)?.send?.('display:scroll-state', next);
+  for (const tile of tiles.values()) liveContents(tile.window)?.send?.('display:scroll-state', next);
+}
+function broadcastOnAir(next) {
+  const prev = outputOnAir;
+  if (
+    prev === next ||
+    (prev && next && prev.snapshotId === next.snapshotId && prev.messageId === next.messageId && prev.nickname === next.nickname && prev.textPreview === next.textPreview)
+  ) return;
+  outputOnAir = next;
+  liveContents(controlWindow)?.send?.('display:on-air', next);
+}
+function snapshotToOnAir(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const nickname = typeof snapshot.nickname === 'string' && snapshot.nickname.trim() ? snapshot.nickname.trim().slice(0, 40) : null;
+  const textPreview = typeof snapshot.text === 'string' ? snapshot.text.replace(/\s+/g, ' ').trim().slice(0, 48) : '';
+  return {
+    messageId: typeof snapshot.messageId === 'string' ? snapshot.messageId : '',
+    snapshotId: typeof snapshot.id === 'string' ? snapshot.id : '',
+    nickname,
+    textPreview,
+  };
+}
+function applyWindowTheme(theme) {
+  const bg = theme === 'dark' ? '#101822' : '#e9f1f5';
+  controlWindow?.setBackgroundColor?.(bg);
+  if (process.platform === 'win32') {
+    controlWindow?.setTitleBarOverlay?.({ color: '#00000000', symbolColor: theme === 'dark' ? '#b8ccd6' : '#46616f', height: 48 });
+  }
+  for (const tile of tiles.values()) tile.window.setBackgroundColor?.(bg);
+}
+function sendDisplayScroll(command) {
+  const sanitized = sanitizeScrollCommand(command);
+  if (!displayWindow || displayWindow.isDestroyed() || !state.output || outputHeld || !outputSnapshotId) return false;
+  liveContents(displayWindow)?.send?.('output:scroll', sanitized);
+  return true;
+}
+function scrollHotkeyCommand(slot) {
+  return slot === 'up' ? { type: 'step', delta: -0.45 } : slot === 'down' ? { type: 'step', delta: 0.45 } : { type: 'togglePause' };
+}
+function registerScrollBinding(slot, accelerator) {
+  if (!accelerator) return true;
+  try {
+    return !!globalShortcut.register(accelerator, () => {
+      if (!shortcutRecording && scrollRegistered[slot] && scrollShortcuts[slot] === accelerator) {
+        try { sendDisplayScroll(scrollHotkeyCommand(slot)); } catch {}
+      }
+    });
+  } catch { return false; }
+}
+async function configureScrollShortcuts(input) {
+  if (shortcutRecording) throw new Error('请先结束快捷键录制');
+  if (!input || typeof input !== 'object') throw new Error('无效滚动快捷键设置');
+  shortcutConfigPending++;
+  const operation = shortcutConfigTail.then(async () => {
+    if (shortcutRecording) throw new Error('请先结束快捷键录制');
+    const candidate = {
+      up: input.up !== undefined ? normalizeShortcut(input.up, '向上滚动快捷键') : scrollShortcuts.up,
+      down: input.down !== undefined ? normalizeShortcut(input.down, '向下滚动快捷键') : scrollShortcuts.down,
+      pause: input.pause !== undefined ? normalizeShortcut(input.pause, '暂停滚动快捷键') : scrollShortcuts.pause,
+    };
+    const seen = new Set([HIDE_SHORTCUT, nextShortcut].filter(Boolean));
+    for (const slot of ['up', 'down', 'pause']) {
+      const value = candidate[slot];
+      if (!value) continue;
+      if (seen.has(value)) throw new Error('快捷键与已有热键冲突，请选择其他组合键');
+      seen.add(value);
+    }
+    const newlyRegistered = [];
+    try {
+      for (const slot of ['up', 'down', 'pause']) {
+        const value = candidate[slot];
+        if (!value) continue;
+        if (value === scrollShortcuts[slot] && scrollRegistered[slot]) continue;
+        if (!registerScrollBinding(slot, value)) throw new Error('滚动快捷键已被系统或其他应用占用，原设置保持不变');
+        newlyRegistered.push(value);
+      }
+    } catch (error) {
+      for (const key of newlyRegistered) globalShortcut.unregister(key);
+      scrollShortcutError = error.message;
+      throw error;
+    }
+    const previous = { ...scrollShortcuts };
+    try {
+      await saveWorkspace(undefined, {
+        scrollUpShortcut: candidate.up,
+        scrollDownShortcut: candidate.down,
+        scrollPauseShortcut: candidate.pause,
+      });
+    } catch {
+      for (const key of newlyRegistered) globalShortcut.unregister(key);
+      scrollShortcutError = '滚动快捷键设置无法保存，原设置保持不变';
+      throw new Error(scrollShortcutError);
+    }
+    for (const slot of ['up', 'down', 'pause']) {
+      const oldKey = previous[slot];
+      if (oldKey && oldKey !== candidate[slot] && !Object.values(candidate).includes(oldKey)) {
+        globalShortcut.unregister(oldKey);
+      }
+    }
+    scrollShortcuts = candidate;
+    scrollRegistered = { up: !!candidate.up, down: !!candidate.down, pause: !!candidate.pause };
+    scrollShortcutError = '';
+    return { ...scrollShortcuts, error: '' };
+  });
+  shortcutConfigTail = operation.catch(() => {});
+  try { return await operation; } finally { shortcutConfigPending--; }
+}
 async function configureNextShortcut(value) {
   if (shortcutRecording) throw new Error('请先结束快捷键录制');
   // A remounted settings view may submit again while the previous disk write
@@ -145,6 +308,10 @@ async function configureNextShortcut(value) {
   const operation = shortcutConfigTail.then(async () => {
     if (shortcutRecording) throw new Error('请先结束快捷键录制');
     const normalized = normalizeNextShortcut(value);
+    if (normalized && Object.values(scrollShortcuts).includes(normalized)) {
+      shortcutError = '快捷键与滚动热键冲突，请选择其他组合键';
+      throw new Error(shortcutError);
+    }
     if (normalized === nextShortcut && (!normalized || nextRegistered)) { shortcutError = ''; return nextShortcut; }
     if (normalized) {
       // Reserve the OS binding first, but activate it only after persistence.
@@ -167,12 +334,21 @@ function recordNextShortcut(recording) {
   if (recording) {
     nextVersion++; shortcutRecording = true;
     if (nextShortcut && nextRegistered) { globalShortcut.unregister(nextShortcut); nextRegistered = false; }
+    for (const slot of ['up', 'down', 'pause']) {
+      if (scrollShortcuts[slot] && scrollRegistered[slot]) { globalShortcut.unregister(scrollShortcuts[slot]); scrollRegistered[slot] = false; }
+    }
     shortcutRecordingTimer = setTimeout(() => recordNextShortcut(false), 30000); shortcutRecordingTimer.unref?.();
   } else if (shortcutRecording) {
     shortcutRecording = false;
     if (nextShortcut) {
       try { if (!globalShortcut.register(nextShortcut, () => { void nextLetter(); })) throw new Error(); nextRegistered = true; }
       catch { nextRegistered = false; shortcutError = '录制结束后无法恢复原下一封快捷键，请在设置中重新选择'; }
+    }
+    for (const slot of ['up', 'down', 'pause']) {
+      if (scrollShortcuts[slot]) {
+        if (registerScrollBinding(slot, scrollShortcuts[slot])) scrollRegistered[slot] = true;
+        else { scrollRegistered[slot] = false; scrollShortcutError = '录制结束后无法恢复部分滚动快捷键，请在设置中重新选择'; }
+      }
     }
   }
   return shortcutRecording;
@@ -392,6 +568,8 @@ function blank(paint = true) {
   const held = { window: displayWindow, version: ++outputVersion, painted: Promise.resolve(false) };
   outputDeadline = 0; outputHeld = true;
   outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
+  broadcastScrollState(null);
+  broadcastOnAir(null);
   if (displayWindow && !displayWindow.isDestroyed()) {
     displayWindow.hide();
     // Discard the backing renderer immediately, even if the site's hide request
@@ -418,6 +596,8 @@ async function recoverOutput(window = displayWindow, crashed = false) {
   const contents = liveContents(window); if (!contents) { closeOutput(window); return; }
   recoveringWindows.add(window); outputDeadline = 0; outputHeld = true;
   outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null;
+  broadcastScrollState(null);
+  broadcastOnAir(null);
   const version = ++outputVersion;
   const owned = () => window === displayWindow && version === outputVersion;
   const current = () => owned() && !quitting && !pendingOutputClears && liveContents(window) === contents;
@@ -520,7 +700,7 @@ async function openDisplay(initiatingTile) {
   displayWindow = new BrowserWindow({ width: 960, height: 640, title: 'WindChime Display', transparent: true, backgroundColor: '#00000000', show: false, frame: false, webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false } });
   secureWindow(displayWindow, partition);
   const window = displayWindow;
-  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputVersion++; if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
+  window.on('closed', () => { if (displayWindow !== window) return; displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputVersion++; broadcastScrollState(null); broadcastOnAir(null); if (isCurrent(scope)) void hideSite(site).catch(() => {}); });
   window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
   window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
   await window.loadFile(path.join(__dirname, 'build/display.html'));
@@ -530,11 +710,12 @@ async function openDisplay(initiatingTile) {
 async function start() {
   vaultPath = path.join(app.getPath('userData'), 'devices.v1.enc'); await readVault();
   workspacePath = path.join(app.getPath('userData'), 'workspace.v1.json'); await readWorkspace();
+  desktopTheme = workspace.theme === 'dark' ? 'dark' : 'light';
   // Only explicit poster preferences use persistent browser storage. Network,
   // credentials, remote pages and inbox persistence remain unavailable here.
   const partition = 'persist:windchime-private';
-  controlWindow = new BrowserWindow({ width: 1440, height: 1000, minWidth: 760, minHeight: 620, title: '风铃 · 私人控制台', icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: '#e9f1f5',
-    ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: '#46616f', height: 48 }, autoHideMenuBar: true } : {}),
+  controlWindow = new BrowserWindow({ width: 1440, height: 1000, minWidth: 760, minHeight: 620, title: '风铃 · 私人控制台', icon: path.join(__dirname, 'build/icon.ico'), backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+    ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: desktopTheme === 'dark' ? '#b8ccd6' : '#46616f', height: 48 }, autoHideMenuBar: true } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false } });
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
@@ -606,6 +787,10 @@ async function start() {
     } finally { clearTimeout(timeout); }
   });
   handle('display:open', 'private', window => openDisplay(tileFor(window)), true);
+  handle('display:scroll', 'private', command => { sendDisplayScroll(command); });
+  handle('display:scroll-state', 'private', () => outputScrollState);
+  handle('display:on-air', 'private', () => outputOnAir);
+  handle('display:scroll-metrics', 'display', metrics => { broadcastScrollState(sanitizeScrollMetrics(metrics)); });
   handle('display:request', 'display', async input => {
     const scope = context(), version = outputVersion;
     const request = validateRequest(input, 'display'); const output = state.output; if (!output) throw new Error('展示未连接');
@@ -631,7 +816,10 @@ async function start() {
         // Do not trust a running JS timer as evidence that an old GPU surface
         // was cleared. Withdrawals replace the native renderer as well.
         if (outputSnapshotId && !result.snapshot) { void recoverOutput(); throw new Error('当前展示已撤下'); }
-        outputSnapshotId = result.snapshot?.id ?? null;
+        const nextSnapshotId = result.snapshot?.id ?? null;
+        if (nextSnapshotId !== outputSnapshotId) broadcastScrollState(null);
+        outputSnapshotId = nextSnapshotId;
+        broadcastOnAir(snapshotToOnAir(result.snapshot));
         output.frameActivation = result.activation;
         syncDisplaySize(result.appearance);
       }
@@ -675,7 +863,19 @@ async function start() {
   });
   handle('control:select-message', 'private', (window, id, connectionId, contextVersion) => chooseMessage(id, connectionId, contextVersion, window), true);
   handle('app:next-shortcut', 'control', configureNextShortcut);
+  handle('app:scroll-shortcuts', 'control', () => ({ ...scrollShortcuts, error: scrollShortcutError }));
+  handle('app:scroll-shortcuts-set', 'control', configureScrollShortcuts);
   handle('app:shortcut-recording', 'control', recordNextShortcut);
+  handle('app:theme-get', 'private', () => desktopTheme);
+  handle('app:theme-set', 'private', async theme => {
+    if (theme !== 'light' && theme !== 'dark') throw new Error('无效外观主题');
+    desktopTheme = theme;
+    applyWindowTheme(theme);
+    await saveWorkspace(undefined, undefined, theme);
+    liveContents(controlWindow)?.send?.('app:theme-changed', theme);
+    for (const tile of tiles.values()) liveContents(tile.window)?.send?.('app:theme-changed', theme);
+    return theme;
+  });
   handle('app:confirm', 'private', async (window, input) => {
     if (!input || typeof input.message !== 'string' || input.message.length > 500) throw new Error('无效确认内容');
     const answer = await dialog.showMessageBox(window, { type: 'warning', title: '风铃', message: input.message, buttons: ['取消', '继续'], defaultId: 0, cancelId: 0, noLink: true });
@@ -714,6 +914,13 @@ async function start() {
   try { if (!globalShortcut.register(HIDE_SHORTCUT, () => void hide().catch(() => {}))) connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
   catch { connectionError('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单'); }
   if (workspace.nextShortcut) { try { if (!globalShortcut.register(workspace.nextShortcut, () => { void nextLetter(); })) throw new Error(); nextShortcut = workspace.nextShortcut; nextRegistered = true; } catch { shortcutError = '保存的下一封快捷键无法注册，请在设置中选择其他快捷键'; } }
+  const savedScroll = { up: workspace.scrollUpShortcut || '', down: workspace.scrollDownShortcut || '', pause: workspace.scrollPauseShortcut || '' };
+  for (const slot of ['up', 'down', 'pause']) {
+    if (!savedScroll[slot]) continue;
+    scrollShortcuts[slot] = savedScroll[slot];
+    if (registerScrollBinding(slot, savedScroll[slot])) scrollRegistered[slot] = true;
+    else scrollShortcutError = '部分保存的滚动快捷键无法注册，请在设置中重新选择';
+  }
   powerMonitor.on('suspend', blank);
   powerMonitor.on('resume', () => { const held = blank(false); void resumeOutput(held); });
   // Main-process timers keep running if renderer timers/compositing stall.

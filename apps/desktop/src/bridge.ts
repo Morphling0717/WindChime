@@ -3,6 +3,23 @@ import type {
   WindChimeLiveTransport,
 } from "../../../src/client/live";
 import type { WindChimeLiveModule } from "../../../src/broadcast/ControlPanel";
+import type {
+  WindChimeDisplayScrollCommand,
+  WindChimeDisplayScrollMetrics,
+} from "../../../src/broadcast/scroll-loop";
+export type ScrollShortcuts = {
+  up: string;
+  down: string;
+  pause: string;
+  error?: string;
+};
+export type OnAirInfo = {
+  messageId: string;
+  snapshotId: string;
+  nickname: string | null;
+  textPreview: string;
+};
+export type DesktopTheme = "light" | "dark";
 export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: boolean; connectionId: string; topicId: string; contextVersion: number };
 export type DesktopStatus = {
   connectionError: string; displayOpen: boolean; shortcut: string;
@@ -51,6 +68,14 @@ type Bridge = {
     connectionId?: string;
   }): Promise<Result<{ id: string }>>;
   openDisplay(): Promise<Result<void>>;
+  scrollDisplay(command: WindChimeDisplayScrollCommand): Promise<Result<void>>;
+  getScrollState(): Promise<Result<WindChimeDisplayScrollMetrics | null>>;
+  onScrollState(callback: (state: WindChimeDisplayScrollMetrics | null) => void): () => void;
+  getOnAir(): Promise<Result<OnAirInfo | null>>;
+  onOnAir(callback: (state: OnAirInfo | null) => void): () => void;
+  getTheme(): Promise<Result<DesktopTheme>>;
+  setTheme(theme: DesktopTheme): Promise<Result<DesktopTheme>>;
+  onThemeChanged(callback: (theme: DesktopTheme) => void): () => void;
   hide(): Promise<Result<void>>;
   status(): Promise<Result<DesktopStatus>>;
   openTile(module: WindChimeLiveModule): Promise<Result<void>>;
@@ -59,6 +84,8 @@ type Bridge = {
   setTileDirty(dirty: boolean | { review: boolean; other: boolean }): Promise<Result<void>>;
   selectMessage(id: string | null, connectionId: string, contextVersion?: number): Promise<Result<void>>;
   setNextShortcut(accelerator: string): Promise<Result<void>>;
+  getScrollShortcuts(): Promise<Result<ScrollShortcuts>>;
+  setScrollShortcuts(input: { up?: string; down?: string; pause?: string }): Promise<Result<ScrollShortcuts>>;
   setShortcutRecording(recording: boolean): Promise<Result<void>>;
   confirm(message: string): Promise<Result<boolean>>;
   saveFile(input: {
@@ -75,6 +102,8 @@ declare global {
     windchimeDesktop: Bridge;
     windchimeOutput: Pick<Bridge, "request"> & {
       onBlank(callback: () => void): () => void;
+      onScrollCommand(callback: (command: WindChimeDisplayScrollCommand) => void): () => void;
+      reportScroll(metrics: WindChimeDisplayScrollMetrics | null): void;
     };
   }
 }

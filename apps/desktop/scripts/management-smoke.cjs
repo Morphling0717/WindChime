@@ -693,7 +693,7 @@ async function run() {
   await nav("topics", "话题管理");
   await capture("topics-wide");
   await click("新建话题");
-  await input('.topic-editor input[maxlength="80"]', "新活动");
+  await input('.topic-editor input[maxlength="64"]', "新活动");
   await input(".topic-editor input[pattern]", "new-topic");
   await click("保存话题");
   await until(

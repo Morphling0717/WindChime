@@ -10,4 +10,38 @@ export const windChimeControlCss = `
 .wc-live[data-module] .wc-mail-list{max-height:none}
 .wc-live[data-module] .wc-settings{margin-top:0}
 .wc-live .wc-preview article{max-height:none;overflow:hidden}
+.wc-live .wc-teleprompter{margin-bottom:14px}
+.wc-live .wc-teleprompter-head{flex-wrap:wrap;gap:8px;padding:10px 14px}
+.wc-live .wc-teleprompter-title{display:flex;align-items:center;gap:8px;min-width:0}
+.wc-live .wc-teleprompter-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wc-live .wc-teleprompter-meta{display:flex;align-items:center;gap:8px;margin-left:auto}
+.wc-live .wc-teleprompter-size{display:flex;gap:4px}
+.wc-live .wc-teleprompter-text{max-height:210px;overflow-y:auto;padding:14px 16px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;background:rgba(16,25,35,.55);border-bottom:1px solid var(--wc-border);overscroll-behavior:contain}
+.wc-live .wc-teleprompter.is-compact .wc-teleprompter-text{max-height:240px;padding:10px 12px}
+.wc-live .wc-teleprompter-extra{margin-top:10px;font-size:.82em;color:var(--wc-muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.wc-live .wc-teleprompter-controls{padding:10px 14px;display:grid;gap:8px}
+.wc-live .wc-teleprompter.is-compact .wc-teleprompter-controls{padding:8px 10px;gap:6px}
+.wc-live .wc-teleprompter-slider{display:flex;align-items:center;gap:8px;margin:0}
+.wc-live .wc-teleprompter-slider input[type=range]{flex:1;margin:0;padding:0;height:6px;accent-color:var(--wc-accent);background:transparent;border:0}
+.wc-live .wc-teleprompter-pct{font-size:11px;color:var(--wc-muted);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.wc-live .wc-teleprompter-empty{padding:12px 14px;font-size:12px;color:var(--wc-muted);line-height:1.6}
+.wc-live .wc-teleprompter-media{display:flex;gap:8px;padding:8px 14px;border-bottom:1px solid var(--wc-border);overflow-x:auto;background:rgba(16,25,35,.32)}
+.wc-live .wc-teleprompter.is-compact .wc-teleprompter-media{padding:6px 10px}
+.wc-live .wc-teleprompter-thumb{width:56px;height:56px;padding:2px;flex:none;display:grid;place-items:center;border-radius:8px;overflow:hidden;background:#101923}
+.wc-live .wc-teleprompter-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px;display:block}
+.wc-live .wc-teleprompter-lightbox{position:fixed;inset:0;z-index:999;background:rgba(9,14,20,.82);backdrop-filter:blur(8px);display:grid;place-items:center;padding:24px}
+.wc-live .wc-teleprompter-lightbox-card{max-width:min(92vw,960px);max-height:90vh;display:grid;gap:12px;background:#16222e;border:1px solid #395063;border-radius:14px;padding:14px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.wc-live .wc-teleprompter-lightbox-card img{max-width:100%;max-height:calc(90vh - 96px);object-fit:contain;border-radius:8px;display:block;margin:0 auto}
+.wc-live .wc-teleprompter-lightbox-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#dbe8f0;font-size:12px}
+.wc-live .wc-panel.wc-review-panel{overflow:clip}
+.wc-live .wc-review-sticky-bar{position:sticky;bottom:0;z-index:4;margin:4px -16px -16px;padding:12px 16px;background:rgba(25,37,49,.95);border-top:1px solid var(--wc-border);backdrop-filter:blur(14px);display:grid;gap:8px;border-radius:0 0 12px 12px}
+.wc-live .wc-mail-search{padding:0 12px 8px}
+.wc-live .wc-mail-search input{padding:7px 10px;font-size:12px}
+.wc-live .wc-tab-count{margin-left:3px;opacity:.7;font-variant-numeric:tabular-nums}
+.wc-live .wc-mail-badges{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.wc-live .wc-img-badge{color:#a8d4e6;border-color:#446b7d}
+.wc-live .wc-display-guide{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(143,225,213,.1);border:1px solid rgba(143,225,213,.38);font-size:12px;color:var(--wc-ink)}
+.wc-live .wc-queue li[data-played=true]:not([aria-current=true]){opacity:.72}
+.wc-live .wc-tag-played{color:#9ab0bc;border-color:#49606d}
+.wc-live .wc-inline-toggle{font-size:11px;color:var(--wc-muted);cursor:pointer;user-select:none}
 `;

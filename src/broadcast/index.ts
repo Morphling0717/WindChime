@@ -5,6 +5,11 @@ export { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from './ControlPane
 export type { WindChimeLiveControlPanelProps, WindChimeLiveModule } from './ControlPanel.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';
 export type { WindChimeLiveRenderProps } from './Display.js';
+export type {
+  WindChimeDisplayScrollCommand,
+  WindChimeDisplayScrollMetrics,
+  WindChimeDisplayScrollController,
+} from './scroll-loop.js';
 export { LIVE_LAYOUTS, LIVE_THEMES, LIVE_THEME_FONTS, resolveLiveLayout, applyLiveTheme } from './appearance.js';
 export type { WindChimeLiveTheme, WindChimeLiveLayout } from './appearance.js';
 export { WindChimeDisplayReceiver } from './receiver.js';
