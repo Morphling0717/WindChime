@@ -5,6 +5,7 @@ import {
   type DesktopPrefs,
   type DesktopStartupView,
   type DesktopStatus,
+  type DesktopUiSurface,
   type ScrollShortcuts,
 } from './bridge';
 import { playWindChime } from './chime';
@@ -136,7 +137,44 @@ export function Hotkeys({
     {prefs && onUpdatePrefs ? (
       <section className="desktop-hotkeys glass-surface management" aria-label="盲盒拆信与桌面偏好">
         <h2>盲盒拆信与桌面偏好</h2>
-        <p>控制单人直播「盲盒拆信模式」、提示音与启动习惯，本机自动保存，无需改动网站。</p>
+        <p>控制界面视觉质感、单人直播「盲盒拆信模式」、提示音与启动习惯，本机自动保存，无需改动网站。</p>
+        <div className="surface-picker" role="group" aria-label="界面质感与性能模式">
+          <div className="surface-picker-head">
+            <strong>界面质感与性能模式</strong>
+            <small>
+              {prefs.uiSurface === 'liquid'
+                ? prefs.acrylicActive
+                  ? '已开启 Windows 亚克力桌面透视 + 内部光学透镜折射'
+                  : '已开启内部光学透镜折射与液态弹簧动效'
+                : prefs.uiSurface === 'standard'
+                  ? '已切换为标准磨砂玻璃（免重启生效）'
+                  : '已切换为精简省性能模式（零模糊、零折射、零动效）'}
+            </small>
+          </div>
+          <div className="surface-choice-grid">
+            {(
+              [
+                ['liquid', '琉璃液态玻璃', '默认', '窗口柔雾透视 + 光学边缘折射、镜面高光与液态弹簧动效；正文卡片保持高对比清晰护眼。'],
+                ['standard', '标准磨砂玻璃', '均衡', '关闭桌面透视与光学折射滤镜，保留柔和磨砂质感与轻快过渡。'],
+                ['lite', '精简省性能模式', '极省 GPU', '彻底关闭模糊、透视与动效，大幅降低显卡占用，适合开大型游戏或低配电脑直播。'],
+              ] as ReadonlyArray<readonly [DesktopUiSurface, string, string, string]>
+            ).map(([mode, label, tag, desc]) => (
+              <button
+                key={mode}
+                type="button"
+                className="surface-choice"
+                aria-pressed={prefs.uiSurface === mode}
+                onClick={() => void onUpdatePrefs({ uiSurface: mode })}
+              >
+                <span className="surface-choice-top">
+                  <span className="surface-choice-title">{label}</span>
+                  <span className="surface-choice-tag">{tag}</span>
+                </span>
+                <span className="surface-choice-desc">{desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="pref-toggle">
           <span>
             <strong>启用「随机拆一封」按钮</strong>

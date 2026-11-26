@@ -31,9 +31,12 @@ import { ObsGuidePanel } from "./ObsGuidePanel";
 import { LocalOverlaySettings } from "./LocalOverlaySettings";
 import { playWindChime } from "./chime";
 import { Inbox, Topics, Share, GlobalSettings } from "./Management";
+import { LiquidGlassDefs } from "./LiquidGlassDefs";
+import { useLiquidGlassMotion } from "./liquid-motion";
 import { parseWindChimeConnectionKey } from "../../../src/core/connection-key";
 import "./glass.css";
 import "./management.css";
+import "./liquid-glass.css";
 const bridge = window.windchimeDesktop;
 type View =
   "inbox" | "studio" | "topics" | "share" | "settings" | "connections";
@@ -157,7 +160,9 @@ function App() {
     startupView: "last",
     lastView: null,
     autoCheckUpdate: true,
+    uiSurface: "liquid",
   });
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [testCardActive, setTestCardActive] = useState(false);
   const [obsStatus, setObsStatus] = useState<ObsBridgeStatus>({
@@ -261,6 +266,11 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.uiSurface = prefs.uiSurface;
+    document.documentElement.dataset.acrylic = prefs.acrylicActive ? "1" : "0";
+  }, [prefs.uiSurface, prefs.acrylicActive]);
+  useLiquidGlassMotion(rootRef, prefs.uiSurface === "liquid");
   const toggleTheme = () => {
     const next: DesktopTheme = theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -660,7 +670,15 @@ function App() {
     studio: "直播工作台",
   }[view];
   return (
-    <div className="wc-desktop" data-view={view} data-theme={theme}>
+    <div
+      ref={rootRef}
+      className="wc-desktop"
+      data-view={view}
+      data-theme={theme}
+      data-ui-surface={prefs.uiSurface}
+      data-acrylic={prefs.acrylicActive ? "1" : "0"}
+    >
+      <LiquidGlassDefs enabled={prefs.uiSurface === "liquid"} />
       <style>{windChimeControlCss}</style>
       <div className="desktop-titlebar">
         <span>风铃桌面控制台</span>

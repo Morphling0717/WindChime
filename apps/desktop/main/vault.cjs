@@ -33,6 +33,7 @@ function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge
     if (!['inbox', 'studio'].includes(value.startupView)) delete value.startupView;
     if (!['inbox', 'studio', 'topics', 'share', 'settings'].includes(value.lastView)) delete value.lastView;
     if (value.autoCheckUpdate !== false) delete value.autoCheckUpdate;
+    if (value.uiSurface !== 'standard' && value.uiSurface !== 'lite') delete value.uiSurface;
     if (
       !value.displayBounds ||
       typeof value.displayBounds !== 'object' ||

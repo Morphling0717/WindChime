@@ -12,6 +12,7 @@ const HIDE_SHORTCUT = 'CommandOrControl+Shift+H';
 const VALID_STARTUP_VIEWS = new Set(['inbox', 'studio', 'last']);
 const VALID_LAST_VIEWS = new Set(['inbox', 'studio', 'topics', 'share', 'settings']);
 const VALID_BADGE_POSITIONS = new Set(['top-right', 'top-left', 'bottom-right', 'bottom-left']);
+const VALID_UI_SURFACES = new Set(['liquid', 'standard', 'lite']);
 
 function normalizeShortcut(value, label = '快捷键') {
   if (typeof value !== 'string' || value.length > 80) throw new Error(`请输入有效的${label}`);
@@ -91,6 +92,9 @@ function restoreWorkspace(value) {
     restored.lastView = value.lastView;
   }
   if (value.autoCheckUpdate === false) restored.autoCheckUpdate = false;
+  if (typeof value.uiSurface === 'string' && VALID_UI_SURFACES.has(value.uiSurface) && value.uiSurface !== 'liquid') {
+    restored.uiSurface = value.uiSurface;
+  }
   if (
     value.displayBounds &&
     typeof value.displayBounds === 'object' &&

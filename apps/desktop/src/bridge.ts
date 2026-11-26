@@ -21,6 +21,7 @@ export type OnAirInfo = {
   textPreview: string;
 };
 export type DesktopTheme = "light" | "dark";
+export type DesktopUiSurface = "liquid" | "standard" | "lite";
 export type DesktopStartupView = "inbox" | "studio" | "last";
 export type DesktopRememberedView = "inbox" | "studio" | "topics" | "share" | "settings";
 export type DesktopPrefs = {
@@ -31,6 +32,8 @@ export type DesktopPrefs = {
   startupView: DesktopStartupView;
   lastView: DesktopRememberedView | null;
   autoCheckUpdate: boolean;
+  uiSurface: DesktopUiSurface;
+  acrylicActive?: boolean;
 };
 export type ObsBridgeStatus = {
   enabled: boolean;

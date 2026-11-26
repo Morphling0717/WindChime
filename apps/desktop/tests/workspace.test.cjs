@@ -57,6 +57,10 @@ test('workspace restores dark theme preference and omits default or invalid valu
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: true, clearOnBlindDraw: true, tiles: {} }).clearOnBlindDraw, true);
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).randomDrawEnabled, undefined);
   assert.equal(restoreWorkspace({ version: 1, randomDrawEnabled: false, clearOnBlindDraw: 'yes', tiles: {} }).clearOnBlindDraw, undefined);
+  assert.equal(restoreWorkspace({ version: 1, uiSurface: 'liquid', tiles: {} }).uiSurface, undefined);
+  assert.equal(restoreWorkspace({ version: 1, uiSurface: 'standard', tiles: {} }).uiSurface, 'standard');
+  assert.equal(restoreWorkspace({ version: 1, uiSurface: 'lite', tiles: {} }).uiSurface, 'lite');
+  assert.equal(restoreWorkspace({ version: 1, uiSurface: 'crystal', tiles: {} }).uiSurface, undefined);
 });
 
 test('workspace restores 1.0.0 display position, chime, startup view, obs bridge, local overlay, and blindbox tile safely', () => {

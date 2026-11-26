@@ -19,6 +19,8 @@ import {
   type ObsBridgeStatus,
   type Site,
 } from './bridge';
+import { LiquidGlassDefs } from './LiquidGlassDefs';
+import { useLiquidGlassMotion } from './liquid-motion';
 import './tiles.css';
 
 const bridge = window.windchimeDesktop;
@@ -41,10 +43,12 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     startupView: 'last',
     lastView: null,
     autoCheckUpdate: true,
+    uiSurface: 'liquid',
   });
   const [testCardActive, setTestCardActive] = useState(false);
   const [obsStatus, setObsStatus] = useState<ObsBridgeStatus | null>(null);
   const [overlay, setOverlay] = useState<DesktopOverlayState | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -52,8 +56,17 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     return bridge.onThemeChanged(value => { if (alive.current) setTheme(value); });
   }, []);
   useEffect(() => {
+    void unwrap(bridge.getPrefs()).then(value => { if (alive.current) setPrefs(value); }).catch(() => {});
+    return bridge.onPrefsChanged(value => { if (alive.current) setPrefs(value); });
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.uiSurface = prefs.uiSurface;
+    document.documentElement.dataset.acrylic = prefs.acrylicActive ? '1' : '0';
+  }, [prefs.uiSurface, prefs.acrylicActive]);
+  useLiquidGlassMotion(rootRef, prefs.uiSurface === 'liquid');
   const toggleTheme = () => {
     const next: DesktopTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
@@ -66,13 +79,11 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
   }, [module]);
   useEffect(() => {
     if (module !== 'blindbox') return;
-    void unwrap(bridge.getPrefs()).then(value => { if (alive.current) setPrefs(value); }).catch(() => {});
-    const offPrefs = bridge.onPrefsChanged(value => { if (alive.current) setPrefs(value); });
     void unwrap(bridge.getTestCard()).then(value => { if (alive.current) setTestCardActive(value); }).catch(() => {});
     const offTest = bridge.onTestCardChanged(value => { if (alive.current) setTestCardActive(value); });
     void unwrap(bridge.getObsStatus()).then(value => { if (alive.current) setObsStatus(value); }).catch(() => {});
     const offObs = bridge.onObsStatusChanged(value => { if (alive.current) setObsStatus(value); });
-    return () => { offPrefs(); offTest(); offObs(); };
+    return () => { offTest(); offObs(); };
   }, [module]);
   useEffect(() => {
     if (module !== 'appearance') return;
@@ -152,7 +163,8 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     finally { if (alive.current) setBusy(false); }
   };
   const title = WINDCHIME_LIVE_MODULES.find(item => item.id === module)!.title;
-  return <div className="wc-desktop wc-tile" data-tile={module} data-theme={theme}>
+  return <div ref={rootRef} className="wc-desktop wc-tile" data-tile={module} data-theme={theme} data-ui-surface={prefs.uiSurface} data-acrylic={prefs.acrylicActive ? '1' : '0'}>
+    <LiquidGlassDefs enabled={prefs.uiSurface === 'liquid'} />
     <header className="tile-titlebar">
       <div className="tile-title"><small>风铃 · 私人磁贴</small><strong>{title}</strong></div>
       <div className="tile-window-actions">

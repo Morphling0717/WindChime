@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, Menu, session, powerMonitor, dialog, nativeImage, screen } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const osNode = require('node:os');
 const crypto = require('node:crypto');
 const httpNode = require('node:http');
 const { performance } = require('node:perf_hooks');
@@ -40,7 +41,18 @@ let desktopPrefs = {
   startupView: 'last',
   lastView: null,
   autoCheckUpdate: true,
+  uiSurface: 'liquid',
 };
+let controlAcrylicActive = false;
+function supportsWinAcrylic() {
+  if (process.platform !== 'win32') return false;
+  const parts = String(osNode.release() || '').split('.');
+  const build = Number(parts[2] || 0);
+  return Number.isFinite(build) && build >= 22000;
+}
+function prefsPayload() {
+  return { ...desktopPrefs, acrylicActive: controlAcrylicActive };
+}
 let displayMoveTimer = null;
 const pendingRequests = new Set();
 let writeTail = Promise.resolve();
@@ -278,6 +290,7 @@ async function openTile(module) {
   const stableTitle = `WindChime Private · ${TILE_MODULES[module]}`;
   const defaultWidth = module === 'review' || module === 'appearance' ? 760 : module === 'blindbox' ? 380 : 480;
   const defaultHeight = module === 'transport' ? 560 : module === 'blindbox' ? 560 : 720;
+  const tileUseAcrylic = desktopPrefs.uiSurface === 'liquid' && supportsWinAcrylic();
   const window = new BrowserWindow({
     width: defaultWidth,
     height: defaultHeight,
@@ -289,11 +302,13 @@ async function openTile(module) {
     resizable: true,
     alwaysOnTop: preferences.pinned !== false,
     icon: path.join(__dirname, 'build/icon.ico'),
-    backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+    backgroundColor: tileUseAcrylic ? '#00000000' : desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+    ...(tileUseAcrylic ? { backgroundMaterial: 'acrylic' } : {}),
     autoHideMenuBar: true,
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false },
   });
+  applyWindowSurface(window, desktopTheme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: true });
   const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false };
   tiles.set(module, tile); secureWindow(window, partition);
   window.on('page-title-updated', event => event.preventDefault());
@@ -391,13 +406,37 @@ function snapshotToOnAir(snapshot) {
     textPreview,
   };
 }
-function applyWindowTheme(theme) {
-  const bg = theme === 'dark' ? '#101822' : '#e9f1f5';
-  controlWindow?.setBackgroundColor?.(bg);
-  if (process.platform === 'win32') {
-    controlWindow?.setTitleBarOverlay?.({ color: '#00000000', symbolColor: theme === 'dark' ? '#b8ccd6' : '#46616f', height: 48 });
+function applyWindowSurface(win, theme, uiSurface, { isControl = false, allowAcrylic = true } = {}) {
+  if (!win || win.isDestroyed()) return false;
+  const wantAcrylic = allowAcrylic && uiSurface === 'liquid' && supportsWinAcrylic();
+  let appliedAcrylic = false;
+  if (wantAcrylic && typeof win.setBackgroundMaterial === 'function') {
+    try {
+      win.setBackgroundColor?.('#00000000');
+      win.setBackgroundMaterial('acrylic');
+      appliedAcrylic = true;
+    } catch {
+      appliedAcrylic = false;
+    }
   }
-  for (const tile of tiles.values()) tile.window.setBackgroundColor?.(bg);
+  if (!appliedAcrylic) {
+    try { win.setBackgroundMaterial?.('none'); } catch {}
+    win.setBackgroundColor?.(theme === 'dark' ? '#101822' : '#e9f1f5');
+  }
+  if (isControl && process.platform === 'win32') {
+    win.setTitleBarOverlay?.({
+      color: '#00000000',
+      symbolColor: theme === 'dark' ? '#d0e4ee' : '#315262',
+      height: 48,
+    });
+  }
+  return appliedAcrylic;
+}
+function applyWindowTheme(theme) {
+  controlAcrylicActive = applyWindowSurface(controlWindow, theme, desktopPrefs.uiSurface, { isControl: true, allowAcrylic: true });
+  for (const tile of tiles.values()) {
+    applyWindowSurface(tile.window, theme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: true });
+  }
 }
 function sendDisplayScroll(command) {
   const sanitized = sanitizeScrollCommand(command);
@@ -868,6 +907,7 @@ async function start() {
     startupView: ws.startupView === 'inbox' || ws.startupView === 'studio' ? ws.startupView : 'last',
     lastView: ws.lastView ?? null,
     autoCheckUpdate: ws.autoCheckUpdate !== false,
+    uiSurface: ws.uiSurface === 'standard' || ws.uiSurface === 'lite' ? ws.uiSurface : 'liquid',
   };
 
   if (ws.obsBridge) {
@@ -883,6 +923,7 @@ async function start() {
   }
 
   const partition = 'persist:windchime-private';
+  const controlUseAcrylic = desktopPrefs.uiSurface === 'liquid' && supportsWinAcrylic();
   controlWindow = new BrowserWindow({
     width: 1440,
     height: 1000,
@@ -890,10 +931,12 @@ async function start() {
     minHeight: 620,
     title: '风铃 · 私人控制台',
     icon: path.join(__dirname, 'build/icon.ico'),
-    backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
-    ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: desktopTheme === 'dark' ? '#b8ccd6' : '#46616f', height: 48 }, autoHideMenuBar: true } : {}),
+    backgroundColor: controlUseAcrylic ? '#00000000' : desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
+    ...(controlUseAcrylic ? { backgroundMaterial: 'acrylic' } : {}),
+    ...(process.platform === 'win32' ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#00000000', symbolColor: desktopTheme === 'dark' ? '#d0e4ee' : '#315262', height: 48 }, autoHideMenuBar: true } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false },
   });
+  controlAcrylicActive = applyWindowSurface(controlWindow, desktopTheme, desktopPrefs.uiSurface, { isControl: true, allowAcrylic: true });
   secureWindow(controlWindow, partition);
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
   for (const event of ['blur', 'hide', 'closed']) controlWindow.on(event, () => shortcuts.setRecording(false, () => performance.now()));
@@ -1097,7 +1140,7 @@ async function start() {
     broadcastPrivate('app:theme-changed', theme);
     return theme;
   });
-  handle('app:prefs-get', 'private', () => ({ ...desktopPrefs }));
+  handle('app:prefs-get', 'private', () => prefsPayload());
   handle('app:prefs-set', 'private', async patch => {
     if (!patch || typeof patch !== 'object') throw new Error('无效偏好设置');
     const next = { ...desktopPrefs };
@@ -1119,7 +1162,13 @@ async function start() {
       if (patch.lastView !== null && !['inbox', 'studio', 'topics', 'share', 'settings'].includes(patch.lastView)) throw new Error('无效页面记录');
       next.lastView = patch.lastView;
     }
+    if ('uiSurface' in patch) {
+      if (!['liquid', 'standard', 'lite'].includes(patch.uiSurface)) throw new Error('无效界面质感模式');
+      next.uiSurface = patch.uiSurface;
+    }
+    const surfaceChanged = next.uiSurface !== desktopPrefs.uiSurface;
     desktopPrefs = next;
+    if (surfaceChanged) applyWindowTheme(desktopTheme);
     await workspaceStore.save({
       randomDrawEnabled: next.randomDrawEnabled,
       clearOnBlindDraw: next.clearOnBlindDraw,
@@ -1128,9 +1177,11 @@ async function start() {
       startupView: next.startupView,
       lastView: next.lastView,
       autoCheckUpdate: next.autoCheckUpdate,
+      uiSurface: next.uiSurface,
     });
-    broadcastPrivate('app:prefs-changed', { ...next });
-    return { ...next };
+    const out = prefsPayload();
+    broadcastPrivate('app:prefs-changed', out);
+    return out;
   });
   handle('app:badge-update', 'control', count => {
     const n = Number.isInteger(count) && count > 0 ? Math.min(9999, count) : 0;
