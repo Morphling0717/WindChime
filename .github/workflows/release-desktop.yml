@@ -54,7 +54,11 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path $env:WINDCHIME_BUILD_ROOT, $env:ELECTRON_CACHE, $env:ELECTRON_BUILDER_CACHE | Out-Null
           node scripts/make.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/verify-portable.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Optional Authenticode code signing (enabled when WIN_CERT_BASE64 secret is configured)
         working-directory: apps/desktop
