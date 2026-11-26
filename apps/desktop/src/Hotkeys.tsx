@@ -211,8 +211,8 @@ export function Hotkeys({
         </div>
         <label className="pref-toggle">
           <span>
-            <strong>启动时自动检查 GitHub 新版本</strong>
-            <small>发现新版本仅在顶部显示温和提醒，绝不会在直播途中自动下载或重启软件。</small>
+            <strong>启动及后台自动检查新版本</strong>
+            <small>优先连接国内直连镜像源，支持应用内校验并一键更新；绝不会在直播途中自动重启软件。</small>
           </span>
           <input
             type="checkbox"

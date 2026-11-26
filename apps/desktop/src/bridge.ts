@@ -61,12 +61,23 @@ export type UpdaterInfo = {
   currentVersion: string;
   latestVersion: string;
   hasUpdate: boolean;
+  verified: boolean;
+  canDownload: boolean;
+  source: string;
+  stage: "idle" | "checking" | "available" | "downloading" | "verifying" | "ready" | "error";
   title: string;
   notes: string;
   url: string;
   publishedAt: string;
   checkedAt: string;
   error: string;
+  installerFileName: string;
+  installerSize: number;
+  installerSha256: string;
+  downloadedBytes: number;
+  totalBytes: number;
+  percent: number;
+  speedBytesPerSec: number;
 };
 export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: boolean; connectionId: string; topicId: string; contextVersion: number };
 export type DesktopStatus = {
@@ -147,7 +158,11 @@ type Bridge = {
   onHistoryChanged(callback: (entries: PlayHistoryEntry[]) => void): () => void;
   getUpdaterInfo(): Promise<Result<UpdaterInfo>>;
   checkUpdate(): Promise<Result<UpdaterInfo>>;
+  downloadUpdate(): Promise<Result<UpdaterInfo>>;
+  cancelUpdateDownload(): Promise<Result<boolean>>;
+  installUpdate(): Promise<Result<boolean>>;
   openRelease(url?: string): Promise<Result<boolean>>;
+  onUpdaterChanged(callback: (info: UpdaterInfo) => void): () => void;
   hide(): Promise<Result<void>>;
   status(): Promise<Result<DesktopStatus>>;
   openTile(module: WindChimeLiveModule): Promise<Result<void>>;

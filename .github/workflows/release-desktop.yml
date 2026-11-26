@@ -120,3 +120,35 @@ jobs:
               --notes-file $notesFile `
               --latest
           }
+
+      - name: Sign and publish China-mirror update feed to windchime.uliuli.cn
+        if: ${{ secrets.WINDCHIME_UPDATE_PRIVATE_KEY != '' && secrets.MIA_SSH_KEY != '' && secrets.MIA_SSH_HOST != '' }}
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          WINDCHIME_UPDATE_PRIVATE_KEY: ${{ secrets.WINDCHIME_UPDATE_PRIVATE_KEY }}
+          MIA_SSH_KEY: ${{ secrets.MIA_SSH_KEY }}
+          MIA_SSH_HOST: ${{ secrets.MIA_SSH_HOST }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $relDir = "out\releases\$version"
+          $setup = "$relDir\WindChime-Setup-$version.exe"
+          $manifest = "$relDir\latest.json"
+          $notesFile = "$relDir\auto-release-notes.md"
+          node scripts/generate-update-manifest.cjs --version $version --setup $setup --notes-file $notesFile --out $manifest --title "风铃 $version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $keyPath = "$env:RUNNER_TEMP\mia_deploy_key"
+          [IO.File]::WriteAllText($keyPath, $env:MIA_SSH_KEY.Replace("`r`n", "`n") + "`n", [Text.UTF8Encoding]::new($false))
+          icacls $keyPath /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+          try {
+            $sshOpts = @('-i', $keyPath, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'BatchMode=yes')
+            scp @sshOpts $setup "$relDir\SHA256SUMS.txt" "root@$($env:MIA_SSH_HOST):/opt/windchime-updates/"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            scp @sshOpts $manifest "root@$($env:MIA_SSH_HOST):/opt/windchime-updates/latest.json.tmp"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            ssh @sshOpts "root@$($env:MIA_SSH_HOST)" "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ls -t /opt/windchime-updates/WindChime-Setup-*.exe | tail -n +3 | xargs -r rm -f"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue $keyPath
+          }

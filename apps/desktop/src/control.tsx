@@ -186,6 +186,7 @@ function App() {
   const [updaterInfo, setUpdaterInfo] = useState<UpdaterInfo | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [updateNotesOpen, setUpdateNotesOpen] = useState(false);
   const [expiryDismissedId, setExpiryDismissedId] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const prevPendingRef = useRef<{ topicKey: string; count: number } | null>(null);
@@ -234,17 +235,28 @@ function App() {
   }, []);
   useEffect(() => {
     void unwrap(bridge.getUpdaterInfo()).then(setUpdaterInfo).catch(() => {});
+    return bridge.onUpdaterChanged((info) => {
+      setUpdaterInfo(info);
+      if (info.stage === "downloading" || info.stage === "ready") {
+        setUpdateDismissed(false);
+      }
+    });
   }, []);
   useEffect(() => {
     if (!prefsLoaded || !prefs.autoCheckUpdate) return;
-    const timer = setTimeout(() => {
+    const runCheck = () => {
       void unwrap(bridge.checkUpdate())
         .then((info) => {
           if (!info.error) setUpdaterInfo(info);
         })
         .catch(() => {});
-    }, 5000);
-    return () => clearTimeout(timer);
+    };
+    const timer = setTimeout(runCheck, 5000);
+    const periodic = setInterval(runCheck, 4 * 60 * 60 * 1000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(periodic);
+    };
   }, [prefsLoaded, prefs.autoCheckUpdate]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -268,12 +280,42 @@ function App() {
       setUpdaterInfo(info);
       setUpdateDismissed(false);
       if (info.error) setError(info.error);
-      else if (info.hasUpdate) setNotice(`发现新版本 v${info.latestVersion}，可在顶部横幅一键前往下载。`);
+      else if (info.hasUpdate) setNotice(info.canDownload ? `发现新版本 v${info.latestVersion}（已通过签名校验），可在顶部横幅一键应用内更新。` : `发现新版本 v${info.latestVersion}，可在顶部横幅一键前往下载。`);
       else setNotice(`当前已是最新版本 v${info.currentVersion}。`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "检查更新失败");
     } finally {
       setCheckingUpdate(false);
+    }
+  };
+  const startUpdateDownload = async () => {
+    setError("");
+    try {
+      const info = await unwrap(bridge.downloadUpdate());
+      setUpdaterInfo(info);
+      if (info.stage === "ready") {
+        setNotice(`新版 v${info.latestVersion} 已下载并校验通过，随时可点击「立即安装并重启」。`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "下载更新失败");
+    }
+  };
+  const cancelUpdateDownload = async () => {
+    try {
+      await unwrap(bridge.cancelUpdateDownload());
+    } catch {}
+  };
+  const installDownloadedUpdate = async () => {
+    setError("");
+    const liveActive = Boolean(onAir || status.displayOpen || obsStatus.clientCount > 0);
+    const prompt = liveActive
+      ? "检测到当前展示端在线或正在播出。点击「继续」将先清空观众画面、退出风铃并启动新版安装向导（不会丢失已有密钥和设置）。确定现在安装？"
+      : "即将退出风铃并启动新版安装向导覆盖升级，已有网站密钥、热键和本地配置会完整保留。继续？";
+    if (!(await unwrap(bridge.confirm(prompt)))) return;
+    try {
+      await unwrap(bridge.installUpdate());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "启动更新安装程序失败");
     }
   };
   const exportPlayHistory = useCallback(async (format: "md" | "csv") => {
@@ -713,14 +755,22 @@ function App() {
             <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
           </button>
           <div className="sidebar-version-row">
-            <span>{`v${status.version || updaterInfo?.currentVersion || "1.0.0"}`}</span>
+            <span>{`v${status.version || updaterInfo?.currentVersion || "1.1.0"}`}</span>
             <button
               type="button"
               className={`sidebar-update-btn${updaterInfo?.hasUpdate ? " has-update" : ""}`}
               disabled={checkingUpdate}
               onClick={() => void manualCheckUpdate()}
             >
-              {checkingUpdate ? "检查中…" : updaterInfo?.hasUpdate ? `新版 v${updaterInfo.latestVersion}` : "检查更新"}
+              {checkingUpdate
+                ? "检查中…"
+                : updaterInfo?.stage === "ready"
+                  ? "待安装"
+                  : updaterInfo?.stage === "downloading"
+                    ? `${updaterInfo.percent}%`
+                    : updaterInfo?.hasUpdate
+                      ? `新版 v${updaterInfo.latestVersion}`
+                      : "检查更新"}
             </button>
           </div>
           <div className="capture-note">
@@ -842,14 +892,64 @@ function App() {
             </div>
           ) : null}
           {updaterInfo?.hasUpdate && !updateDismissed ? (
-            <div className="desktop-banner is-update" role="status">
-              <span>{`发现新版本 v${updaterInfo.latestVersion}（${updaterInfo.title || "点击查看更新说明"}）· 绝不打断当前直播`}</span>
-              <div className="desktop-banner-actions">
-                <button type="button" className="wc-primary" onClick={() => void unwrap(bridge.openRelease(updaterInfo.url)).catch(() => {})}>
-                  前往 GitHub 下载
-                </button>
-                <button type="button" className="wc-subtle" onClick={() => setUpdateDismissed(true)}>稍后</button>
+            <div className="desktop-banner is-update update-banner-stack" role="status">
+              <div className="update-banner-top">
+                <div className="update-banner-meta">
+                  <strong>{`发现新版本 v${updaterInfo.latestVersion}`}</strong>
+                  {updaterInfo.verified ? <span className="update-verified-pill">国内直连 · 已验签</span> : null}
+                  <span>{updaterInfo.title && updaterInfo.title !== `v${updaterInfo.latestVersion}` ? updaterInfo.title : "绝不打断当前直播"}</span>
+                </div>
+                <div className="desktop-banner-actions">
+                  {updaterInfo.notes ? (
+                    <button type="button" className="wc-subtle" onClick={() => setUpdateNotesOpen(v => !v)}>
+                      {updateNotesOpen ? "收起更新内容" : "查看更新内容"}
+                    </button>
+                  ) : null}
+                  {updaterInfo.stage === "downloading" ? (
+                    <button type="button" className="wc-subtle" onClick={() => void cancelUpdateDownload()}>
+                      取消下载
+                    </button>
+                  ) : updaterInfo.stage === "verifying" ? (
+                    <button type="button" disabled>正在校验 SHA-256…</button>
+                  ) : updaterInfo.stage === "ready" ? (
+                    <button type="button" className="wc-primary" onClick={() => void installDownloadedUpdate()}>
+                      立即安装并重启
+                    </button>
+                  ) : updaterInfo.canDownload ? (
+                    <button type="button" className="wc-primary" onClick={() => void startUpdateDownload()}>
+                      {updaterInfo.installerSize > 0
+                        ? `一键下载更新（${(updaterInfo.installerSize / (1024 * 1024)).toFixed(1)} MB）`
+                        : "一键下载更新"}
+                    </button>
+                  ) : null}
+                  {updaterInfo.stage !== "downloading" && updaterInfo.stage !== "verifying" ? (
+                    <>
+                      <button type="button" onClick={() => void unwrap(bridge.openRelease(updaterInfo.url)).catch(() => {})}>
+                        GitHub 页面
+                      </button>
+                      <button type="button" className="wc-subtle" onClick={() => setUpdateDismissed(true)}>稍后</button>
+                    </>
+                  ) : null}
+                </div>
               </div>
+              {updaterInfo.stage === "downloading" || updaterInfo.stage === "verifying" ? (
+                <div className="update-progress-wrap">
+                  <div className="update-progress-track">
+                    <div className="update-progress-fill" style={{ width: `${updaterInfo.stage === "verifying" ? 100 : updaterInfo.percent}%` }} />
+                  </div>
+                  <span className="update-progress-text">
+                    {updaterInfo.stage === "verifying"
+                      ? "下载完成，正在核对 SHA-256 完整性…"
+                      : `${updaterInfo.percent}% · ${(updaterInfo.downloadedBytes / (1024 * 1024)).toFixed(1)} / ${(updaterInfo.totalBytes / (1024 * 1024)).toFixed(1)} MB${updaterInfo.speedBytesPerSec > 0 ? ` · ${(updaterInfo.speedBytesPerSec / (1024 * 1024)).toFixed(2)} MB/s` : ""}`}
+                  </span>
+                </div>
+              ) : null}
+              {updaterInfo.stage === "ready" ? (
+                <p className="update-ready-note">安装包已下载并通过 Ed25519 + SHA-256 双重安全校验，下播后随时点击「立即安装并重启」即可覆盖升级。</p>
+              ) : null}
+              {updateNotesOpen && updaterInfo.notes ? (
+                <pre className="update-notes-box">{updaterInfo.notes}</pre>
+              ) : null}
             </div>
           ) : null}
           {error ? (

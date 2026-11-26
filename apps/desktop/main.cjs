@@ -90,7 +90,7 @@ function broadcastPrivate(channel, payload) {
   for (const tile of tiles.values()) liveContents(tile.window)?.send?.(channel, payload);
 }
 
-let workspacePath = '', vaultPath = '', historyPath = '', overlayDir = '';
+let workspacePath = '', vaultPath = '', historyPath = '', overlayDir = '', updatesDir = '';
 const workspaceStore = createWorkspaceStore({
   fs,
   getPath: () => workspacePath,
@@ -157,6 +157,13 @@ const sessionHistory = createSessionHistoryStore({
 const updater = createUpdater({
   fetch,
   shell,
+  crypto,
+  fs,
+  path,
+  spawn: (cmd, args, opts) => require('node:child_process').spawn(cmd, args, opts),
+  getUpdatesDir: () => updatesDir,
+  onStateChange: info => broadcastPrivate('updater:changed', info),
+  onBeforeInstallQuit: () => { setTimeout(() => app.quit(), 250).unref?.(); },
   currentVersion: appVersion,
   setTimeoutFn: setTimeout,
   clearTimeoutFn: clearTimeout,
@@ -845,6 +852,7 @@ async function start() {
   workspacePath = path.join(userDataDir, 'workspace.v1.json');
   historyPath = path.join(userDataDir, 'play-history.v1.json');
   overlayDir = path.join(userDataDir, 'local-overlay');
+  updatesDir = path.join(userDataDir, 'updates');
 
   await vaultStore.read();
   const ws = await workspaceStore.read();
@@ -1167,9 +1175,12 @@ async function start() {
   });
   handle('history:clear', 'control', () => sessionHistory.clear());
 
-  // In-app update check IPC
+  // In-app update check, download & install IPC
   handle('updater:info', 'private', () => updater.getInfo());
   handle('updater:check', 'control', () => updater.check());
+  handle('updater:download', 'control', () => updater.download());
+  handle('updater:cancel', 'control', () => updater.cancelDownload());
+  handle('updater:install', 'control', () => updater.install());
   handle('updater:open-release', 'control', url => updater.openRelease(url));
 
   handle('app:confirm', 'private', async (window, input) => {
