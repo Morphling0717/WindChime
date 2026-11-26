@@ -147,7 +147,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             scp @sshOpts $manifest "root@$($env:MIA_SSH_HOST):/opt/windchime-updates/latest.json.tmp"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            ssh @sshOpts "root@$($env:MIA_SSH_HOST)" "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ls -t /opt/windchime-updates/WindChime-Setup-*.exe | tail -n +3 | xargs -r rm -f"
+            ssh @sshOpts "root@$($env:MIA_SSH_HOST)" "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ln -sf WindChime-Setup-$version.exe /opt/windchime-updates/WindChime-Setup-latest.exe && ls -t /opt/windchime-updates/WindChime-Setup-[0-9]*.exe | tail -n +3 | xargs -r rm -f"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $keyPath
