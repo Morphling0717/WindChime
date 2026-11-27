@@ -169,24 +169,24 @@ jobs:
             $remoteHost = "root@$($env:MIA_SSH_HOST)"
 
             # Fast path: pull the just-published installer directly on the HK mirror from GitHub Release and verify SHA-256 (~10s vs ~11min scp).
-            $pullScript = @'
-set -euo pipefail
-version="$1"
-expected_sha="$2"
-release_url="$3"
-mkdir -p /opt/windchime-updates
-tmp="/opt/windchime-updates/WindChime-Setup-${version}.exe.dl"
-target="/opt/windchime-updates/WindChime-Setup-${version}.exe"
-rm -f "$tmp"
-curl -fSL --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 180 -o "$tmp" "$release_url"
-actual="$(sha256sum "$tmp" | awk '{print tolower($1)}')"
-if [ "$actual" != "$expected_sha" ]; then
-  echo "SHA-256 mismatch: $actual != $expected_sha" >&2
-  rm -f "$tmp"
-  exit 42
-fi
-mv "$tmp" "$target"
-'@ -replace "`r`n", "`n"
+            $pullScript = @(
+              'set -euo pipefail'
+              'version="$1"'
+              'expected_sha="$2"'
+              'release_url="$3"'
+              'mkdir -p /opt/windchime-updates'
+              'tmp="/opt/windchime-updates/WindChime-Setup-${version}.exe.dl"'
+              'target="/opt/windchime-updates/WindChime-Setup-${version}.exe"'
+              'rm -f "$tmp"'
+              'curl -fSL --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 180 -o "$tmp" "$release_url"'
+              'actual="$(sha256sum "$tmp" | awk ''{print tolower($1)}'' )"'
+              'if [ "$actual" != "$expected_sha" ]; then'
+              '  echo "SHA-256 mismatch: $actual != $expected_sha" >&2'
+              '  rm -f "$tmp"'
+              '  exit 42'
+              'fi'
+              'mv "$tmp" "$target"'
+            ) -join "`n"
             Write-Host "Pulling WindChime-Setup-$version.exe directly onto HK mirror from $releaseUrl ..."
             $pullScript | ssh @sshOpts $remoteHost "bash -s -- '$version' '$expectedSha' '$releaseUrl'"
             if ($LASTEXITCODE -ne 0) {
