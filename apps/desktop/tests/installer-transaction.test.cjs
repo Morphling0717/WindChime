@@ -43,6 +43,9 @@ static class Fixture {
     var releaser=new Thread(()=>{Thread.Sleep(450);hold.Dispose();});
     releaser.Start();
   }
+  if(mode=="inherited-cwd"){
+    Environment.CurrentDirectory=target;
+  }
   try {tx.Prepared(expected);tx.Commit();}
   catch {tx.Recover();throw;}
   return 0;
@@ -69,4 +72,5 @@ static class Fixture {
  for(const phase of ['files-restored','metadata-restored'])test(`recovery interrupted at ${phase} can itself be resumed`,async()=>{const root=await scenario();await run(root,'install','metadata-written',91);await run(root,'recover',phase,91);await run(root,'recover');await original(root,true);});
  test('cleanup interrupted after deleting an old file resumes without undoing a successful install',async()=>{const root=await scenario();await run(root,'install','cleanup-file',91);await run(root,'recover');assert.equal(await fs.readFile(path.join(root,'WindChime/WindChime.exe'),'utf8'),'synthetic new executable');assert.equal((await fs.readdir(root)).filter(n=>n.startsWith('.WindChime-Setup-')).length,0);});
  test('transient AV file lock during commit retries cleanly and completes upgrade',async()=>{const root=await scenario();await run(root,'transient-lock');assert.equal(await fs.readFile(path.join(root,'WindChime/WindChime.exe'),'utf8'),'synthetic new executable');assert.equal((await fs.readdir(root)).filter(n=>n.startsWith('.WindChime-Setup-')).length,0);});
+ test('upgrade succeeds even when installer inherited target install directory as CurrentDirectory',async()=>{const root=await scenario();await run(root,'inherited-cwd');assert.equal(await fs.readFile(path.join(root,'WindChime/WindChime.exe'),'utf8'),'synthetic new executable');assert.equal((await fs.readdir(root)).filter(n=>n.startsWith('.WindChime-Setup-')).length,0);});
 });

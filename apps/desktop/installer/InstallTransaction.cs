@@ -82,6 +82,15 @@ namespace WindChime.Setup {
       }
       throw new IOException(context+" 时文件正被其他程序占用（常见于杀毒软件实时扫描或资源管理器打开了该目录），请稍等几秒重试或暂时放行风铃安装目录。详情："+last.Message,last);
     }
+    public static void ReleaseWorkingDirectory(string directory) {
+      try {
+        var current=Environment.CurrentDirectory;
+        if(!String.IsNullOrWhiteSpace(current)&&(InstallPolicy.SamePath(current,directory)||InstallPolicy.Within(current,directory))) {
+          var safe=Path.GetTempPath();
+          if(Directory.Exists(safe))Environment.CurrentDirectory=safe;
+        }
+      } catch {}
+    }
     public static void RetryIo(Action operation,string context,CancellationToken cancel=default(CancellationToken)) {
       RetryIo(()=>{operation();return true;},context,cancel);
     }
@@ -202,6 +211,8 @@ namespace WindChime.Setup {
       if(new DriveInfo(Path.GetPathRoot(Journal.target)).AvailableFreeSpace<128*MiB)throw new IOException("剩余磁盘空间不足以安全提交安装，原版本将保留。");
       if(Journal.hadTarget)VerifyTree(Journal.target,Journal.before);else if(Directory.Exists(Journal.target)||File.Exists(Journal.target))throw new IOException("安装位置已被其他程序创建。");
       Save("move-old");
+      ReleaseWorkingDirectory(Journal.target);
+      ReleaseWorkingDirectory(Root);
       if(Journal.hadTarget)RetryIo(()=>Directory.Move(Journal.target,Old),"切换旧版程序目录");
       checkpoint("old-moved");Save("move-new");RetryIo(()=>Directory.Move(Stage,Journal.target),"启用新版程序目录");checkpoint("new-moved");Save("metadata");
       metadata.Apply(Journal.target,Journal.version,Journal.desktop,Journal.menu);
@@ -211,6 +222,8 @@ namespace WindChime.Setup {
     }
     public void Recover() {
       requireStopped();RequireOrdinaryPath(Root);
+      ReleaseWorkingDirectory(Journal.target);
+      ReleaseWorkingDirectory(Root);
       if(Journal.phase=="committed") {VerifyTree(Journal.target,Journal.after);metadata.Verify(Journal.target,Journal.version,Journal.desktop,Journal.menu);Cleanup();return;}
       // Before moving anything, both copies must match their recorded manifests.
       if(Directory.Exists(Old)) {

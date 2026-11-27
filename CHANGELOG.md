@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.2 — 2026-11-27
+
+- **根治应用内更新「切换旧版程序目录时文件正被其他程序占用」自锁死缺陷**：
+  - 实机溯源定位到真正根因：通过桌面/开始菜单快捷方式启动旧版风铃时，旧进程的当前工作目录（`CWD`）指向程序安装目录本身；应用内 `spawn` 安装包未显式指定 `cwd`，导致安装向导进程自己继承并长期持有安装目录句柄，在 `InstallTransaction.Commit()` 执行 `Directory.Move` 切换旧版目录时与自己发生 `ERROR_SHARING_VIOLATION` 死锁。
+  - **双向根治（向下兼容所有旧版直接升级）**：
+    - 安装向导 [GlassSetup.cs](apps/desktop/installer/GlassSetup.cs) 入口及 [InstallTransaction.cs](apps/desktop/installer/InstallTransaction.cs) 切换/恢复目录前强制将 `Environment.CurrentDirectory` 切离安装目录至系统临时目录，即使从 `v1.1.0`–`v1.4.1` 任意旧版应用内点击「立即安装并重启」也能 100% 顺利升级。
+    - 应用内更新器 [updater.cjs](apps/desktop/main/updater.cjs) 启动安装程序时显式传入 `cwd: path.dirname(downloadedPath)`（`%APPDATA%\WindChime\updates`），从源头杜绝继承安装目录句柄。
+
 ## 1.4.1 — 2026-11-27
 
 - **安装器抗杀软瞬时文件占用重试（修复火绒 / Defender 扫描导致的「另一个进程正在使用此文件」报错）**：

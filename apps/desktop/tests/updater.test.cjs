@@ -96,6 +96,7 @@ test('updater verifies Ed25519 signed manifest, downloads with SHA-256 verificat
     assert.equal(await updater.install(), true);
     assert.equal(spawned.length, 1);
     assert(spawned[0].cmd.endsWith('WindChime-Setup-1.2.0.exe'));
+    assert.equal(spawned[0].opts.cwd, tmpDir, 'installer must spawn with updates dir as cwd, never inherited install dir');
     assert.equal(quitRequested, 1);
     assert.deepEqual(order, ['prepare', 'spawn', 'quit'], 'must complete shutdown cleanup BEFORE spawning installer');
 

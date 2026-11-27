@@ -557,7 +557,11 @@ function createUpdater({
     if (typeof onBeforeInstallPrepare === 'function') {
       await onBeforeInstallPrepare();
     }
-    const child = spawn(downloadedPath, [], { detached: true, stdio: 'ignore' });
+    const child = spawn(downloadedPath, [], {
+      cwd: path.dirname(downloadedPath),
+      detached: true,
+      stdio: 'ignore',
+    });
     child.unref?.();
     onBeforeInstallQuit?.();
     return true;

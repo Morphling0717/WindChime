@@ -250,6 +250,9 @@ namespace WindChime.Setup {
     }
     [STAThread] public static int Main() {
       try {
+        // Detach immediately from any inherited CurrentDirectory (e.g. when spawned by an older WindChime.exe
+        // whose shortcut WorkingDirectory is the install folder) so Directory.Move never self-locks on CWD.
+        try { var safeCwd=Path.GetTempPath(); if(Directory.Exists(safeCwd))Environment.CurrentDirectory=safeCwd; } catch {}
         bool first;
         using(var mutex=new Mutex(true,"Local\\WindChime.Setup."+WindowsIdentity.GetCurrent().User.Value,out first)) {
           if(!first){MessageBox.Show("安装向导已经打开，请继续使用现有窗口。","风铃安装",MessageBoxButton.OK,MessageBoxImage.Information);return 1;}
