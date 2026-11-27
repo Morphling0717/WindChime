@@ -125,7 +125,15 @@ jobs:
           Set-Content -Path $notesFile -Value $notes -Encoding UTF8
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $tag already exists; uploading missing assets if needed and skipping duplicate creation."
+            Write-Host "Release $tag already exists; updating assets and notes to keep Release and mirror hashes in sync."
+            gh release upload $tag `
+              "$relDir\WindChime-Setup-$version.exe" `
+              "$relDir\WindChime-win32-x64-$version.zip" `
+              "$relDir\SHA256SUMS.txt" `
+              --clobber
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            gh release edit $tag --notes-file $notesFile
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             gh release create $tag `
               "$relDir\WindChime-Setup-$version.exe" `
@@ -134,6 +142,7 @@ jobs:
               --title "风铃 $version" `
               --notes-file $notesFile `
               --latest
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
       - name: Sign and publish China-mirror update feed to windchime.uliuli.cn
@@ -168,7 +177,8 @@ jobs:
             $sshOpts = @('-i', $keyPath, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'BatchMode=yes')
             $remoteHost = "root@$($env:MIA_SSH_HOST)"
 
-            # Fast path: pull the just-published installer directly on the HK mirror from GitHub Release and verify SHA-256 (~10s vs ~11min scp).
+            # Fast path: pull the just-published installer directly on the HK mirror from GitHub Release and verify SHA-256.
+            # Encode as LF-only UTF-8 Base64 so Windows PowerShell never appends a trailing CR (\r) to the piped bash script.
             $pullScript = @(
               'set -euo pipefail'
               'version="$1"'
@@ -185,25 +195,36 @@ jobs:
               '  rm -f "$tmp"'
               '  exit 42'
               'fi'
+              'chmod 644 "$tmp"'
               'mv "$tmp" "$target"'
             ) -join "`n"
+            $pullB64 = [Convert]::ToBase64String([Text.UTF8Encoding]::new($false).GetBytes($pullScript + "`n"))
             Write-Host "Pulling WindChime-Setup-$version.exe directly onto HK mirror from $releaseUrl ..."
-            $pullScript | ssh @sshOpts $remoteHost "bash -s -- '$version' '$expectedSha' '$releaseUrl'"
+            ssh @sshOpts $remoteHost "printf '%s' '$pullB64' | base64 -d | bash -s -- '$version' '$expectedSha' '$releaseUrl'"
             if ($LASTEXITCODE -ne 0) {
               Write-Host "Direct pull on HK mirror failed (exit $LASTEXITCODE); falling back to scp upload..."
               scp @sshOpts $setup "${remoteHost}:/opt/windchime-updates/WindChime-Setup-$version.exe.tmp"
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-              ssh @sshOpts $remoteHost "mv /opt/windchime-updates/WindChime-Setup-$version.exe.tmp /opt/windchime-updates/WindChime-Setup-$version.exe"
+              ssh @sshOpts $remoteHost "chmod 644 /opt/windchime-updates/WindChime-Setup-$version.exe.tmp && mv /opt/windchime-updates/WindChime-Setup-$version.exe.tmp /opt/windchime-updates/WindChime-Setup-$version.exe"
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             }
 
-            # Upload tiny metadata files and atomically flip latest.json + WindChime-Setup-latest.exe symlink.
+            # Upload tiny metadata files, atomically flip latest.json + symlink, and clean old/malformed installer files.
             scp @sshOpts "$relDir\SHA256SUMS.txt" "${remoteHost}:/opt/windchime-updates/"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             scp @sshOpts $manifest "${remoteHost}:/opt/windchime-updates/latest.json.tmp"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            ssh @sshOpts $remoteHost "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ln -sf WindChime-Setup-$version.exe /opt/windchime-updates/WindChime-Setup-latest.exe && ls -t /opt/windchime-updates/WindChime-Setup-[0-9]*.exe | tail -n +3 | xargs -r rm -f"
+            ssh @sshOpts $remoteHost "test -f /opt/windchime-updates/WindChime-Setup-$version.exe && find /opt/windchime-updates -maxdepth 1 -name 'WindChime-Setup-*.exe?*' ! -name '*.tmp' ! -name '*.dl' -delete && mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ln -sf WindChime-Setup-$version.exe /opt/windchime-updates/WindChime-Setup-latest.exe && ls -t /opt/windchime-updates/WindChime-Setup-[0-9]*.exe | tail -n +3 | xargs -r rm -f"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            # Verify live public HTTPS mirror returns 200 with exact Content-Length before marking release green.
+            $liveHead = Invoke-WebRequest -Method Head -Uri "https://windchime.uliuli.cn/updates/WindChime-Setup-$version.exe" -UseBasicParsing
+            $liveLen = [int64]($liveHead.Headers['Content-Length'] | Select-Object -First 1)
+            $expectedLen = (Get-Item $setup).Length
+            if ($liveHead.StatusCode -ne 200 -or $liveLen -ne $expectedLen) {
+              throw "Live mirror verification failed: status=$($liveHead.StatusCode) len=$liveLen expected=$expectedLen"
+            }
+            Write-Host "Verified live mirror installer: https://windchime.uliuli.cn/updates/WindChime-Setup-$version.exe ($liveLen bytes)"
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $keyPath
           }
