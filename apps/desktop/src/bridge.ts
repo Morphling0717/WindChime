@@ -147,7 +147,7 @@ export type TileInfo = { module: WindChimeLiveModule; pinned: boolean; dirty?: b
 export type DesktopStatus = {
   version?: string;
   connectionError: string; displayOpen: boolean; obsRunning?: boolean; obsClients?: number; shortcut: string;
-  nextShortcut: string; shortcutError: string; nextActionError: string;
+  nextShortcut: string; shortcutError: string; shortcutRecording?: boolean; nextActionError: string;
   selectedMessageId: string | null; contextVersion: number;
   tiles: TileInfo[]; tile: TileInfo | null;
 };

@@ -37,7 +37,7 @@ function normalizeNextShortcut(value) {
 function sanitizeObsBridge(value) {
   if (!value || typeof value !== 'object') return undefined;
   const out = {};
-  if (value.enabled === true) out.enabled = true;
+  if (value.enabled === false) out.enabled = false;
   if (Number.isInteger(value.port) && value.port >= 1024 && value.port <= 65535 && value.port !== 17420) {
     out.port = value.port;
   }

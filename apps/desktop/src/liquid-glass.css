@@ -292,6 +292,7 @@
 .wc-desktop[data-ui-surface="liquid"] .obs-mode-tabs::before,
 .wc-desktop[data-ui-surface="liquid"] .desktop-hide::before,
 .wc-desktop[data-ui-surface="liquid"] .titlebar-onair::before,
+.wc-desktop[data-ui-surface="liquid"] .sidebar-guide-btn::before,
 .wc-desktop[data-ui-surface="liquid"] .sidebar-theme-toggle::before,
 .wc-desktop[data-ui-surface="liquid"] .wc-live .wc-tile-more-menu::before {
   content: "";
@@ -326,6 +327,7 @@
 .wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .obs-mode-tabs::before,
 .wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .desktop-hide::before,
 .wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .titlebar-onair::before,
+.wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .sidebar-guide-btn::before,
 .wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .sidebar-theme-toggle::before,
 .wc-desktop[data-ui-surface="liquid"][data-theme="dark"] .wc-live .wc-tile-more-menu::before {
   background: linear-gradient(
@@ -688,6 +690,7 @@
 
 /* 2d. Floating Capsules & Glossy Liquid Glass Buttons (Tactile Spring Press + Specular Meniscus) */
 .wc-desktop[data-ui-surface="liquid"] .titlebar-onair,
+.wc-desktop[data-ui-surface="liquid"] .sidebar-guide-btn,
 .wc-desktop[data-ui-surface="liquid"] .sidebar-theme-toggle,
 .wc-desktop[data-ui-surface="liquid"] .desktop-workspace-bar button,
 .wc-desktop[data-ui-surface="liquid"] .wc-live button.wc-primary,
@@ -821,6 +824,7 @@
 
 /* Interactive cursor specular sheen across glass controls */
 .wc-desktop[data-ui-surface="liquid"] .desktop-hide::after,
+.wc-desktop[data-ui-surface="liquid"] .sidebar-guide-btn::after,
 .wc-desktop[data-ui-surface="liquid"] .sidebar-theme-toggle::after,
 .wc-desktop[data-ui-surface="liquid"] .desktop-workspace-bar button::after,
 .wc-desktop[data-ui-surface="liquid"] .wc-live button.wc-primary:not(.connect-submit)::after,

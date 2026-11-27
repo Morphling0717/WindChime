@@ -163,7 +163,8 @@ button svg {
 .desktop-sidebar nav button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  white-space: nowrap;
   position: relative;
   border: 1px solid transparent;
   border-radius: 15px;

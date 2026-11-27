@@ -1186,15 +1186,19 @@ async function start() {
     uiSurface: ws.uiSurface === 'standard' || ws.uiSurface === 'lite' ? ws.uiSurface : 'liquid',
   };
 
-  if (ws.obsBridge) {
+  const obsShouldStart = ws.obsBridge?.enabled !== false;
+  if (obsShouldStart || ws.obsBridge) {
     try {
-      await obsBridge.configure({
-        enabled: ws.obsBridge.enabled === true,
-        port: ws.obsBridge.port ?? 17420,
-        key: ws.obsBridge.key,
+      const { persisted } = await obsBridge.configure({
+        enabled: obsShouldStart,
+        port: ws.obsBridge?.port ?? 17420,
+        key: ws.obsBridge?.key,
       });
-    } catch (error) {
-      connectionError(error.message || '本地 OBS 浏览器源启动失败');
+      if (obsShouldStart && persisted?.key && persisted.key !== ws.obsBridge?.key) {
+        await workspaceStore.save({ obsBridge: persisted }).catch(() => {});
+      }
+    } catch {
+      // Startup port conflicts are surfaced inside ObsGuidePanel via obsStatus.error without blocking launch.
     }
   }
 

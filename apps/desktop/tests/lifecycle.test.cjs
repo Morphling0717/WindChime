@@ -39,8 +39,23 @@ async function harness(options={}) {
   };
   const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(file.endsWith('play-history.v1.json')||file.endsWith('timeline-secrets.v1.enc')||file.includes('local-overlay')){throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{if(file.endsWith('play-history.v1.json.tmp')||file.endsWith('timeline-secrets.v1.enc.tmp')||file.includes('local-overlay')){return;}const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('play-history.v1.json.tmp')||file.endsWith('timeline-secrets.v1.enc.tmp'))return;if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);},unlink:async()=>{}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
+  const fakeHttp = {
+    createServer: () => {
+      const srv = new EventEmitter();
+      srv.listening = false;
+      let boundPort = 0;
+      srv.listen = (port) => {
+        boundPort = port || 17420;
+        srv.listening = true;
+        queueMicrotask(() => srv.emit('listening'));
+      };
+      srv.address = () => ({ address: '127.0.0.1', port: boundPort });
+      srv.close = (cb) => { srv.listening = false; cb?.(); };
+      return srv;
+    },
+  };
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,execPath:options.execPath??process.execPath,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
-  wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
+  wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:http'&&!options.realHttp?fakeHttp:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
   async function pair(port){const pending=await invoke('sites:pair',[{origin:`http://localhost:${port}`,label:`Site ${port}`}]);assert(pending.ok);const result=await invoke('sites:pair-status',[pending.data.id]);assert(result.ok,result.error);return result.data.site;}
@@ -990,4 +1005,27 @@ test('failed startup nextShortcut remains visible and clearable via settings',as
   const s2=(await h.invoke('app:status')).data;
   assert.equal(s2.nextShortcut,'');
   assert.equal(s2.shortcutError,'');
+});
+
+test('local OBS browser source defaults to enabled with persisted key and respects explicit opt-out',async()=>{
+  const h1=await harness();
+  const st1=(await h1.invoke('obs:status')).data;
+  assert.equal(st1.enabled,true);
+  assert.equal(st1.running,true);
+  assert.equal(st1.port,17420);
+  assert.match(st1.url,/^http:\/\/127\.0\.0\.1:17420\/obs\/[A-Za-z0-9_-]{16,64}$/);
+  assert(h1.workspaceCommits.some(w=>w.obsBridge&&w.obsBridge.key&&w.obsBridge.enabled===undefined),'initial startup persists stable key and omits default enabled=true');
+
+  const disabled=await h1.invoke('obs:configure',[{enabled:false}]);
+  assert(disabled.ok);
+  assert.equal(disabled.data.enabled,false);
+  assert.equal(disabled.data.running,false);
+  const savedWorkspace=h1.workspaceCommits.at(-1);
+  assert.equal(savedWorkspace.obsBridge.enabled,false);
+  assert(savedWorkspace.obsBridge.key);
+
+  const h2=await harness({workspace:savedWorkspace});
+  const st2=(await h2.invoke('obs:status')).data;
+  assert.equal(st2.enabled,false);
+  assert.equal(st2.running,false);
 });

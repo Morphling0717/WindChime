@@ -229,6 +229,8 @@
 }
 .poster-preview {
   padding: 16px;
+  position: sticky;
+  top: 68px;
 }
 .poster-preview > canvas {
   width: 100%;

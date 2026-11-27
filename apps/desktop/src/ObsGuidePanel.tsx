@@ -165,7 +165,7 @@ export function ObsGuidePanel({
           <label className="pref-toggle">
             <span>
               <strong>启用本机 OBS 浏览器源服务（仅监听 127.0.0.1）</strong>
-              <small>仅本机 OBS / 直播姬可访问，不暴露局域网、不传出网站密钥，链接固定持久化，下次开播无需重贴。</small>
+              <small>已默认开启，仅本机 OBS / 直播姬可访问，不暴露局域网、不传出网站密钥，链接固定持久化，下次开播无需重贴。</small>
             </span>
             <input
               type="checkbox"

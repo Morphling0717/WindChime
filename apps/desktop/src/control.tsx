@@ -30,6 +30,8 @@ import { TileApp } from "./tiles";
 import { Hotkeys } from "./Hotkeys";
 import { ObsGuidePanel } from "./ObsGuidePanel";
 import { LocalOverlaySettings } from "./LocalOverlaySettings";
+import { GuideDrawer } from "./GuideDrawer";
+import type { GuideJumpTarget } from "./guide-data";
 import { playWindChime } from "./chime";
 import { Inbox, Topics, Share, GlobalSettings } from "./Management";
 import { LiquidGlassDefs } from "./LiquidGlassDefs";
@@ -38,6 +40,7 @@ import { parseWindChimeConnectionKey } from "../../../src/core/connection-key";
 import "./glass.css";
 import "./management.css";
 import "./liquid-glass.css";
+import "./guide.css";
 const bridge = window.windchimeDesktop;
 type View =
   "inbox" | "studio" | "topics" | "share" | "settings" | "connections";
@@ -45,7 +48,7 @@ function Icon({
   name,
   size = 20,
 }: {
-  name: "inbox" | "link" | "palette" | "screen" | "hide" | "shield" | "arrow" | "moon" | "sun";
+  name: "inbox" | "link" | "palette" | "screen" | "hide" | "shield" | "arrow" | "moon" | "sun" | "book";
   size?: number;
 }) {
   const paths = {
@@ -92,6 +95,13 @@ function Icon({
       <>
         <circle cx="12" cy="12" r="4" />
         <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" />
+      </>
+    ),
+    book: (
+      <>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" />
+        <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20" />
+        <path d="M9 8h6M9 11.5h4" />
       </>
     ),
   };
@@ -178,6 +188,7 @@ function App() {
     error: "",
   });
   const [obsGuideOpen, setObsGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [overlay, setOverlay] = useState<DesktopOverlayState>({
     enabled: false,
     badgeUrl: null,
@@ -561,6 +572,36 @@ function App() {
       void updatePrefs({ lastView: next as DesktopRememberedView }).catch(() => {});
     }
   };
+  const handleGuideJump = useCallback(async (target: GuideJumpTarget) => {
+    if (!selected) return;
+    if (view !== target.view) {
+      if ((studioDirty || topicDirty || settingsDirty) && !(await confirmDiscard())) return;
+      userNavigatedRef.current = true;
+      setError("");
+      setNotice("");
+      setStudioDirty(false);
+      setTopicDirty(false);
+      setSettingsDirty(false);
+      setView(target.view);
+      void updatePrefs({ lastView: target.view as DesktopRememberedView }).catch(() => {});
+    }
+    if (target.view === "studio") {
+      if (target.studioMode) setStudioMode(target.studioMode);
+      if (target.openObsGuide) setObsGuideOpen(true);
+    } else if (target.view === "settings") {
+      setSettingsTab(target.settingsTab);
+    }
+  }, [selected, view, studioDirty, topicDirty, settingsDirty, confirmDiscard, updatePrefs]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "F1" || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+      if (status.shortcutRecording) return;
+      event.preventDefault();
+      setGuideOpen(open => !open);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [status.shortcutRecording]);
   useEffect(() => {
     if (startupAppliedRef.current || userNavigatedRef.current || !prefsLoaded || !selectedId) return;
     startupAppliedRef.current = true;
@@ -886,6 +927,17 @@ function App() {
         <div className="sidebar-bottom">
           <button
             type="button"
+            className="sidebar-guide-btn"
+            aria-label="打开风铃使用指南"
+            title="风铃使用指南（F1）"
+            onClick={() => setGuideOpen(true)}
+          >
+            <Icon name="book" size={16} />
+            <span>使用指南</span>
+            <kbd className="guide-btn-kbd">F1</kbd>
+          </button>
+          <button
+            type="button"
             className="sidebar-theme-toggle"
             aria-label={theme === "dark" ? "切换浅色外观" : "切换深色外观"}
             title={theme === "dark" ? "切换浅色外观" : "切换深色外观"}
@@ -895,7 +947,7 @@ function App() {
             <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
           </button>
           <div className="sidebar-version-row">
-            <span>{`v${status.version || updaterInfo?.currentVersion || "1.3.0"}`}</span>
+            <span>{`v${status.version || updaterInfo?.currentVersion || "1.4.0"}`}</span>
             <button
               type="button"
               className={`sidebar-update-btn${updaterInfo?.hasUpdate ? " has-update" : ""}`}
@@ -1583,6 +1635,14 @@ function App() {
           </>
         ) : null}
       </main>
+      <GuideDrawer
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onJump={handleGuideJump}
+        hasSite={Boolean(selected)}
+        theme={theme}
+        uiSurface={prefs.uiSurface}
+      />
     </div>
   );
 }

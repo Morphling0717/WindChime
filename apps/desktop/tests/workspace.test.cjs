@@ -97,7 +97,11 @@ test('workspace restores 1.0.0 display position, chime, startup view, obs bridge
   assert.equal(restored.lastView, 'settings');
   assert.equal(restored.autoCheckUpdate, false);
   assert.deepEqual(restored.displayBounds, { x: 120, y: 81 });
-  assert.deepEqual(restored.obsBridge, { enabled: true, port: 18888, key: 'abcdefghijklmnop1234' });
+  assert.deepEqual(restored.obsBridge, { port: 18888, key: 'abcdefghijklmnop1234' });
+  assert.deepEqual(
+    restoreWorkspace({ version: 1, obsBridge: { enabled: false, port: 17420, key: 'abcdefghijklmnop1234' }, tiles: {} }).obsBridge,
+    { enabled: false, key: 'abcdefghijklmnop1234' },
+  );
   assert.deepEqual(restored.localOverlay, { enabled: true, badgePosition: 'bottom-left', badgeSize: 80, badgeOpacity: 75, watermarkText: '@风铃主播', backgroundOpacity: 25 });
   assert.equal(restored.tiles.blindbox.bounds.width, 380);
 
