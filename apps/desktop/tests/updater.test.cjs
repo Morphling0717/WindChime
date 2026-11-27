@@ -55,6 +55,7 @@ test('updater verifies Ed25519 signed manifest, downloads with SHA-256 verificat
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'wc-updater-test-'));
   const spawned = [];
+  const order = [];
   let quitRequested = 0;
   const states = [];
   try {
@@ -67,9 +68,10 @@ test('updater verifies Ed25519 signed manifest, downloads with SHA-256 verificat
       feedUrl: 'https://windchime.uliuli.cn/updates/latest.json',
       getUpdatesDir: () => tmpDir,
       shell: { openExternal: async () => {} },
-      spawn: (cmd, args, opts) => { spawned.push({ cmd, args, opts }); return { unref() {} }; },
+      spawn: (cmd, args, opts) => { order.push('spawn'); spawned.push({ cmd, args, opts }); return { unref() {} }; },
       onStateChange: s => states.push(s.stage),
-      onBeforeInstallQuit: () => { quitRequested++; },
+      onBeforeInstallPrepare: async () => { await new Promise(r => setTimeout(r, 15)); order.push('prepare'); },
+      onBeforeInstallQuit: () => { order.push('quit'); quitRequested++; },
       fetch: async url => {
         if (url.endsWith('/latest.json')) return Response.json(signed);
         if (url.endsWith('.exe')) return new Response(installerBytes, { status: 200, headers: { 'content-length': String(installerBytes.length) } });
@@ -95,6 +97,15 @@ test('updater verifies Ed25519 signed manifest, downloads with SHA-256 verificat
     assert.equal(spawned.length, 1);
     assert(spawned[0].cmd.endsWith('WindChime-Setup-1.2.0.exe'));
     assert.equal(quitRequested, 1);
+    assert.deepEqual(order, ['prepare', 'spawn', 'quit'], 'must complete shutdown cleanup BEFORE spawning installer');
+
+    // Stale installer cleanup removes <= currentVersion installers and .downloading files, preserving newer cached installers
+    await fs.writeFile(path.join(tmpDir, 'WindChime-Setup-1.0.0.exe'), 'old');
+    await fs.writeFile(path.join(tmpDir, 'WindChime-Setup-1.1.0.exe'), 'same');
+    await fs.writeFile(path.join(tmpDir, 'WindChime-Setup-1.2.0.exe.downloading'), 'partial');
+    const cleaned = await updater.cleanupStaleInstallers();
+    assert.deepEqual(cleaned.removed.sort(), ['WindChime-Setup-1.0.0.exe', 'WindChime-Setup-1.1.0.exe', 'WindChime-Setup-1.2.0.exe.downloading']);
+    assert.deepEqual(await fs.readdir(tmpDir), ['WindChime-Setup-1.2.0.exe'], 'newer pre-downloaded installer preserved');
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true });
   }

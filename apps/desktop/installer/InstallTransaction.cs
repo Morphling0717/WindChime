@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Web.Script.Serialization;
 
 namespace WindChime.Setup {
@@ -50,15 +52,46 @@ namespace WindChime.Setup {
     public bool Committing {get;private set;}
     public string CleanupWarning {get;private set;}
     static readonly JavaScriptSerializer json=new JavaScriptSerializer {MaxJsonLength=16*1024*1024};
+    static readonly int[] LockRetryDelaysMs=new[]{120,180,240,300,350,400,450,500,500,500,500,500};
     static string Owner {get{return WindowsIdentity.GetCurrent().User.Value;}}
     static string Canonical(string path){return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);}
+    public static bool IsTransientLock(Exception error) {
+      if(error is UnauthorizedAccessException)return true;
+      var win32=error as Win32Exception;
+      if(win32!=null)return win32.NativeErrorCode==32||win32.NativeErrorCode==33||win32.NativeErrorCode==5;
+      var io=error as IOException;
+      if(io!=null) {
+        int code=io.HResult&0xFFFF;
+        return code==32||code==33||code==5;
+      }
+      return false;
+    }
+    public static T RetryIo<T>(Func<T> operation,string context,CancellationToken cancel=default(CancellationToken)) {
+      Exception last=null;
+      for(int attempt=0;attempt<=LockRetryDelaysMs.Length;attempt++) {
+        cancel.ThrowIfCancellationRequested();
+        try { return operation(); }
+        catch(Exception ex) {
+          if(!IsTransientLock(ex))throw;
+          last=ex;
+          if(attempt==LockRetryDelaysMs.Length)break;
+          int delay=LockRetryDelaysMs[attempt];
+          if(cancel.CanBeCanceled){if(cancel.WaitHandle.WaitOne(delay))cancel.ThrowIfCancellationRequested();}
+          else Thread.Sleep(delay);
+        }
+      }
+      throw new IOException(context+" 时文件正被其他程序占用（常见于杀毒软件实时扫描或资源管理器打开了该目录），请稍等几秒重试或暂时放行风铃安装目录。详情："+last.Message,last);
+    }
+    public static void RetryIo(Action operation,string context,CancellationToken cancel=default(CancellationToken)) {
+      RetryIo(()=>{operation();return true;},context,cancel);
+    }
     static void ValidateTargetLocation(string target) {
       if(!String.Equals(Path.GetFileName(target),"WindChime",StringComparison.OrdinalIgnoreCase))throw new IOException("安装位置必须是独立的 WindChime 目录。");
       var protectedRoots=InstallPolicy.LegacyDirectories();protectedRoots.Add(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));protectedRoots.Add(Environment.GetFolderPath(Environment.SpecialFolder.Windows));
       if(protectedRoots.Any(root=>InstallPolicy.Within(target,root)||InstallPolicy.Within(root,target)))throw new IOException("安装事务不能覆盖个人数据、系统或旧版程序。");
       RequireOrdinaryPath(target);
     }
-    public static string Hash(string path){using(var stream=File.OpenRead(path))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();}
+    public static string Hash(string path){return RetryIo(()=>{using(var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();},"校验文件 "+Path.GetFileName(path));}
     public static long RequiredBytes(long payload,long engine,bool sameVolume) {
       if(payload<0||engine<0)throw new ArgumentOutOfRangeException();
       // New files and the engine coexist on the destination volume. The old
@@ -119,9 +152,9 @@ namespace WindChime.Setup {
       var actual=Inspect(directory);var files=expected.files.ToDictionary(f=>f.path,StringComparer.OrdinalIgnoreCase);
       if(actual.files.Any(f=>!files.ContainsKey(f.path)||files[f.path].bytes!=f.bytes||files[f.path].sha256!=f.sha256)
         ||actual.directories.Any(d=>!expected.directories.Contains(d,StringComparer.OrdinalIgnoreCase)))throw new IOException("恢复备份已被修改，已停止清理。");
-      foreach(var file in actual.files){File.Delete(InstallPolicy.PayloadPath(directory,file.path));if(checkpoint!=null)checkpoint("cleanup-file");}
-      foreach(var child in actual.directories.OrderByDescending(x=>x.Length))Directory.Delete(InstallPolicy.PayloadPath(directory,child),false);
-      Directory.Delete(directory,false);
+      foreach(var file in actual.files){var full=InstallPolicy.PayloadPath(directory,file.path);RetryIo(()=>File.Delete(full),"清理文件 "+Path.GetFileName(full));if(checkpoint!=null)checkpoint("cleanup-file");}
+      foreach(var child in actual.directories.OrderByDescending(x=>x.Length)){var full=InstallPolicy.PayloadPath(directory,child);RetryIo(()=>Directory.Delete(full,false),"清理子目录 "+Path.GetFileName(full));}
+      RetryIo(()=>Directory.Delete(directory,false),"清理临时目录 "+Path.GetFileName(directory));
     }
     InstallTransaction(string root,InstallJournal journal,IInstallMetadata store,Action<string> fault,Action stopped){Root=root;Journal=journal;metadata=store;checkpoint=fault??(_=>{});requireStopped=stopped??(()=>{});}
     public static InstallTransaction Begin(string target,string version,bool desktop,bool menu,IInstallMetadata store,Action<string> fault=null,Action stopped=null) {
@@ -149,10 +182,13 @@ namespace WindChime.Setup {
     }
     void Save(string phase) {
       Journal.phase=phase;var target=Path.Combine(Root,"journal.json");var temporary=Path.Combine(Root,"journal.next");RequireOrdinaryPath(Root);
-      using(var file=new FileStream(temporary,FileMode.Create,FileAccess.Write,FileShare.None,4096,FileOptions.WriteThrough)){
-        var bytes=Encoding.UTF8.GetBytes(json.Serialize(Journal));file.Write(bytes,0,bytes.Length);file.Flush(true);
-      }
-      if(File.Exists(target))File.Replace(temporary,target,null);else File.Move(temporary,target);
+      var bytes=Encoding.UTF8.GetBytes(json.Serialize(Journal));
+      RetryIo(()=>{
+        using(var file=new FileStream(temporary,FileMode.Create,FileAccess.Write,FileShare.None,4096,FileOptions.WriteThrough)){
+          file.Write(bytes,0,bytes.Length);file.Flush(true);
+        }
+        if(File.Exists(target))File.Replace(temporary,target,null);else File.Move(temporary,target);
+      },"保存安装事务状态");
       checkpoint(phase);
     }
     public void Prepared(IEnumerable<PayloadFile> expected) {
@@ -166,8 +202,8 @@ namespace WindChime.Setup {
       if(new DriveInfo(Path.GetPathRoot(Journal.target)).AvailableFreeSpace<128*MiB)throw new IOException("剩余磁盘空间不足以安全提交安装，原版本将保留。");
       if(Journal.hadTarget)VerifyTree(Journal.target,Journal.before);else if(Directory.Exists(Journal.target)||File.Exists(Journal.target))throw new IOException("安装位置已被其他程序创建。");
       Save("move-old");
-      if(Journal.hadTarget)Directory.Move(Journal.target,Old);
-      checkpoint("old-moved");Save("move-new");Directory.Move(Stage,Journal.target);checkpoint("new-moved");Save("metadata");
+      if(Journal.hadTarget)RetryIo(()=>Directory.Move(Journal.target,Old),"切换旧版程序目录");
+      checkpoint("old-moved");Save("move-new");RetryIo(()=>Directory.Move(Stage,Journal.target),"启用新版程序目录");checkpoint("new-moved");Save("metadata");
       metadata.Apply(Journal.target,Journal.version,Journal.desktop,Journal.menu);
       checkpoint("metadata-written");metadata.Verify(Journal.target,Journal.version,Journal.desktop,Journal.menu);VerifyTree(Journal.target,Journal.after);
       Save("committed");Committing=false;
@@ -179,11 +215,11 @@ namespace WindChime.Setup {
       // Before moving anything, both copies must match their recorded manifests.
       if(Directory.Exists(Old)) {
         VerifyTree(Old,Journal.before);
-        if(Directory.Exists(Journal.target)){VerifyTree(Journal.target,Journal.after);if(Directory.Exists(Retired))throw new IOException("恢复目录冲突。");Directory.Move(Journal.target,Retired);}
-        Directory.Move(Old,Journal.target);
+        if(Directory.Exists(Journal.target)){VerifyTree(Journal.target,Journal.after);if(Directory.Exists(Retired))throw new IOException("恢复目录冲突。");RetryIo(()=>Directory.Move(Journal.target,Retired),"移开未完成的程序目录");}
+        RetryIo(()=>Directory.Move(Old,Journal.target),"恢复旧版程序目录");
       } else if(Journal.hadTarget) VerifyTree(Journal.target,Journal.before);
       else if(Directory.Exists(Journal.target)) {
-        VerifyTree(Journal.target,Journal.after);if(Directory.Exists(Retired))throw new IOException("恢复目录冲突。");Directory.Move(Journal.target,Retired);
+        VerifyTree(Journal.target,Journal.after);if(Directory.Exists(Retired))throw new IOException("恢复目录冲突。");RetryIo(()=>Directory.Move(Journal.target,Retired),"移开未完成的程序目录");
       }
       checkpoint("files-restored");metadata.Restore(Journal.metadata);checkpoint("metadata-restored");
       // A partial extraction is our fresh private directory, never the target.
@@ -194,10 +230,10 @@ namespace WindChime.Setup {
     }
     public void Cleanup() {
       if(Journal.phase=="committed"&&Directory.Exists(Old))RemoveTree(Old,Journal.before,checkpoint);
-      foreach(var name in new[]{"request.ini",Path.GetFileName(Engine),"journal.next"}){var file=Path.Combine(Root,name);RequireOrdinaryPath(file);if(File.Exists(file))File.Delete(file);}
+      foreach(var name in new[]{"request.ini",Path.GetFileName(Engine),"journal.next"}){var file=Path.Combine(Root,name);RequireOrdinaryPath(file);if(File.Exists(file))RetryIo(()=>File.Delete(file),"清理临时文件 "+name);}
       var extras=Directory.EnumerateFileSystemEntries(Root).Where(p=>Path.GetFileName(p)!="journal.json").ToArray();
       if(extras.Length!=0)throw new IOException("事务目录含有未确认文件，已保留供恢复。");
-      File.Delete(Path.Combine(Root,"journal.json"));Directory.Delete(Root,false);
+      RetryIo(()=>File.Delete(Path.Combine(Root,"journal.json")),"清理事务日志");RetryIo(()=>Directory.Delete(Root,false),"清理安装事务目录");
     }
   }
 }

@@ -111,7 +111,7 @@ namespace WindChime.Setup {
       while(error.InnerException!=null&&(error is TargetInvocationException||(error is AggregateException&&((AggregateException)error).InnerExceptions.Count==1)))error=error.InnerException;
       return error is OperationCanceledException?"已取消安装，原程序和个人设置保留。":error.Message;
     }
-    static string HashFile(string path) { using(var source=File.OpenRead(path))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(source)).Replace("-","").ToLowerInvariant(); }
+    static string HashFile(string path) { return InstallTransaction.Hash(path); }
     public void Run() {
       manifest=new JavaScriptSerializer().Deserialize<PayloadManifest>(ReadResource("Payload.json"));
       if(manifest.appId!=InstallPolicy.AppId||manifest.files==null||manifest.files.Count==0)throw new InvalidOperationException("安装文件清单不完整。");
@@ -171,7 +171,7 @@ namespace WindChime.Setup {
       try {
         installDirectory=InstallPolicy.NormalizeDirectory(UI<TextBox>("PathBox").Text);
         UI<TextBox>("PathBox").Text=installDirectory;
-        RequireStopped();RecoverPending();InstallPolicy.ValidateDirectory(installDirectory);
+        await Task.Run(()=>RequireStopped());RecoverPending();InstallPolicy.ValidateDirectory(installDirectory);
         InstallTransaction.CheckSpace(installDirectory,manifest.files.Sum(f=>f.bytes),manifest.engineBytes);
         bool desktop=UI<CheckBox>("DesktopCheck").IsChecked==true,menu=UI<CheckBox>("MenuCheck").IsChecked==true;
         working=true;Show(3);
@@ -181,9 +181,12 @@ namespace WindChime.Setup {
       } catch(Exception ex) {working=false;Show(2);Error(FailureMessage(ex));}
     }
     void Cancel(){if(publishing||(transaction!=null&&transaction.Committing)){Error("正在安全切换程序文件，请等待完成。发生错误会恢复原版本。");return;}if(cancellation!=null){cancellation.Cancel();Error("正在取消并恢复，请稍候…");}}
-    static void RequireStopped(){if(Process.GetProcessesByName("WindChime").Any())throw new InvalidOperationException("风铃仍在运行。请保存编辑内容，从托盘选择“退出并结束展示”，再点击安装。安装器不会强制关闭程序。");}
-    Dictionary<string,string> ReadPending(){InstallTransaction.RequireOrdinaryPath(PendingPath);if(!File.Exists(PendingPath))return null;return new JavaScriptSerializer().Deserialize<Dictionary<string,string>>(File.ReadAllText(PendingPath));}
-    void SavePending(InstallTransaction value){var folder=Path.GetDirectoryName(PendingPath);InstallTransaction.RequireOrdinaryPath(folder);Directory.CreateDirectory(folder);var temporary=PendingPath+".next";File.WriteAllText(temporary,new JavaScriptSerializer().Serialize(new Dictionary<string,string>{{"root",value.Root},{"target",value.Journal.target}}),Encoding.UTF8);if(File.Exists(PendingPath))File.Replace(temporary,PendingPath,null);else File.Move(temporary,PendingPath);}
+    static void RequireStopped(){
+      for(int attempt=0;attempt<25&&Process.GetProcessesByName("WindChime").Any();attempt++)Thread.Sleep(160);
+      if(Process.GetProcessesByName("WindChime").Any())throw new InvalidOperationException("风铃仍在运行。请保存编辑内容，从托盘选择“退出并结束展示”，再点击安装。安装器不会强制关闭程序。");
+    }
+    Dictionary<string,string> ReadPending(){InstallTransaction.RequireOrdinaryPath(PendingPath);if(!File.Exists(PendingPath))return null;return new JavaScriptSerializer().Deserialize<Dictionary<string,string>>(InstallTransaction.RetryIo(()=>File.ReadAllText(PendingPath),"读取安装恢复索引"));}
+    void SavePending(InstallTransaction value){var folder=Path.GetDirectoryName(PendingPath);InstallTransaction.RequireOrdinaryPath(folder);Directory.CreateDirectory(folder);var temporary=PendingPath+".next";var payload=new JavaScriptSerializer().Serialize(new Dictionary<string,string>{{"root",value.Root},{"target",value.Journal.target}});InstallTransaction.RetryIo(()=>{File.WriteAllText(temporary,payload,Encoding.UTF8);if(File.Exists(PendingPath))File.Replace(temporary,PendingPath,null);else File.Move(temporary,PendingPath);},"保存安装恢复索引");}
     void RecoverPending() {
       var pending=ReadPending();
       var roots=pending==null?InstallTransaction.FindPending(installDirectory).ToArray():new[]{pending["root"]};
@@ -199,7 +202,7 @@ namespace WindChime.Setup {
         if(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(recovering.Engine)).Any())throw new IOException("上次安装的解包进程仍在结束，请稍后重试。原程序尚未被替换。");
         recovering.Recover();
       }
-      if(pending!=null)File.Delete(PendingPath);
+      if(pending!=null&&File.Exists(PendingPath))InstallTransaction.RetryIo(()=>File.Delete(PendingPath),"清理安装恢复索引");
     }
     async Task Install(bool desktop,bool menu) {
       cancellation=new CancellationTokenSource();var cancel=cancellation.Token;
@@ -216,10 +219,10 @@ namespace WindChime.Setup {
       if(!String.Equals(await Task.Run(()=>HashFile(engine)),manifest.engineSha256,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("安装引擎校验失败，请重新下载安装包。");
       // No shell is involved. The engine independently restricts extraction to
       // this fresh private stage; the transaction checks running apps at commit.
-      File.WriteAllText(request,InstallPolicy.CreateRequest(transaction.Stage,transaction.Journal.id,token),Encoding.Unicode);
+      InstallTransaction.RetryIo(()=>File.WriteAllText(request,InstallPolicy.CreateRequest(transaction.Stage,transaction.Journal.id,token),Encoding.Unicode),"写入安装解压请求",cancel);
       caption.Text="正在解压并写入程序文件…";progress.IsIndeterminate=true;UI<TextBlock>("ProgressPercent").Visibility=Visibility.Collapsed;
       var start=new ProcessStartInfo(engine,"/S /WC_BOOTSTRAP="+token){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=transaction.Root};
-      using(var process=Process.Start(start)) {
+      using(var process=await Task.Run(()=>InstallTransaction.RetryIo(()=>Process.Start(start),"启动安装解压引擎",cancel),cancel)) {
         using(cancel.Register(()=>{try{if(!process.HasExited)process.Kill();}catch(InvalidOperationException){}catch(Win32Exception){}}))await Task.Run(()=>process.WaitForExit());
         cancel.ThrowIfCancellationRequested();
         if(process.ExitCode!=0) {
@@ -237,10 +240,10 @@ namespace WindChime.Setup {
       await Task.Run(()=>transaction.Prepared(manifest.files));cancel.ThrowIfCancellationRequested();
       publishing=true;caption.Text="正在安全切换程序并保存安装选项…";progress.IsIndeterminate=true;
       await Task.Run(()=>transaction.Commit());
-      if(!Directory.Exists(transaction.Root))File.Delete(PendingPath);
+      if(!Directory.Exists(transaction.Root)&&File.Exists(PendingPath))InstallTransaction.RetryIo(()=>File.Delete(PendingPath),"清理安装恢复索引");
       caption.Text="安装完成";progress.Value=100;
       } catch(Exception original) {
-        try {transaction.Recover();File.Delete(PendingPath);}
+        try {transaction.Recover();if(File.Exists(PendingPath))InstallTransaction.RetryIo(()=>File.Delete(PendingPath),"清理安装恢复索引");}
         catch(Exception recovery){throw new IOException("安装未完成，恢复记录已保留。重新运行本安装向导可继续恢复。原因："+FailureMessage(recovery),original);}
         throw;
       } finally {publishing=false;cancellation.Dispose();cancellation=null;}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 — 2026-11-27
+
+- **安装器抗杀软瞬时文件占用重试（修复火绒 / Defender 扫描导致的「另一个进程正在使用此文件」报错）**：
+  - 安装事务 [InstallTransaction.cs](apps/desktop/installer/InstallTransaction.cs) 与向导 [GlassSetup.cs](apps/desktop/installer/GlassSetup.cs) 的文件校验改为 `FileShare.ReadWrite | FileShare.Delete`，并对文件哈希、解压引擎启动（`WindChime-Extract-*.exe`）、目录原子切换（`Directory.Move`）、事务日志替换与临时文件清理统一增加最长约 4.5 秒的渐进退避重试，兼容火绒 (`HipsDaemon.exe`) 等实时监控扫描；超过重试仍被占时将明确提示具体被占阶段与文件，不再仅返回裸系统原文。
+- **优化应用内更新退出时序与安装器退出等待**：
+  - 点击「立即安装并重启」时，先完成清屏 `hideSite`、停止本地 OBS 浏览器源与关闭展示窗/悬浮小窗，再 `detached` 启动安装包并立即销毁托盘退出主进程，消除退出与安装向导之间的时序竞争；安装器检测旧进程时亦增加最长 4 秒温和等待。
+- **启动自动清理已安装旧包**：新版风铃启动后自动清理 `%APPDATA%\WindChime\updates\` 中 `≤ 当前版本` 的历史安装包与残余 `.downloading` 临时文件（保留更新的预下载包），释放 C 盘空间。
+
 ## 1.4.0 — 2026-11-27
 
 - **左下角常驻「使用指南」抽屉（纯极简排版 + 8 章节 2K 鼠标交互演示）**：

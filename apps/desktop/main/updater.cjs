@@ -143,6 +143,7 @@ function createUpdater({
   spawn,
   getUpdatesDir,
   onStateChange,
+  onBeforeInstallPrepare,
   onBeforeInstallQuit,
   currentVersion,
   repo = 'Morphling0717/WindChime',
@@ -551,10 +552,38 @@ function createUpdater({
       emit();
       throw new Error('安装包校验失效，请重新下载');
     }
+    // Complete async app cleanup (hideSite, stop OBS bridge, close output/tiles) BEFORE launching the installer
+    // so WindChime exits immediately after spawn instead of lingering behind the wizard.
+    if (typeof onBeforeInstallPrepare === 'function') {
+      await onBeforeInstallPrepare();
+    }
     const child = spawn(downloadedPath, [], { detached: true, stdio: 'ignore' });
     child.unref?.();
     onBeforeInstallQuit?.();
     return true;
+  }
+
+  async function cleanupStaleInstallers() {
+    if (!fs || !path || !getUpdatesDir) return { removed: [] };
+    const dir = getUpdatesDir();
+    if (!dir) return { removed: [] };
+    const removed = [];
+    try {
+      const files = await fs.readdir?.(dir);
+      if (!Array.isArray(files)) return { removed };
+      for (const name of files) {
+        const full = path.join(dir, name);
+        if (name.endsWith('.downloading')) {
+          await fs.unlink?.(full).then(() => removed.push(name)).catch(() => {});
+          continue;
+        }
+        const match = /^WindChime-Setup-([0-9A-Za-z._-]+)\.exe$/i.exec(name);
+        if (match && parseSemver(match[1]) && compareSemver(match[1], currentVersion) <= 0) {
+          await fs.unlink?.(full).then(() => removed.push(name)).catch(() => {});
+        }
+      }
+    } catch {}
+    return { removed };
   }
 
   async function openRelease(url) {
@@ -573,6 +602,7 @@ function createUpdater({
     download,
     cancelDownload,
     install,
+    cleanupStaleInstallers,
     openRelease,
   };
 }

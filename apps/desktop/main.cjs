@@ -214,6 +214,23 @@ const timelineSync = createTimelineSync({
   setTimeoutFn: setTimeout,
 });
 
+let shutdownCleanupPromise = null;
+function runShutdownCleanup() {
+  if (shutdownCleanupPromise) return shutdownCleanupPromise;
+  const site = selected();
+  stopObsPoller();
+  timelineSync.stopPolling();
+  const stopObs = obsBridge.stop().catch(() => {});
+  closeOutput();
+  disposeTiles();
+  globalShortcut.unregisterAll();
+  shutdownCleanupPromise = Promise.all([
+    stopObs,
+    Promise.race([hideSite(site).catch(() => {}), new Promise(resolve => setTimeout(resolve, 1500))]),
+  ]);
+  return shutdownCleanupPromise;
+}
+
 const updater = createUpdater({
   fetch,
   shell,
@@ -223,7 +240,13 @@ const updater = createUpdater({
   spawn: (cmd, args, opts) => require('node:child_process').spawn(cmd, args, opts),
   getUpdatesDir: () => updatesDir,
   onStateChange: info => broadcastPrivate('updater:changed', info),
-  onBeforeInstallQuit: () => { setTimeout(() => app.quit(), 250).unref?.(); },
+  onBeforeInstallPrepare: () => runShutdownCleanup(),
+  onBeforeInstallQuit: () => {
+    quitting = true;
+    try { tray?.destroy?.(); tray = null; } catch {}
+    try { if (controlWindow && !controlWindow.isDestroyed()) controlWindow.hide(); } catch {}
+    setTimeout(() => app.quit(), 30).unref?.();
+  },
   currentVersion: appVersion,
   setTimeoutFn: setTimeout,
   clearTimeoutFn: clearTimeout,
@@ -1164,6 +1187,7 @@ async function start() {
   timelineSecretsPath = path.join(userDataDir, 'timeline-secrets.v1.enc');
   overlayDir = path.join(userDataDir, 'local-overlay');
   updatesDir = path.join(userDataDir, 'updates');
+  void updater.cleanupStaleInstallers().catch(() => {});
 
   await vaultStore.read();
   const ws = await workspaceStore.read();
@@ -1760,12 +1784,6 @@ async function start() {
 
 app.on('before-quit', event => {
   if (quitting) return; event.preventDefault(); quitting = true;
-  const site = selected();
-  stopObsPoller();
-  timelineSync.stopPolling();
-  void obsBridge.stop().catch(() => {});
-  closeOutput();
-  disposeTiles();
-  Promise.race([hideSite(site).catch(() => {}), new Promise(resolve => setTimeout(resolve, 2000))]).finally(() => { globalShortcut.unregisterAll(); app.quit(); });
+  runShutdownCleanup().finally(() => { app.quit(); });
 });
 app.on('window-all-closed', () => { if (!tray) app.quit(); });

@@ -14,7 +14,7 @@ describe('real .NET installation transactions in new isolated fixtures',{skip:pr
   temporary=await fs.mkdtemp(path.join(os.tmpdir(),'windchime-transaction-tests-'));
   const source=path.join(temporary,'Fixture.cs');fixture=path.join(temporary,'Fixture.exe');
   await fs.writeFile(source,String.raw`
-using System;using System.IO;using System.Linq;using WindChime.Setup;
+using System;using System.IO;using System.Linq;using System.Threading;using WindChime.Setup;
 sealed class Store:IInstallMetadata {
  readonly string file;readonly bool fail; public Store(string directory,bool broken){file=Path.Combine(directory,"metadata.txt");fail=broken;}
  public string Capture(){return File.Exists(file)?File.ReadAllText(file):null;}
@@ -37,6 +37,12 @@ static class Fixture {
   var expected=InstallTransaction.Inspect(tx.Stage).files;
   if(mode=="corrupt")File.WriteAllText(Path.Combine(tx.Stage,"resources","app.asar"),"damaged after manifest");
   if(mode=="partial"){File.WriteAllText(Path.Combine(tx.Stage,"partial.bin"),"partial extraction");Environment.Exit(92);}
+  if(mode=="transient-lock"){
+    var lockedFile=Path.Combine(target,"WindChime.exe");
+    var hold=new FileStream(lockedFile,FileMode.Open,FileAccess.ReadWrite,FileShare.None);
+    var releaser=new Thread(()=>{Thread.Sleep(450);hold.Dispose();});
+    releaser.Start();
+  }
   try {tx.Prepared(expected);tx.Commit();}
   catch {tx.Recover();throw;}
   return 0;
@@ -62,4 +68,5 @@ static class Fixture {
  test('space budget combines destination engine and temp overhead only on the same drive',async()=>{const root=await scenario(false);const values=(await run(root,'space')).trim().split(/\s+/).map(Number);assert.equal(values[0],700*1024*1024);assert.equal(values[1],636*1024*1024);});
  for(const phase of ['files-restored','metadata-restored'])test(`recovery interrupted at ${phase} can itself be resumed`,async()=>{const root=await scenario();await run(root,'install','metadata-written',91);await run(root,'recover',phase,91);await run(root,'recover');await original(root,true);});
  test('cleanup interrupted after deleting an old file resumes without undoing a successful install',async()=>{const root=await scenario();await run(root,'install','cleanup-file',91);await run(root,'recover');assert.equal(await fs.readFile(path.join(root,'WindChime/WindChime.exe'),'utf8'),'synthetic new executable');assert.equal((await fs.readdir(root)).filter(n=>n.startsWith('.WindChime-Setup-')).length,0);});
+ test('transient AV file lock during commit retries cleanly and completes upgrade',async()=>{const root=await scenario();await run(root,'transient-lock');assert.equal(await fs.readFile(path.join(root,'WindChime/WindChime.exe'),'utf8'),'synthetic new executable');assert.equal((await fs.readdir(root)).filter(n=>n.startsWith('.WindChime-Setup-')).length,0);});
 });

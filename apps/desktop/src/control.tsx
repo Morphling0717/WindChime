@@ -947,7 +947,7 @@ function App() {
             <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
           </button>
           <div className="sidebar-version-row">
-            <span>{`v${status.version || updaterInfo?.currentVersion || "1.4.0"}`}</span>
+            <span>{`v${status.version || updaterInfo?.currentVersion || "1.4.1"}`}</span>
             <button
               type="button"
               className={`sidebar-update-btn${updaterInfo?.hasUpdate ? " has-update" : ""}`}
