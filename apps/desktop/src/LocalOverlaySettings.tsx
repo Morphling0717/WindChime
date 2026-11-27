@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { unwrap, type DesktopOverlayState } from './bridge';
 
 const bridge = window.windchimeDesktop;
@@ -20,6 +20,34 @@ export function LocalOverlaySettings({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [watermark, setWatermark] = useState(overlay.watermarkText);
+  const syncedWatermarkRef = useRef(overlay.watermarkText);
+  const [sliderDraft, setSliderDraft] = useState({
+    badgeSize: overlay.badgeSize,
+    badgeOpacity: overlay.badgeOpacity,
+    backgroundOpacity: overlay.backgroundOpacity,
+  });
+  const pendingPatchRef = useRef<Partial<DesktopOverlayState>>({});
+  const debounceTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (overlay.watermarkText !== syncedWatermarkRef.current) {
+      const wasClean = watermark === syncedWatermarkRef.current;
+      syncedWatermarkRef.current = overlay.watermarkText;
+      if (wasClean) setWatermark(overlay.watermarkText);
+    }
+  }, [overlay.watermarkText, watermark]);
+
+  useEffect(() => {
+    setSliderDraft({
+      badgeSize: overlay.badgeSize,
+      badgeOpacity: overlay.badgeOpacity,
+      backgroundOpacity: overlay.backgroundOpacity,
+    });
+  }, [overlay.badgeSize, overlay.badgeOpacity, overlay.backgroundOpacity]);
+
+  useEffect(() => () => {
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
+  }, []);
 
   const patch = async (input: Partial<DesktopOverlayState>) => {
     setError('');
@@ -29,6 +57,19 @@ export function LocalOverlaySettings({
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存本机装饰失败');
     }
+  };
+
+  const patchSlider = (key: 'badgeSize' | 'badgeOpacity' | 'backgroundOpacity', value: number) => {
+    setSliderDraft(cur => ({ ...cur, [key]: value }));
+    onChange({ ...overlay, [key]: value });
+    pendingPatchRef.current = { ...pendingPatchRef.current, [key]: value };
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(() => {
+      debounceTimerRef.current = null;
+      const queued = pendingPatchRef.current;
+      pendingPatchRef.current = {};
+      if (Object.keys(queued).length) void patch(queued);
+    }, 150);
   };
 
   const pick = async (slot: 'badge' | 'background') => {
@@ -146,36 +187,36 @@ export function LocalOverlaySettings({
 
         <div className="overlay-sliders">
           <label>
-            {`角标大小：${overlay.badgeSize}px`}
+            {`角标大小：${sliderDraft.badgeSize}px`}
             <input
               type="range"
               min={32}
               max={128}
               step={4}
-              value={overlay.badgeSize}
-              onChange={e => void patch({ badgeSize: Number(e.target.value) })}
+              value={sliderDraft.badgeSize}
+              onChange={e => patchSlider('badgeSize', Number(e.target.value))}
             />
           </label>
           <label>
-            {`角标 / 水印不透明度：${overlay.badgeOpacity}%`}
+            {`角标 / 水印不透明度：${sliderDraft.badgeOpacity}%`}
             <input
               type="range"
               min={10}
               max={100}
               step={5}
-              value={overlay.badgeOpacity}
-              onChange={e => void patch({ badgeOpacity: Number(e.target.value) })}
+              value={sliderDraft.badgeOpacity}
+              onChange={e => patchSlider('badgeOpacity', Number(e.target.value))}
             />
           </label>
           <label>
-            {`背景叠图不透明度：${overlay.backgroundOpacity}%`}
+            {`背景叠图不透明度：${sliderDraft.backgroundOpacity}%`}
             <input
               type="range"
               min={0}
               max={80}
               step={5}
-              value={overlay.backgroundOpacity}
-              onChange={e => void patch({ backgroundOpacity: Number(e.target.value) })}
+              value={sliderDraft.backgroundOpacity}
+              onChange={e => patchSlider('backgroundOpacity', Number(e.target.value))}
             />
           </label>
         </div>

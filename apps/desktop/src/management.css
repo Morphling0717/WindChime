@@ -338,8 +338,11 @@
   }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .wc-desktop .management .glass-surface {
+  .wc-desktop:not([data-theme="dark"]) .management .glass-surface {
     background: #f5f8fb;
+  }
+  .wc-desktop[data-theme="dark"] .management .glass-surface {
+    background: #16222e;
   }
 }
 .original-image {
@@ -383,28 +386,67 @@
 .wc-desktop[data-view="settings"] .desktop-studio .wc-settings {
   grid-template-columns: minmax(0, 1fr);
 }
-.desktop-end {
-  position: fixed;
-  top: 6px;
-  right: 290px;
-  z-index: 30;
+.wc-desktop .desktop-controls-stack .management,
+.wc-desktop .desktop-controls-stack .obs-guide-card {
+  margin: 0;
+}
+.share-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.share-url-row > input {
+  flex: 1;
+  min-width: 180px;
+}
+.share-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.share-preset-row button[aria-pressed="true"] {
+  background: linear-gradient(135deg, #277d88, #369c96) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+.share-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.share-color-grid label {
+  display: grid;
+  gap: 5px;
+}
+.share-color-grid input[type="color"] {
+  width: 100%;
   height: 36px;
-  padding: 6px 12px;
-  border: 1px solid #ffffff;
-  border-radius: 12px;
-  backdrop-filter: blur(20px);
-  background: #ffffffa1;
-  color: #506775;
-  font-size: 12px;
-  -webkit-app-region: no-drag;
+  min-height: 36px;
+  padding: 4px;
 }
-.desktop-end:disabled {
-  opacity: 0.45;
+.share-bg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
 }
-.wc-desktop[data-theme="dark"] .desktop-end {
-  background: #1d2d3d;
-  border-color: #344b60;
-  color: #c8dce6;
+.share-bg-thumb {
+  width: 72px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #cde0e6;
+}
+.share-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
 }
 .wc-desktop[data-theme="dark"] .context-field {
   color: #95aebc;

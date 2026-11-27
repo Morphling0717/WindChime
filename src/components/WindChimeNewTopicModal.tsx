@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -260,13 +261,15 @@ export function WindChimeNewTopicModal({
   theme,
 }: WindChimeNewTopicModalProps) {
   const th = useMemo(() => mergeTheme(theme), [theme]);
+  const headersRef = useRef(requestHeaders);
+  headersRef.current = requestHeaders;
   const client = useMemo(
     () =>
       createWindChimeClient({
         endpoints: { topics: endpoint },
-        getHeaders: () => requestHeaders ?? {},
+        getHeaders: () => headersRef.current ?? {},
       }),
-    [endpoint, requestHeaders],
+    [endpoint],
   );
   const L = { ...DEFAULT_LABELS, ...(labels ?? {}) };
 
@@ -299,7 +302,7 @@ export function WindChimeNewTopicModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !submitting) onClose();
     };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -307,7 +310,7 @@ export function WindChimeNewTopicModal({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open, onClose, submitting]);
 
   const slugError = useMemo(
     () => (slug ? validateSlugClient(slug, reservedSlugs) : null),
@@ -402,7 +405,7 @@ export function WindChimeNewTopicModal({
   return createPortal(
     <div
       className={cn(th.overlay, "windchime-overlay-enter")}
-      onClick={onClose}
+      onClick={() => !submitting && onClose()}
     >
       <form
         onSubmit={doSubmit}
@@ -411,7 +414,8 @@ export function WindChimeNewTopicModal({
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => !submitting && onClose()}
+          disabled={submitting}
           aria-label="关闭"
           className={th.closeButton}
         >
@@ -513,7 +517,7 @@ export function WindChimeNewTopicModal({
         {serverError && <div className={th.serverError}>{serverError}</div>}
 
         <div className={th.footer}>
-          <button type="button" onClick={onClose} className={th.cancelButton}>
+          <button type="button" onClick={() => !submitting && onClose()} disabled={submitting} className={th.cancelButton}>
             {L.cancel}
           </button>
           <button

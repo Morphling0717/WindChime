@@ -73,6 +73,22 @@ function sanitizeLocalOverlay(value) {
   return Object.keys(out).length ? out : undefined;
 }
 
+function sanitizeTimelineSync(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const out = {};
+  if (value.obsLogEnabled === false) out.obsLogEnabled = false;
+  if (value.obsWsEnabled === false) out.obsWsEnabled = false;
+  if (Number.isInteger(value.obsWsPort) && value.obsWsPort >= 1024 && value.obsWsPort <= 65535 && value.obsWsPort !== 4455) {
+    out.obsWsPort = value.obsWsPort;
+  }
+  if (typeof value.bilibiliRoomId === 'string') {
+    const room = value.bilibiliRoomId.trim();
+    if (/^\d{1,12}$/.test(room)) out.bilibiliRoomId = room;
+  }
+  if (value.preferTrack === 'record') out.preferTrack = 'record';
+  return Object.keys(out).length ? out : undefined;
+}
+
 function restoreWorkspace(value) {
   const restored = { version: 1, nextShortcut: '', tiles: {} };
   if (!value || value.version !== 1) return restored;
@@ -92,6 +108,7 @@ function restoreWorkspace(value) {
     restored.lastView = value.lastView;
   }
   if (value.autoCheckUpdate === false) restored.autoCheckUpdate = false;
+  if (value.displayMotion === false) restored.displayMotion = false;
   if (typeof value.uiSurface === 'string' && VALID_UI_SURFACES.has(value.uiSurface) && value.uiSurface !== 'liquid') {
     restored.uiSurface = value.uiSurface;
   }
@@ -105,10 +122,27 @@ function restoreWorkspace(value) {
   ) {
     restored.displayBounds = { x: Math.round(value.displayBounds.x), y: Math.round(value.displayBounds.y) };
   }
+  if (
+    value.displaySize &&
+    typeof value.displaySize === 'object' &&
+    Number.isFinite(value.displaySize.width) &&
+    Number.isFinite(value.displaySize.height) &&
+    value.displaySize.width >= 280 &&
+    value.displaySize.width <= 1920 &&
+    value.displaySize.height >= 180 &&
+    value.displaySize.height <= 1080
+  ) {
+    restored.displaySize = {
+      width: Math.round(value.displaySize.width),
+      height: Math.round(value.displaySize.height),
+    };
+  }
   const obsBridge = sanitizeObsBridge(value.obsBridge);
   if (obsBridge) restored.obsBridge = obsBridge;
   const localOverlay = sanitizeLocalOverlay(value.localOverlay);
   if (localOverlay) restored.localOverlay = localOverlay;
+  const timelineSync = sanitizeTimelineSync(value.timelineSync);
+  if (timelineSync) restored.timelineSync = timelineSync;
   const used = new Set([HIDE_SHORTCUT, restored.nextShortcut].filter(Boolean));
   for (const field of ['scrollUpShortcut', 'scrollDownShortcut', 'scrollPauseShortcut']) {
     try {
@@ -159,6 +193,7 @@ module.exports = {
   normalizeNextShortcut,
   sanitizeObsBridge,
   sanitizeLocalOverlay,
+  sanitizeTimelineSync,
   restoreWorkspace,
   fitTileBounds,
   fitDisplayPosition,

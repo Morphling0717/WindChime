@@ -1223,123 +1223,375 @@ type ShareData = {
   topicId: string;
   topicTitle: string;
   submissionUrl: string;
-  posterDefaults?: { title?: string; subtitle?: string; signature?: string };
+  posterDefaults?: {
+    title?: string;
+    subtitle?: string;
+    signature?: string;
+    avatarUrl?: string;
+    qrForeground?: string;
+    qrBackground?: string;
+    qrLogoUrl?: string;
+    gradient?: [string, string];
+    textColor?: string;
+    backgroundImageUrl?: string;
+    backgroundImageOpacity?: number;
+    backgroundImageOverlay?: string;
+    brandingText?: string;
+  };
 };
+type PosterStyleState = {
+  presetId: string;
+  qrForeground: string;
+  qrBackground: string;
+  qrLogoSrc: string;
+  gradientStart: string;
+  gradientEnd: string;
+  textColor: string;
+  backgroundImageSrc: string;
+  overlayOpacity: number;
+  brandingText: string;
+};
+const SHARE_PRESETS: ReadonlyArray<{
+  id: string;
+  label: string;
+  style: Omit<PosterStyleState, "presetId" | "qrLogoSrc" | "backgroundImageSrc">;
+}> = [
+  {
+    id: "web-default",
+    label: "网页默认 · 紫粉流光",
+    style: {
+      qrForeground: "#1f2937",
+      qrBackground: "#ffffff",
+      gradientStart: "#8b5cf6",
+      gradientEnd: "#ec4899",
+      textColor: "#ffffff",
+      overlayOpacity: 38,
+      brandingText: "",
+    },
+  },
+  {
+    id: "uliuli",
+    label: "UliUli · 赛博夜航",
+    style: {
+      qrForeground: "#2de2e6",
+      qrBackground: "#050508",
+      gradientStart: "#050508",
+      gradientEnd: "#1a1033",
+      textColor: "#ffffff",
+      overlayOpacity: 55,
+      brandingText: "🎐 WindChime 匿名提问箱",
+    },
+  },
+  {
+    id: "glass",
+    label: "琉璃浅青",
+    style: {
+      qrForeground: "#263A58",
+      qrBackground: "#ffffff",
+      gradientStart: "#eef5fb",
+      gradientEnd: "#e1f1ef",
+      textColor: "#263A58",
+      overlayOpacity: 25,
+      brandingText: "",
+    },
+  },
+  {
+    id: "midnight",
+    label: "暗夜星穹",
+    style: {
+      qrForeground: "#e2e8f0",
+      qrBackground: "#0f172a",
+      gradientStart: "#0f172a",
+      gradientEnd: "#1e293b",
+      textColor: "#f8fafc",
+      overlayOpacity: 45,
+      brandingText: "",
+    },
+  },
+];
+function isSafeSavedImage(value: string) {
+  return (
+    /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value) ||
+    /^https?:\/\/\S+$/.test(value) ||
+    /^\/[^\s]*$/.test(value)
+  );
+}
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+}
+function parseOverlayOpacity(overlay?: string): number {
+  if (!overlay) return 45;
+  const m = /rgba\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\s*\)/i.exec(overlay);
+  if (!m) return 45;
+  const alpha = Number(m[1]);
+  return Number.isFinite(alpha) ? Math.round(Math.min(85, Math.max(0, alpha * 100))) : 45;
+}
+function defaultStyleFromShare(data: ShareData): PosterStyleState {
+  const d = data.posterDefaults ?? {};
+  const hasServerTheme = Boolean(
+    d.qrForeground ||
+    d.qrBackground ||
+    d.gradient ||
+    d.textColor ||
+    d.backgroundImageUrl ||
+    d.brandingText,
+  );
+  const base = SHARE_PRESETS[0]!.style;
+  return {
+    presetId: hasServerTheme ? "site" : "web-default",
+    qrForeground: isHexColor(d.qrForeground) ? d.qrForeground : base.qrForeground,
+    qrBackground: isHexColor(d.qrBackground) ? d.qrBackground : base.qrBackground,
+    qrLogoSrc: typeof d.qrLogoUrl === "string" && isSafeSavedImage(d.qrLogoUrl) ? d.qrLogoUrl : "",
+    gradientStart: Array.isArray(d.gradient) && isHexColor(d.gradient[0]) ? d.gradient[0] : base.gradientStart,
+    gradientEnd: Array.isArray(d.gradient) && isHexColor(d.gradient[1]) ? d.gradient[1] : base.gradientEnd,
+    textColor: isHexColor(d.textColor) ? d.textColor : base.textColor,
+    backgroundImageSrc:
+      typeof d.backgroundImageUrl === "string" && isSafeSavedImage(d.backgroundImageUrl)
+        ? d.backgroundImageUrl
+        : "",
+    overlayOpacity: parseOverlayOpacity(d.backgroundImageOverlay),
+    brandingText: typeof d.brandingText === "string" ? d.brandingText.slice(0, 60) : base.brandingText,
+  };
+}
+function readPosterStyle(key: string, fallback: PosterStyleState): PosterStyleState {
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) ?? "{}") as Record<string, unknown>;
+    if (!raw || typeof raw !== "object") return fallback;
+    return {
+      presetId: typeof raw.presetId === "string" ? raw.presetId : fallback.presetId,
+      qrForeground: isHexColor(raw.qrForeground) ? raw.qrForeground : fallback.qrForeground,
+      qrBackground: isHexColor(raw.qrBackground) ? raw.qrBackground : fallback.qrBackground,
+      qrLogoSrc: typeof raw.qrLogoSrc === "string" && isSafeSavedImage(raw.qrLogoSrc) ? raw.qrLogoSrc : fallback.qrLogoSrc,
+      gradientStart: isHexColor(raw.gradientStart) ? raw.gradientStart : fallback.gradientStart,
+      gradientEnd: isHexColor(raw.gradientEnd) ? raw.gradientEnd : fallback.gradientEnd,
+      textColor: isHexColor(raw.textColor) ? raw.textColor : fallback.textColor,
+      backgroundImageSrc:
+        typeof raw.backgroundImageSrc === "string" && isSafeSavedImage(raw.backgroundImageSrc)
+          ? raw.backgroundImageSrc
+          : fallback.backgroundImageSrc,
+      overlayOpacity:
+        typeof raw.overlayOpacity === "number" && Number.isFinite(raw.overlayOpacity)
+          ? Math.round(Math.min(85, Math.max(0, raw.overlayOpacity)))
+          : fallback.overlayOpacity,
+      brandingText: typeof raw.brandingText === "string" ? raw.brandingText.slice(0, 60) : fallback.brandingText,
+    };
+  } catch {
+    return fallback;
+  }
+}
+async function normalizeDataUrlInCanvas(
+  dataUrl: string,
+  maxEdge: number,
+  format: "image/png" | "image/jpeg",
+): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const node = new Image();
+    node.onload = () => resolve(node);
+    node.onerror = () => reject(new Error("图片解码失败"));
+    node.src = dataUrl;
+  });
+  const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+  const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+  const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+  return format === "image/jpeg" ? c.toDataURL("image/jpeg", 0.86) : c.toDataURL("image/png");
+}
 export function Share({
   client,
   topicId,
   siteId,
   onError,
+  onNotice,
 }: {
   client: WindChimeClient;
   topicId: string;
   siteId: string;
   onError(message: string): void;
+  onNotice?(message: string): void;
 }) {
   const [share, setShare] = useState<ShareData | null>(null),
     [heading, setHeading] = useState(""),
     [body, setBody] = useState(""),
     [poster, setPoster] = useState<HTMLCanvasElement | null>(null),
-    [ready, setReady] = useState(false);
+    [ready, setReady] = useState(false),
+    [copiedUrl, setCopiedUrl] = useState(false);
   const qr = useRef<HTMLCanvasElement>(null),
     preview = useRef<HTMLCanvasElement>(null);
   const [footer, setFooter] = useState(""),
     [avatarSrc, setAvatarSrc] = useState(""),
-    [preferencesLoaded, setPreferencesLoaded] = useState(false);
+    [avatarUrlDraft, setAvatarUrlDraft] = useState(""),
+    [bgUrlDraft, setBgUrlDraft] = useState(""),
+    [style, setStyle] = useState<PosterStyleState>({
+      presetId: "web-default",
+      ...SHARE_PRESETS[0]!.style,
+      qrLogoSrc: "",
+      backgroundImageSrc: "",
+    }),
+    [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const resolvedCacheRef = useRef(new Map<string, string>());
+  const copyTimerRef = useRef<number | null>(null);
   const storageKey = "windchime:poster:v1:" + siteId + ":" + topicId;
+  const styleStorageKey = "windchime:poster-style:v1:" + siteId + ":" + topicId;
+
+  useEffect(() => () => {
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+  }, []);
+
+  const resolveForCanvas = useCallback(async (src: string): Promise<string | undefined> => {
+    const trimmed = src.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith("data:image/")) return trimmed;
+    const cached = resolvedCacheRef.current.get(trimmed);
+    if (cached) return cached;
+    const fetched = await unwrap(bridge.fetchShareImage(trimmed));
+    const dataUrl = `data:${fetched.mimeType};base64,${fetched.image}`;
+    resolvedCacheRef.current.set(trimmed, dataUrl);
+    return dataUrl;
+  }, []);
+
   useEffect(() => {
+    if (loadedKey !== storageKey) return;
     if (
-      preferencesLoaded &&
       !writeWindChimePosterConfig(storageKey, {
         heading,
         body,
         footer,
         avatarSrc,
       })
-    )
+    ) {
       onError("海报偏好无法保存，请检查本机存储空间");
-  }, [
-    preferencesLoaded,
-    storageKey,
-    heading,
-    body,
-    footer,
-    avatarSrc,
-    onError,
-  ]);
+    }
+  }, [loadedKey, storageKey, heading, body, footer, avatarSrc, onError]);
+
+  useEffect(() => {
+    if (loadedKey !== storageKey) return;
+    try {
+      localStorage.setItem(styleStorageKey, JSON.stringify(style));
+    } catch {
+      onError("海报配色或背景图偏好超过本机存储上限，请尝试更小的图片");
+    }
+  }, [loadedKey, storageKey, styleStorageKey, style, onError]);
+
   useEffect(() => {
     const abort = new AbortController();
+    setLoadedKey(null);
+    setShare(null);
+    setReady(false);
     void client
       .request<ShareData>("/share", "GET", undefined, {
         topicId,
         signal: abort.signal,
       })
       .then((data) => {
-        if (!abort.signal.aborted) {
-          setShare(data);
-          const saved = readWindChimePosterConfig(storageKey, {
-            heading: data.posterDefaults?.title || data.topicTitle,
-            body:
-              data.posterDefaults?.subtitle || "扫码匿名投稿",
-            footer: data.posterDefaults?.signature || data.siteName,
-            avatarSrc: "",
-          });
-          setHeading(saved.heading);
-          setBody(saved.body);
-          setFooter(saved.footer);
-          setAvatarSrc(
-            /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(saved.avatarSrc)
-              ? saved.avatarSrc
+        if (abort.signal.aborted) return;
+        setShare(data);
+        const saved = readWindChimePosterConfig(storageKey, {
+          heading: data.posterDefaults?.title || data.topicTitle,
+          body: data.posterDefaults?.subtitle || "扫码匿名投稿",
+          footer: data.posterDefaults?.signature ?? "",
+          avatarSrc:
+            typeof data.posterDefaults?.avatarUrl === "string" &&
+            isSafeSavedImage(data.posterDefaults.avatarUrl)
+              ? data.posterDefaults.avatarUrl
               : "",
-          );
-          setPreferencesLoaded(true);
-        }
+        });
+        const safeAvatar = isSafeSavedImage(saved.avatarSrc) ? saved.avatarSrc : "";
+        setHeading(saved.heading);
+        setBody(saved.body);
+        setFooter(saved.footer);
+        setAvatarSrc(safeAvatar);
+        setAvatarUrlDraft(safeAvatar.startsWith("data:") ? "" : safeAvatar);
+        const nextStyle = readPosterStyle(styleStorageKey, defaultStyleFromShare(data));
+        setStyle(nextStyle);
+        setBgUrlDraft(
+          nextStyle.backgroundImageSrc.startsWith("data:") ? "" : nextStyle.backgroundImageSrc,
+        );
+        setLoadedKey(storageKey);
       })
       .catch((e) => {
         if (!abort.signal.aborted) onError(message(e));
       });
     return () => abort.abort();
-  }, [client, topicId, storageKey, onError]);
+  }, [client, topicId, storageKey, styleStorageKey, onError]);
+
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [bgPreviewUrl, setBgPreviewUrl] = useState("");
   useEffect(() => {
-    if (!share || !qr.current) return;
+    let cancelled = false;
+    if (!avatarSrc) { setAvatarPreviewUrl(""); return; }
+    if (avatarSrc.startsWith("data:image/")) { setAvatarPreviewUrl(avatarSrc); return; }
+    void resolveForCanvas(avatarSrc)
+      .then((url) => { if (!cancelled) setAvatarPreviewUrl(url ?? ""); })
+      .catch(() => { if (!cancelled) setAvatarPreviewUrl(""); });
+    return () => { cancelled = true; };
+  }, [avatarSrc, resolveForCanvas]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!style.backgroundImageSrc) { setBgPreviewUrl(""); return; }
+    if (style.backgroundImageSrc.startsWith("data:image/")) { setBgPreviewUrl(style.backgroundImageSrc); return; }
+    void resolveForCanvas(style.backgroundImageSrc)
+      .then((url) => { if (!cancelled) setBgPreviewUrl(url ?? ""); })
+      .catch(() => { if (!cancelled) setBgPreviewUrl(""); });
+    return () => { cancelled = true; };
+  }, [style.backgroundImageSrc, resolveForCanvas]);
+
+  useEffect(() => {
+    if (!share || !qr.current || loadedKey !== storageKey) return;
     let disposed = false;
     setReady(false);
     const canvas = qr.current;
-    void renderWindChimeQr(canvas, {
-      url: share.submissionUrl,
-      size: 320,
-      foreground: "#263A58",
-      background: "#ffffff",
-      pixelRatio: 1,
-    })
-      .then(() =>
-        renderWindChimePoster(canvas, {
-          url: share.submissionUrl,
-          heading,
-          body,
-          footer,
-          avatarSrc: avatarSrc || undefined,
-          brandingText: share.siteName,
-          gradient: ["#eef5fb", "#e1f1ef"],
-          textColor: "#263A58",
-          width: 720,
-        }),
-      )
-      .then((canvas) => {
-        if (disposed || !preview.current) return;
-        preview.current.width = canvas.width;
-        preview.current.height = canvas.height;
-        preview.current.getContext("2d")?.drawImage(canvas, 0, 0);
-        setPoster(canvas);
-        setReady(true);
-      })
-      .catch((e) => {
-        if (!disposed) onError(message(e));
+    void (async () => {
+      const [resolvedAvatar, resolvedBg, resolvedLogo] = await Promise.all([
+        avatarSrc ? resolveForCanvas(avatarSrc).catch(() => undefined) : Promise.resolve(undefined),
+        style.backgroundImageSrc ? resolveForCanvas(style.backgroundImageSrc).catch(() => undefined) : Promise.resolve(undefined),
+        style.qrLogoSrc ? resolveForCanvas(style.qrLogoSrc).catch(() => undefined) : Promise.resolve(undefined),
+      ]);
+      if (disposed) return;
+      const dpr = Math.max(2, typeof window !== "undefined" ? window.devicePixelRatio || 2 : 2);
+      await renderWindChimeQr(canvas, {
+        url: share.submissionUrl,
+        size: 320,
+        foreground: style.qrForeground,
+        background: style.qrBackground,
+        margin: 2,
+        errorCorrectionLevel: "H",
+        logoSrc: resolvedLogo,
+        pixelRatio: dpr,
       });
+      if (disposed) return;
+      const posterCanvas = await renderWindChimePoster(canvas, {
+        url: share.submissionUrl,
+        heading,
+        body,
+        footer,
+        avatarSrc: resolvedAvatar,
+        brandingText: style.brandingText || undefined,
+        gradient: [style.gradientStart, style.gradientEnd],
+        textColor: style.textColor,
+        backgroundImageSrc: resolvedBg,
+        backgroundImageOverlay: `rgba(5,5,8,${(style.overlayOpacity / 100).toFixed(2)})`,
+        width: 900,
+      });
+      if (disposed || !preview.current) return;
+      preview.current.width = posterCanvas.width;
+      preview.current.height = posterCanvas.height;
+      preview.current.getContext("2d")?.drawImage(posterCanvas, 0, 0);
+      setPoster(posterCanvas);
+      setReady(true);
+    })().catch((e) => {
+      if (!disposed) onError(message(e));
+    });
     return () => {
       disposed = true;
     };
-  }, [share, heading, body, footer, avatarSrc, onError]);
+  }, [share, loadedKey, storageKey, heading, body, footer, avatarSrc, style, resolveForCanvas, onError]);
+
   const save = async (canvas: HTMLCanvasElement | null, name: string) => {
     if (!canvas) return;
     try {
@@ -1355,6 +1607,78 @@ export function Share({
       onError(message(e));
     }
   };
+  const copySubmissionUrl = async () => {
+    if (!share?.submissionUrl) return;
+    try {
+      await unwrap(bridge.writeClipboard(share.submissionUrl));
+      setCopiedUrl(true);
+      onNotice?.("已复制投稿地址到剪贴板。");
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopiedUrl(false);
+        copyTimerRef.current = null;
+      }, 2000);
+    } catch {
+      onError("剪贴板写入失败，请手动全选复制投稿地址");
+    }
+  };
+  const pickLocalImage = async (purpose: "avatar" | "background" | "logo") => {
+    try {
+      const result =
+        purpose === "avatar"
+          ? await unwrap(bridge.chooseAvatar())
+          : await unwrap(bridge.choosePosterImage(purpose));
+      if (!result) return;
+      const rawDataUrl = `data:${result.mimeType};base64,${result.image}`;
+      const normalized =
+        purpose === "background"
+          ? await normalizeDataUrlInCanvas(rawDataUrl, 1280, "image/jpeg")
+          : await normalizeDataUrlInCanvas(rawDataUrl, purpose === "logo" ? 256 : 512, "image/png");
+      if (purpose === "avatar") {
+        setAvatarSrc(normalized);
+        setAvatarUrlDraft("");
+      } else if (purpose === "background") {
+        setStyle((cur) => ({ ...cur, presetId: "custom", backgroundImageSrc: normalized }));
+        setBgUrlDraft("");
+      } else {
+        setStyle((cur) => ({ ...cur, presetId: "custom", qrLogoSrc: normalized }));
+      }
+    } catch (e) {
+      onError(message(e));
+    }
+  };
+  const applyPreset = (preset: (typeof SHARE_PRESETS)[number]) => {
+    setStyle((cur) => ({
+      ...cur,
+      ...preset.style,
+      presetId: preset.id,
+      backgroundImageSrc:
+        preset.id === "uliuli" && !cur.backgroundImageSrc
+          ? "/Background.webp"
+          : cur.backgroundImageSrc,
+    }));
+    if (preset.id === "uliuli" && !style.backgroundImageSrc) {
+      setBgUrlDraft("/Background.webp");
+    }
+  };
+  const resetToSiteDefaults = () => {
+    if (!share) return;
+    setHeading(share.posterDefaults?.title || share.topicTitle);
+    setBody(share.posterDefaults?.subtitle || "扫码匿名投稿");
+    setFooter(share.posterDefaults?.signature ?? "");
+    const defaultAvatar =
+      typeof share.posterDefaults?.avatarUrl === "string" &&
+      isSafeSavedImage(share.posterDefaults.avatarUrl)
+        ? share.posterDefaults.avatarUrl
+        : "";
+    setAvatarSrc(defaultAvatar);
+    setAvatarUrlDraft(defaultAvatar);
+    const nextStyle = defaultStyleFromShare(share);
+    setStyle(nextStyle);
+    setBgUrlDraft(nextStyle.backgroundImageSrc.startsWith("data:") ? "" : nextStyle.backgroundImageSrc);
+    onNotice?.("已恢复站点默认海报与二维码样式。");
+  };
+
   return (
     <section className="management wc-live" aria-label="投稿分享">
       <div className="share-grid">
@@ -1363,25 +1687,65 @@ export function Share({
           <p className="wc-muted">{share?.topicTitle || "正在读取话题…"}</p>
           <label>
             投稿地址
-            <input readOnly value={share?.submissionUrl ?? ""} />
+            <div className="share-url-row">
+              <input readOnly value={share?.submissionUrl ?? ""} onFocus={(e) => e.currentTarget.select()} />
+              <button type="button" disabled={!share} onClick={() => void copySubmissionUrl()}>
+                {copiedUrl ? "已复制 ✓" : "复制地址"}
+              </button>
+              <button
+                type="button"
+                disabled={!share}
+                onClick={() =>
+                  void unwrap(bridge.openSubmission()).catch((e) =>
+                    onError(message(e)),
+                  )
+                }
+              >
+                在浏览器打开投稿页
+              </button>
+            </div>
           </label>
-          <button
-            disabled={!share}
-            onClick={() =>
-              void unwrap(bridge.openSubmission()).catch((e) =>
-                onError(message(e)),
-              )
-            }
-          >
-            在浏览器打开投稿页
-          </button>
           <canvas ref={qr} className="share-qr" aria-label="投稿二维码" />
-          <button
-            disabled={!ready}
-            onClick={() => void save(qr.current, "风铃投稿二维码.png")}
-          >
-            保存二维码 PNG
-          </button>
+          <div className="share-actions-row">
+            <button
+              type="button"
+              disabled={!ready}
+              onClick={() => void save(qr.current, "风铃投稿二维码.png")}
+            >
+              保存二维码 PNG
+            </button>
+            <button type="button" onClick={() => void pickLocalImage("logo")}>
+              {style.qrLogoSrc ? "更换二维码 Logo" : "添加二维码中心 Logo"}
+            </button>
+            {style.qrLogoSrc && (
+              <button
+                type="button"
+                onClick={() => setStyle((cur) => ({ ...cur, qrLogoSrc: "" }))}
+              >
+                移除 Logo
+              </button>
+            )}
+          </div>
+
+          <label>
+            风格预设（与网页 CMS 一键对齐）
+            <div className="share-preset-row">
+              {SHARE_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-pressed={style.presetId === preset.id}
+                  onClick={() => applyPreset(preset)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <button type="button" disabled={!share} onClick={resetToSiteDefaults}>
+                恢复默认
+              </button>
+            </div>
+          </label>
+
           <label>
             海报标题
             <input
@@ -1399,38 +1763,188 @@ export function Share({
             />
           </label>
           <label>
-            海报署名
+            海报署名（留空则显示网址）
             <input
               aria-label="海报署名"
               maxLength={100}
               value={footer}
+              placeholder={share?.submissionUrl.replace(/^https?:\/\//i, "") || ""}
               onChange={(e) => setFooter(e.target.value)}
             />
           </label>
-          <div className="poster-avatar">
-            {avatarSrc && <img src={avatarSrc} alt="海报头像" />}
-            <button
-              onClick={() =>
-                void unwrap(bridge.chooseAvatar())
-                  .then((result) => {
-                    if (result)
-                      setAvatarSrc(
-                        `data:${result.mimeType};base64,${result.image}`,
-                      );
-                  })
-                  .catch((e) => onError(message(e)))
+          <label>
+            底部品牌标语（可选）
+            <input
+              maxLength={60}
+              value={style.brandingText}
+              placeholder="例如：🎐 WindChime 匿名提问箱"
+              onChange={(e) =>
+                setStyle((cur) => ({ ...cur, presetId: "custom", brandingText: e.target.value }))
               }
-            >
+            />
+          </label>
+
+          <div className="share-color-grid">
+            <label>
+              二维码前景色
+              <input
+                type="color"
+                value={style.qrForeground}
+                onChange={(e) =>
+                  setStyle((cur) => ({ ...cur, presetId: "custom", qrForeground: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              二维码背景色
+              <input
+                type="color"
+                value={style.qrBackground}
+                onChange={(e) =>
+                  setStyle((cur) => ({ ...cur, presetId: "custom", qrBackground: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              海报渐变起色
+              <input
+                type="color"
+                value={style.gradientStart}
+                onChange={(e) =>
+                  setStyle((cur) => ({ ...cur, presetId: "custom", gradientStart: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              海报渐变止色
+              <input
+                type="color"
+                value={style.gradientEnd}
+                onChange={(e) =>
+                  setStyle((cur) => ({ ...cur, presetId: "custom", gradientEnd: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              海报文字色
+              <input
+                type="color"
+                value={style.textColor}
+                onChange={(e) =>
+                  setStyle((cur) => ({ ...cur, presetId: "custom", textColor: e.target.value }))
+                }
+              />
+            </label>
+          </div>
+
+          <div className="poster-avatar">
+            {avatarPreviewUrl && <img src={avatarPreviewUrl} alt="海报头像" />}
+            <button type="button" onClick={() => void pickLocalImage("avatar")}>
               选择本机头像
             </button>
             {avatarSrc && (
-              <button onClick={() => setAvatarSrc("")}>移除头像</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAvatarSrc("");
+                  setAvatarUrlDraft("");
+                }}
+              >
+                移除头像
+              </button>
             )}
           </div>
+          <label>
+            或填入头像 URL（支持 B站 hdslb.com 头像）
+            <div className="share-url-row">
+              <input
+                value={avatarUrlDraft}
+                placeholder="https://i0.hdslb.com/... 或 /avatar.png"
+                onChange={(e) => setAvatarUrlDraft(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={!avatarUrlDraft.trim() || avatarUrlDraft.trim() === avatarSrc}
+                onClick={() => {
+                  const next = avatarUrlDraft.trim();
+                  if (!isSafeSavedImage(next)) {
+                    onError("请输入以 https://、http:// 或 / 开头的图片地址");
+                    return;
+                  }
+                  setAvatarSrc(next);
+                }}
+              >
+                应用头像 URL
+              </button>
+            </div>
+          </label>
+
+          <div className="share-bg-row">
+            {bgPreviewUrl && <img className="share-bg-thumb" src={bgPreviewUrl} alt="海报背景图预览" />}
+            <button type="button" onClick={() => void pickLocalImage("background")}>
+              {style.backgroundImageSrc ? "更换海报背景图" : "选择本机海报背景图"}
+            </button>
+            {style.backgroundImageSrc && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStyle((cur) => ({ ...cur, presetId: "custom", backgroundImageSrc: "" }));
+                  setBgUrlDraft("");
+                }}
+              >
+                移除背景图
+              </button>
+            )}
+          </div>
+          <label>
+            或填入站点 / 网络背景图地址（例如 /Background.webp）
+            <div className="share-url-row">
+              <input
+                value={bgUrlDraft}
+                placeholder="/Background.webp 或 https://..."
+                onChange={(e) => setBgUrlDraft(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={!bgUrlDraft.trim() || bgUrlDraft.trim() === style.backgroundImageSrc}
+                onClick={() => {
+                  const next = bgUrlDraft.trim();
+                  if (!isSafeSavedImage(next)) {
+                    onError("请输入以 / 或 https:// 开头的背景图路径");
+                    return;
+                  }
+                  setStyle((cur) => ({ ...cur, presetId: "custom", backgroundImageSrc: next }));
+                }}
+              >
+                应用背景图
+              </button>
+            </div>
+          </label>
+          {style.backgroundImageSrc && (
+            <label>
+              {`背景图暗角蒙层浓度：${style.overlayOpacity}%`}
+              <input
+                type="range"
+                min={0}
+                max={85}
+                step={5}
+                value={style.overlayOpacity}
+                onChange={(e) =>
+                  setStyle((cur) => ({
+                    ...cur,
+                    presetId: "custom",
+                    overlayOpacity: Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+          )}
+
           <p className="wc-muted">
-            标题、文案、署名和头像仅保存在此电脑；不会修改网站或来信。
+            海报标题、文案、署名、配色、背景图和头像仅保存在此电脑（导出为 900px 高清海报与 2x 锐利二维码），不会修改网站或来信。
           </p>
           <button
+            type="button"
             className="wc-primary"
             disabled={!ready}
             onClick={() => void save(poster, "风铃投稿海报.png")}

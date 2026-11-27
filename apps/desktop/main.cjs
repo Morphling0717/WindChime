@@ -1,9 +1,11 @@
-const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, Menu, session, powerMonitor, dialog, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, globalShortcut, Tray, Menu, session, powerMonitor, dialog, nativeImage, nativeTheme, screen, clipboard } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const osNode = require('node:os');
 const crypto = require('node:crypto');
+const dns = require('node:dns');
 const httpNode = require('node:http');
+const net = require('node:net');
 const { performance } = require('node:perf_hooks');
 const { version: appVersion } = require('./package.json');
 const { normalizeOrigin, validateRequest, restoreSite, verifier, challenge, publicSite } = require('./security.cjs');
@@ -15,6 +17,7 @@ const {
   normalizeNextShortcut,
   sanitizeObsBridge,
   sanitizeLocalOverlay,
+  sanitizeTimelineSync,
   restoreWorkspace,
   fitTileBounds,
   fitDisplayPosition,
@@ -22,8 +25,9 @@ const {
 const { atomicRename, createWorkspaceStore, createVaultStore } = require('./main/vault.cjs');
 const { createShortcutManager } = require('./main/shortcuts.cjs');
 const { createObsBridge } = require('./main/obs-bridge.cjs');
-const { createOverlayStore } = require('./main/overlay-store.cjs');
+const { createOverlayStore, detectImageMime, parseWebpSize } = require('./main/overlay-store.cjs');
 const { createSessionHistoryStore } = require('./main/session-history.cjs');
+const { createTimelineSync } = require('./main/timeline-sync.cjs');
 const { createUpdater } = require('./main/updater.cjs');
 
 const state = { sites: [], selected: null, pairings: new Map(), output: null, connectionError: '' };
@@ -31,8 +35,9 @@ let controlWindow, displayWindow, tray, quitting = false;
 let selectionVersion = 0, outputVersion = 0, switching = false, importVersion = 0;
 const tiles = new Map();
 let selectedMessageId = null, mainDirty = false, mainReviewDirty = false, mainOtherDirty = false;
-let displaySize = { width: 960, height: 640 }, outputScrollState = null, outputOnAir = null;
-let outputTestCard = false, outputAppearance = null, lastLiveFrame = null, desktopTheme = 'light';
+let displaySize = { width: 960, height: 640 }, manualDisplaySize = null, lastServerDisplaySize = null;
+let outputScrollState = null, outputOnAir = null, outputSpotlightAssetId = null;
+let outputTestCard = false, outputAppearance = null, lastLiveFrame = null, lastObsFrameFingerprint = '', desktopTheme = 'light';
 let desktopPrefs = {
   randomDrawEnabled: false,
   clearOnBlindDraw: false,
@@ -41,19 +46,28 @@ let desktopPrefs = {
   startupView: 'last',
   lastView: null,
   autoCheckUpdate: true,
+  displayMotion: true,
   uiSurface: 'liquid',
 };
 let controlAcrylicActive = false;
+let controlWindowFocused = true;
 function supportsWinAcrylic() {
   if (process.platform !== 'win32') return false;
   const parts = String(osNode.release() || '').split('.');
   const build = Number(parts[2] || 0);
   return Number.isFinite(build) && build >= 22000;
 }
-function prefsPayload() {
-  return { ...desktopPrefs, acrylicActive: controlAcrylicActive };
+function prefsPayload(isTile = false) {
+  return { ...desktopPrefs, acrylicActive: isTile ? false : controlAcrylicActive };
+}
+function broadcastPrefs() {
+  liveContents(controlWindow)?.send?.('app:prefs-changed', prefsPayload(false));
+  for (const tile of tiles.values()) {
+    liveContents(tile.window)?.send?.('app:prefs-changed', prefsPayload(true));
+  }
 }
 let displayMoveTimer = null;
+const tileRememberTimers = new Map();
 const pendingRequests = new Set();
 let writeTail = Promise.resolve();
 let outputDeadline = 0, outputHeld = false, pendingOutputClears = 0;
@@ -102,13 +116,14 @@ function broadcastPrivate(channel, payload) {
   for (const tile of tiles.values()) liveContents(tile.window)?.send?.(channel, payload);
 }
 
-let workspacePath = '', vaultPath = '', historyPath = '', overlayDir = '', updatesDir = '';
+let workspacePath = '', vaultPath = '', historyPath = '', overlayDir = '', updatesDir = '', timelineSecretsPath = '';
 const workspaceStore = createWorkspaceStore({
   fs,
   getPath: () => workspacePath,
   restoreWorkspace,
   sanitizeObsBridge,
   sanitizeLocalOverlay,
+  sanitizeTimelineSync,
   onReadError: connectionError,
   setTimeoutFn: setTimeout,
 });
@@ -138,7 +153,14 @@ const vaultStore = createVaultStore({
     obsBridge.disconnectAll();
     closeOutput();
     sessionHistory.resetSessionDedupe();
-    try { await hideSite(previous).catch(() => {}); } finally { switching = false; }
+    try {
+      await hideSite(previous).catch(() => {});
+    } finally {
+      switching = false;
+      if (obsBridge.getClientCount() > 0 && (!displayWindow || displayWindow.isDestroyed())) {
+        void startObsPoller();
+      }
+    }
   },
 });
 
@@ -163,6 +185,32 @@ const sessionHistory = createSessionHistoryStore({
   atomicRename,
   crypto,
   onChanged: list => broadcastPrivate('history:changed', list),
+  onStreamStartChanged: iso => {
+    broadcastPrivate('history:stream-start-changed', iso);
+    timelineSync.notifyExternalChange();
+  },
+  setTimeoutFn: setTimeout,
+});
+
+const timelineSync = createTimelineSync({
+  fs,
+  path,
+  crypto,
+  fetchFn: fetch,
+  WebSocketImpl: typeof globalThis.WebSocket === 'function' ? globalThis.WebSocket : null,
+  safeStorage,
+  atomicRename,
+  getObsLogsDir: () =>
+    process.env.WINDCHIME_OBS_LOGS_DIR ||
+    (process.platform === 'win32' && process.env.APPDATA ? path.join(process.env.APPDATA, 'obs-studio', 'logs') : ''),
+  getSecretsPath: () => timelineSecretsPath,
+  getConfig: () => workspaceStore.get().timelineSync,
+  saveConfig: config => workspaceStore.save({ timelineSync: config }),
+  getTimelineMeta: () => sessionHistory.getTimelineMeta(),
+  applyTimelineAnchor: (iso, meta) => sessionHistory.setStreamStartedAt(iso, meta),
+  onStatusChange: status => broadcastPrivate('timeline:status-changed', status),
+  setIntervalFn: setInterval,
+  clearIntervalFn: typeof clearInterval === 'function' ? clearInterval : () => {},
   setTimeoutFn: setTimeout,
 });
 
@@ -189,6 +237,8 @@ const obsBridge = createObsBridge({
   buildDir: path.join(__dirname, 'build'),
   getInitialState: basePath => ({
     overlay: overlayStore.getObsPayload(basePath),
+    motion: desktopPrefs.displayMotion !== false,
+    spotlight: outputSnapshotId ? outputSpotlightAssetId : null,
     frame: lastLiveFrame && outputSnapshotId ? { ...lastLiveFrame, basePath } : null,
     testCard: outputTestCard && !outputSnapshotId ? { active: true, appearance: outputAppearance } : null,
   }),
@@ -271,15 +321,38 @@ async function confirmDirty(tileList, message, includeMain = false, parent = con
   if (response.response !== 1) throw cancelled();
 }
 function dirtyTiles() { return [...tiles.values()].filter(tile => tile.dirty); }
-function rememberTile(tile) {
-  const ws = workspaceStore.get();
-  const bounds = !tile.window.isDestroyed() ? tile.window.getBounds?.() : ws.tiles[tile.module]?.bounds;
-  const nextTiles = { ...ws.tiles, [tile.module]: { pinned: tile.pinned, ...(bounds ? { bounds } : {}) } };
-  void workspaceStore.save({ tiles: nextTiles }).catch(() => { connectionError('磁贴位置未能保存'); });
+function rememberTile(tile, immediate = false) {
+  const flushTile = () => {
+    const existingTimer = tileRememberTimers.get(tile.module);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      tileRememberTimers.delete(tile.module);
+    }
+    const ws = workspaceStore.get();
+    const bounds = !tile.window.isDestroyed() ? tile.window.getBounds?.() : ws.tiles[tile.module]?.bounds;
+    const pinned = tile.pinned;
+    void workspaceStore
+      .update(current => ({
+        tiles: { ...current.tiles, [tile.module]: { pinned, ...(bounds ? { bounds } : {}) } },
+      }))
+      .catch(() => { connectionError('磁贴位置未能保存'); });
+  };
+  if (immediate) {
+    flushTile();
+    return;
+  }
+  const existingTimer = tileRememberTimers.get(tile.module);
+  if (existingTimer) clearTimeout(existingTimer);
+  const timer = setTimeout(() => {
+    tileRememberTimers.delete(tile.module);
+    flushTile();
+  }, 250);
+  timer.unref?.();
+  tileRememberTimers.set(tile.module, timer);
 }
 function disposeTiles() {
   selectedMessageId = null; mainDirty = false; mainReviewDirty = false; mainOtherDirty = false;
-  for (const tile of tiles.values()) { rememberTile(tile); tile.allowClose = true; tile.window.close(); }
+  for (const tile of tiles.values()) { rememberTile(tile, true); tile.allowClose = true; tile.window.close(); }
   tiles.clear();
 }
 async function openTile(module) {
@@ -290,7 +363,6 @@ async function openTile(module) {
   const stableTitle = `WindChime Private · ${TILE_MODULES[module]}`;
   const defaultWidth = module === 'review' || module === 'appearance' ? 760 : module === 'blindbox' ? 380 : 480;
   const defaultHeight = module === 'transport' ? 560 : module === 'blindbox' ? 560 : 720;
-  const tileUseAcrylic = desktopPrefs.uiSurface === 'liquid' && supportsWinAcrylic();
   const window = new BrowserWindow({
     width: defaultWidth,
     height: defaultHeight,
@@ -302,13 +374,12 @@ async function openTile(module) {
     resizable: true,
     alwaysOnTop: preferences.pinned !== false,
     icon: path.join(__dirname, 'build/icon.ico'),
-    backgroundColor: tileUseAcrylic ? '#00000000' : desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
-    ...(tileUseAcrylic ? { backgroundMaterial: 'acrylic' } : {}),
+    backgroundColor: desktopTheme === 'dark' ? '#101822' : '#e9f1f5',
     autoHideMenuBar: true,
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload-control.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false },
   });
-  applyWindowSurface(window, desktopTheme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: true });
+  applyWindowSurface(window, desktopTheme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: false });
   const tile = { module, window, scope, topicId: activeTopic(scope.site), pinned: preferences.pinned !== false, dirty: false, allowClose: false, closing: false };
   tiles.set(module, tile); secureWindow(window, partition);
   window.on('page-title-updated', event => event.preventDefault());
@@ -316,16 +387,16 @@ async function openTile(module) {
   window.on('close', event => {
     if (tile.allowClose || quitting || !tile.dirty) return;
     event.preventDefault(); if (tile.closing) return; tile.closing = true;
-    void confirmDirty([tile], '此磁贴有未保存的修改。关闭磁贴会放弃这些修改。', false, window).then(() => { if (tiles.get(module) !== tile) return; tile.allowClose = true; rememberTile(tile); window.close(); }).catch(() => {}).finally(() => { tile.closing = false; });
+    void confirmDirty([tile], '此磁贴有未保存的修改。关闭磁贴会放弃这些修改。', false, window).then(() => { if (tiles.get(module) !== tile) return; tile.allowClose = true; rememberTile(tile, true); window.close(); }).catch(() => {}).finally(() => { tile.closing = false; });
   });
-  window.on('closed', () => { if (tiles.get(module) !== tile) return; rememberTile(tile); tiles.delete(module); });
+  window.on('closed', () => { if (tiles.get(module) !== tile) return; rememberTile(tile, true); tiles.delete(module); });
   try { await window.loadFile(path.join(__dirname, 'build/control.html'), { query: { tile: module } }); assertTile(tile); window.setTitle?.(stableTitle); window.show(); return tileMetadata(tile); }
   catch (error) { if (tiles.get(module) === tile) { tiles.delete(module); tile.allowClose = true; window.close(); } throw error; }
 }
 async function closeTile(module) {
   const tile = tiles.get(module); if (!tile) return; assertTile(tile);
   await confirmDirty([tile], '此磁贴有未保存的修改。关闭磁贴会放弃这些修改。', false, tile.window); assertTile(tile);
-  rememberTile(tile); tile.allowClose = true; tiles.delete(module); tile.window.close();
+  rememberTile(tile, true); tile.allowClose = true; tiles.delete(module); tile.window.close();
 }
 async function chooseMessage(messageId, connectionId, contextVersion, parent = controlWindow) {
   const scope = context(), initiatingTile = tileFor(parent);
@@ -377,6 +448,15 @@ function sanitizeScrollMetrics(metrics) {
 function broadcastScrollState(next) {
   outputScrollState = next;
   broadcastPrivate('display:scroll-state', next);
+}
+function broadcastSpotlight(nextId) {
+  const next = typeof nextId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(nextId) ? nextId : null;
+  if (next === outputSpotlightAssetId) return outputSpotlightAssetId;
+  outputSpotlightAssetId = next;
+  liveContents(displayWindow)?.send?.('output:spotlight', next);
+  obsBridge.pushSpotlight(next);
+  broadcastPrivate('display:spotlight-changed', next);
+  return next;
 }
 function broadcastOnAir(next) {
   const prev = outputOnAir;
@@ -432,10 +512,17 @@ function applyWindowSurface(win, theme, uiSurface, { isControl = false, allowAcr
   }
   return appliedAcrylic;
 }
+function syncNativeTheme(theme) {
+  if (!nativeTheme) return;
+  try {
+    nativeTheme.themeSource = theme === 'dark' ? 'dark' : 'light';
+  } catch {}
+}
 function applyWindowTheme(theme) {
+  syncNativeTheme(theme);
   controlAcrylicActive = applyWindowSurface(controlWindow, theme, desktopPrefs.uiSurface, { isControl: true, allowAcrylic: true });
   for (const tile of tiles.values()) {
-    applyWindowSurface(tile.window, theme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: true });
+    applyWindowSurface(tile.window, theme, desktopPrefs.uiSurface, { isControl: false, allowAcrylic: false });
   }
 }
 function sendDisplayScroll(command) {
@@ -461,8 +548,13 @@ async function http(base, relative, method = 'GET', body, token, { binary = fals
     }
     if (binary) {
       const mimeType = response.headers.get('content-type')?.split(';')[0];
-      if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType)) throw new Error('图片格式无效');
-      const bytes = Buffer.from(await response.arrayBuffer()); if (bytes.length > 5 * 1024 * 1024) throw new Error('图片过大');
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType)) {
+        throw Object.assign(new Error('图片格式无效'), { code: 'INVALID_ASSET', status: response.status });
+      }
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.length > 5 * 1024 * 1024) {
+        throw Object.assign(new Error('图片过大'), { code: 'INVALID_ASSET', status: response.status });
+      }
       return { image: bytes.toString('base64'), mimeType };
     }
     try { return await response.json(); } catch { throw Object.assign(new Error('网站返回了无法识别的响应，请检查网站地址和部署版本'), { code: 'REMOTE_INVALID_RESPONSE', status: response.status }); }
@@ -540,39 +632,161 @@ function handle(channel, kind, operation, bound = false) {
   });
 }
 
+function isAuthFailure(error) {
+  if (!error) return false;
+  if (error.status === 401) return true;
+  if (error.status === 403) {
+    const code = typeof error.code === 'string' ? error.code : '';
+    if (!code || code === 'REMOTE_ERROR' || /AUTH|TOKEN|GRANT|REVOK|EXPIR|FORBIDDEN|SCOPE/i.test(code)) return true;
+  }
+  return false;
+}
+
+function isPrivateIpAddress(ip) {
+  if (typeof ip !== 'string') return true;
+  const trimmed = ip.trim().toLowerCase();
+  if (trimmed.startsWith('::ffff:')) {
+    return isPrivateIpAddress(trimmed.slice(7));
+  }
+  const version = net.isIP(trimmed);
+  if (version === 4) {
+    const parts = trimmed.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+    const [a, b] = parts;
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  if (version === 6) {
+    if (trimmed === '::' || trimmed === '::1') return true;
+    if (trimmed.startsWith('fc') || trimmed.startsWith('fd')) return true;
+    if (/^fe[89ab]/i.test(trimmed)) return true;
+    if (trimmed.startsWith('ff')) return true;
+    return false;
+  }
+  return true;
+}
+
+function decodeValidatedImageBytes(bytes, { maxEdge, label = '图片' }) {
+  const mime = detectImageMime(bytes);
+  if (!mime) throw new Error(`请选择 PNG、JPEG 或 WebP ${label}`);
+  const image = nativeImage.createFromBuffer(bytes);
+  const size = image.getSize();
+  if (!image.isEmpty()) {
+    if (size.width <= 0 || size.height <= 0 || size.width * size.height > 16000000) {
+      throw new Error(`${label}无法解码或像素过大`);
+    }
+    const scale = Math.min(1, maxEdge / Math.max(size.width, size.height));
+    const normalized = image.resize({
+      width: Math.max(1, Math.round(size.width * scale)),
+      height: Math.max(1, Math.round(size.height * scale)),
+      quality: 'best',
+    }).toPNG();
+    return { image: normalized.toString('base64'), mimeType: 'image/png' };
+  }
+  if (mime === 'image/webp') {
+    const webpSize = parseWebpSize(bytes);
+    if (!webpSize) throw new Error(`${label}无法解码或像素过大`);
+    return { image: bytes.toString('base64'), mimeType: 'image/webp' };
+  }
+  throw new Error(`${label}无法解码或像素过大`);
+}
+
+async function assertSafeExternalImageUrl(parsed, siteOrigin) {
+  if (parsed.username || parsed.password) throw new Error('图片地址不允许包含凭据');
+  const sameOriginAsSite = Boolean(siteOrigin && parsed.origin === siteOrigin);
+  if (!sameOriginAsSite && parsed.protocol !== 'https:') {
+    throw new Error('仅支持 HTTPS 外部图片地址或当前站点同源图片');
+  }
+  if (sameOriginAsSite && parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('不支持的图片协议');
+  }
+  if (sameOriginAsSite) return;
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+    throw new Error('禁止访问内网或本机图片地址');
+  }
+  if (net.isIP(host)) {
+    if (isPrivateIpAddress(host)) throw new Error('禁止访问内网或本机图片地址');
+    return;
+  }
+  const records = await dns.promises.lookup(host, { all: true }).catch(() => null);
+  if (!Array.isArray(records) || !records.length) {
+    throw new Error('无法解析图片域名');
+  }
+  for (const rec of records) {
+    if (isPrivateIpAddress(rec.address)) {
+      throw new Error('禁止访问内网或本机图片地址');
+    }
+  }
+}
+
 function applyConfirmedFrame(result, site, source = 'native') {
+  const prevSnapshotId = outputSnapshotId;
   const nextSnapshotId = result.snapshot?.id ?? null;
-  if (nextSnapshotId !== outputSnapshotId) broadcastScrollState(null);
+  const isNewSnapshot = nextSnapshotId !== prevSnapshotId;
+  if (isNewSnapshot) {
+    broadcastScrollState(null);
+    broadcastSpotlight(null);
+  }
   if (nextSnapshotId && outputTestCard) broadcastTestCard(false);
   outputSnapshotId = nextSnapshotId;
   broadcastOnAir(snapshotToOnAir(result.snapshot));
   if (result.appearance && typeof result.appearance === 'object') {
-    outputAppearance = result.appearance;
-    if (outputTestCard && !nextSnapshotId) {
+    const nextAppearance = manualDisplaySize
+      ? { ...result.appearance, maxWidth: manualDisplaySize.width, viewportHeight: manualDisplaySize.height }
+      : result.appearance;
+    const prevAppearanceJson = JSON.stringify(outputAppearance);
+    outputAppearance = nextAppearance;
+    if (outputTestCard && !nextSnapshotId && JSON.stringify(nextAppearance) !== prevAppearanceJson) {
       const payload = { active: true, appearance: outputAppearance };
       liveContents(displayWindow)?.send?.('output:test-card', payload);
       obsBridge.pushTestCard(payload);
     }
   }
   if (nextSnapshotId) {
+    const effectiveAppearance = result.appearance || outputAppearance;
     lastLiveFrame = {
       snapshot: result.snapshot,
-      appearance: result.appearance || outputAppearance,
+      appearance: effectiveAppearance,
       activation: result.activation,
       epoch: result.epoch,
     };
     const key = obsBridge.getKey();
     if (obsBridge.getClientCount() > 0 && key) {
-      obsBridge.pushFrame({ ...lastLiveFrame, basePath: `/obs/${key}` });
+      const fingerprint = JSON.stringify({
+        id: nextSnapshotId,
+        activation: result.activation,
+        epoch: result.epoch,
+        appearance: effectiveAppearance,
+      });
+      if (fingerprint !== lastObsFrameFingerprint) {
+        lastObsFrameFingerprint = fingerprint;
+        obsBridge.pushFrame({ ...lastLiveFrame, basePath: `/obs/${key}` });
+      }
     }
+    const encoderOffsets = timelineSync.getLiveEncoderOffsets();
     void sessionHistory.record({
       snapshot: result.snapshot,
       siteLabel: site?.label || '',
       topicTitle: lastKnownTopicTitle || activeTopic(site) || '',
+      ...encoderOffsets,
     }).catch(() => {});
+    if (isNewSnapshot && !sessionHistory.getStreamStartedAt()) {
+      void timelineSync.syncNow({ forceBilibili: false, forceApply: false }).catch(() => {});
+    }
   } else {
     lastLiveFrame = null;
-    if (source === 'obs' && !outputTestCard) obsBridge.pushBlank();
+    if (lastObsFrameFingerprint) {
+      lastObsFrameFingerprint = '';
+      if (source === 'obs' && !outputTestCard) obsBridge.pushBlank();
+    } else if (source === 'obs' && !outputTestCard && prevSnapshotId) {
+      obsBridge.pushBlank();
+    }
   }
 }
 
@@ -584,6 +798,7 @@ function stopObsPoller() {
   obsGrant = null;
   obsReceiverId = null;
   obsEpoch = null;
+  lastObsFrameFingerprint = '';
 }
 
 async function startObsPoller() {
@@ -606,7 +821,7 @@ async function startObsPoller() {
 
   const schedule = ms => {
     clearTimeout(obsPollTimer);
-    if (!alive()) return;
+    if (!alive()) { stopObsPoller(); return; }
     obsPollTimer = setTimeout(() => void tick(), ms);
     obsPollTimer.unref?.();
   };
@@ -616,32 +831,36 @@ async function startObsPoller() {
     try {
       if (!obsGrant) {
         const grant = await siteRequest(scope.site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(scope.site), kind: 'display', label: 'OBS 本地浏览器源' } });
-        if (!alive()) return;
+        if (!alive()) { stopObsPoller(); return; }
         obsGrant = grant;
       }
-      const startedAt = performance.now();
       if (!obsReceiverId) {
+        const openStartedAt = performance.now();
         const opened = await http(`${scope.site.origin}/api/mail/live`, '/display/open', 'POST', {}, obsGrant.token, { timeout: 2400 });
-        if (!alive()) return;
+        if (!alive()) { stopObsPoller(); return; }
         if (typeof opened.receiverId !== 'string' || typeof opened.epoch !== 'string') throw new Error('展示接收端无效');
         obsReceiverId = opened.receiverId;
         obsEpoch = opened.epoch;
-        confirmOutputLease(opened, startedAt);
+        confirmOutputLease(opened, openStartedAt);
       }
+      const frameStartedAt = performance.now();
       const frame = await http(`${scope.site.origin}/api/mail/live`, `/display/frame?receiverId=${encodeURIComponent(obsReceiverId)}`, 'GET', undefined, obsGrant.token, { timeout: 2400 });
-      if (!alive()) return;
+      if (!alive()) { stopObsPoller(); return; }
       if (frame.receiverId !== obsReceiverId || frame.epoch !== obsEpoch) {
         obsReceiverId = null;
         obsEpoch = null;
+        lastObsFrameFingerprint = '';
         obsBridge.pushBlank();
         schedule(500);
         return;
       }
-      confirmOutputLease(frame, startedAt);
+      confirmOutputLease(frame, frameStartedAt);
       if (outputSnapshotId && !frame.snapshot) {
         outputSnapshotId = null;
         lastLiveFrame = null;
+        lastObsFrameFingerprint = '';
         broadcastScrollState(null);
+        broadcastSpotlight(null);
         broadcastOnAir(null);
         obsBridge.pushBlank();
       } else {
@@ -649,16 +868,18 @@ async function startObsPoller() {
       }
       schedule(500);
     } catch (error) {
-      if (!alive()) return;
+      if (!alive()) { stopObsPoller(); return; }
       outputSnapshotId = null;
       lastLiveFrame = null;
+      lastObsFrameFingerprint = '';
       outputDeadline = 0;
       broadcastScrollState(null);
+      broadcastSpotlight(null);
       broadcastOnAir(null);
       obsBridge.pushBlank();
       obsReceiverId = null;
       obsEpoch = null;
-      if (error?.status === 401 || error?.status === 403) obsGrant = null;
+      if (isAuthFailure(error)) obsGrant = null;
       schedule(1200);
     }
   }
@@ -703,9 +924,10 @@ function blank(paint = true) {
   shortcuts.bumpNextVersion();
   const held = { window: displayWindow, version: ++outputVersion, painted: Promise.resolve(false) };
   outputDeadline = 0; outputHeld = true;
-  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null;
+  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null; lastObsFrameFingerprint = '';
   stopObsPoller();
   broadcastScrollState(null);
+  broadcastSpotlight(null);
   broadcastOnAir(null);
   if (outputTestCard) broadcastTestCard(false);
   obsBridge.pushBlank();
@@ -729,15 +951,18 @@ async function resumeOutput(held) {
 async function clearOutputWith(operation) {
   const held = blank(); pendingOutputClears++;
   let result;
-  try { result = await operation(); } finally { pendingOutputClears--; }
-  await resumeOutput(held); return result;
+  try { result = await operation(); }
+  finally { pendingOutputClears--; }
+  await resumeOutput(held);
+  return result;
 }
 async function recoverOutput(window = displayWindow, crashed = false) {
   if (quitting || pendingOutputClears || !window || window !== displayWindow || window.isDestroyed() || recoveringWindows.has(window)) return;
   const contents = liveContents(window); if (!contents) { closeOutput(window); return; }
   recoveringWindows.add(window); outputDeadline = 0; outputHeld = true;
-  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null;
+  outputReceiverVersion++; outputReceiverId = null; outputEpoch = null; outputSnapshotId = null; lastLiveFrame = null; lastObsFrameFingerprint = '';
   broadcastScrollState(null);
+  broadcastSpotlight(null);
   broadcastOnAir(null);
   if (outputTestCard) broadcastTestCard(false);
   obsBridge.pushBlank();
@@ -760,6 +985,8 @@ async function recoverOutput(window = displayWindow, crashed = false) {
     if (current()) {
       outputHeld = false;
       liveContents(window)?.send?.('output:overlay', overlayStore.get());
+      liveContents(window)?.send?.('output:motion', desktopPrefs.displayMotion !== false);
+      liveContents(window)?.send?.('output:spotlight', null);
       window.showInactive();
     }
   } catch (error) {
@@ -780,13 +1007,32 @@ function syncDisplaySize(appearance) {
   if (!displayWindow || displayWindow.isDestroyed() || !appearance || typeof appearance !== 'object') return;
   const width = Number.isFinite(appearance.maxWidth) ? Math.round(Math.min(1920, Math.max(280, appearance.maxWidth))) : 1200;
   const height = Number.isFinite(appearance.viewportHeight) ? Math.round(Math.min(1080, Math.max(180, appearance.viewportHeight))) : 640;
+  const serverChanged =
+    lastServerDisplaySize !== null &&
+    (lastServerDisplaySize.width !== width || lastServerDisplaySize.height !== height);
+  lastServerDisplaySize = { width, height };
+  if (manualDisplaySize) {
+    if (serverChanged) {
+      manualDisplaySize = null;
+      void workspaceStore.save({ displaySize: undefined }).catch(() => {});
+    } else {
+      if (displaySize.width !== manualDisplaySize.width || displaySize.height !== manualDisplaySize.height) {
+        displaySize = { ...manualDisplaySize };
+        displayWindow.setContentSize?.(displaySize.width, displaySize.height);
+      }
+      return;
+    }
+  }
   if (displaySize.width === width && displaySize.height === height) return;
   displaySize = { width, height };
   displayWindow.setContentSize?.(width, height);
 }
 function closeOutput(expectedWindow = displayWindow) {
   if (expectedWindow !== displayWindow) return;
-  const old = displayWindow; blank(false); displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 }; outputDeadline = 0; outputHeld = false; outputVersion++;
+  const old = displayWindow; blank(false); displayWindow = null; state.output = null;
+  displaySize = manualDisplaySize ? { ...manualDisplaySize } : { width: 960, height: 640 };
+  lastServerDisplaySize = null;
+  outputDeadline = 0; outputHeld = false; outputVersion++;
   if (old && !old.isDestroyed()) old.close();
 }
 function hideSite(site) {
@@ -811,9 +1057,11 @@ async function selectTopic(id, connectionId) {
   const topic = await siteRequest(site, { path: `/control/topics/${encodeURIComponent(id)}`, method: 'GET' });
   await vaultStore.waitForCommit(); assertCurrent(scope); assertAttempt();
   if (topic.id !== id) throw new Error('网站返回了不匹配的话题');
-  lastKnownTopicTitle = typeof topic.title === 'string' ? topic.title : '';
+  const resolvedTitle = typeof topic.title === 'string' ? topic.title : '';
   const next = { ...site, selectedTopicId: id };
-  return vaultStore.persist(state.sites.map(item => item.id === site.id ? next : item), site.id, assertAttempt);
+  const persisted = await vaultStore.persist(state.sites.map(item => item.id === site.id ? next : item), site.id, assertAttempt);
+  lastKnownTopicTitle = resolvedTitle;
+  return persisted;
 }
 async function hide() {
   return clearOutputWith(() => hideSite(selected()));
@@ -832,57 +1080,80 @@ async function openDisplay(initiatingTile) {
   if (pendingOutputClears) throw new Error('正在隐藏展示，请稍候');
   if (displayWindow && !displayWindow.isDestroyed() && state.output) { if (outputHeld) await recoverOutput(); else displayWindow.show(); return; }
   const scope = context(), site = scope.site;
+  if (!activeTopic(site)) throw new Error('请先选择话题');
   stopObsPoller();
   closeOutput();
   const version = outputVersion;
-  if (!activeTopic(site)) throw new Error('请先选择话题');
-  const grant = await siteRequest(site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(site), kind: 'display', label: '桌面展示窗口' } });
-  assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); if (version !== outputVersion) throw new Error('展示请求已取消');
-  state.output = grant;
-  const partition = `windchime-display-${crypto.randomUUID()}`;
-  displaySize = { width: 960, height: 640 };
-  const savedPos = fitDisplayPosition(workspaceStore.get().displayBounds, displaySize, screen?.getAllDisplays().map(d => d.workArea));
-  displayWindow = new BrowserWindow({
-    width: 960,
-    height: 640,
-    ...savedPos,
-    title: 'WindChime Display',
-    transparent: true,
-    backgroundColor: '#00000000',
-    show: false,
-    frame: false,
-    webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false },
-  });
-  secureWindow(displayWindow, partition);
-  const window = displayWindow;
-  window.on('moved', () => {
-    if (displayWindow !== window || window.isDestroyed()) return;
-    clearTimeout(displayMoveTimer);
-    displayMoveTimer = setTimeout(() => {
+  let window = null;
+  try {
+    const grant = await siteRequest(site, { path: '/control/grants', method: 'POST', body: { topicId: activeTopic(site), kind: 'display', label: '桌面展示窗口' } });
+    assertCurrent(scope); if (initiatingTile) assertTile(initiatingTile); if (version !== outputVersion) throw new Error('展示请求已取消');
+    state.output = grant;
+    const partition = `windchime-display-${crypto.randomUUID()}`;
+    displaySize = manualDisplaySize ? { ...manualDisplaySize } : { width: 960, height: 640 };
+    lastServerDisplaySize = null;
+    const savedPos = fitDisplayPosition(workspaceStore.get().displayBounds, displaySize, screen?.getAllDisplays().map(d => d.workArea));
+    displayWindow = new BrowserWindow({
+      width: displaySize.width,
+      height: displaySize.height,
+      ...savedPos,
+      title: 'WindChime Display',
+      transparent: true,
+      backgroundColor: '#00000000',
+      show: false,
+      frame: false,
+      webPreferences: { preload: path.join(__dirname, 'preload-display.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, partition, spellcheck: false, backgroundThrottling: false },
+    });
+    secureWindow(displayWindow, partition);
+    window = displayWindow;
+    window.on('moved', () => {
       if (displayWindow !== window || window.isDestroyed()) return;
-      const b = window.getBounds?.();
-      if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
-        void workspaceStore.save({ displayBounds: { x: Math.round(b.x), y: Math.round(b.y) } }).catch(() => {});
-      }
-    }, 250);
-    displayMoveTimer.unref?.();
-  });
-  window.on('closed', () => {
-    if (displayWindow !== window) return;
-    displayWindow = null; state.output = null; displaySize = { width: 960, height: 640 };
-    outputAppearance = null; outputDeadline = 0; outputVersion++; lastLiveFrame = null;
-    broadcastScrollState(null); broadcastOnAir(null);
-    if (outputTestCard) broadcastTestCard(false);
-    obsBridge.pushBlank();
-    if (obsBridge.getClientCount() > 0 && isCurrent(scope)) void startObsPoller();
-    else if (isCurrent(scope)) void hideSite(site).catch(() => {});
-  });
-  window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
-  window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
-  await window.loadFile(path.join(__dirname, 'build/display.html'));
-  assertCurrent(scope); if (displayWindow !== window || version !== outputVersion || window.isDestroyed()) throw new Error('展示窗口已关闭');
-  liveContents(window)?.send?.('output:overlay', overlayStore.get());
-  window.showInactive();
+      clearTimeout(displayMoveTimer);
+      displayMoveTimer = setTimeout(() => {
+        if (displayWindow !== window || window.isDestroyed()) return;
+        const b = window.getBounds?.();
+        if (b && Number.isFinite(b.x) && Number.isFinite(b.y)) {
+          void workspaceStore.save({ displayBounds: { x: Math.round(b.x), y: Math.round(b.y) } }).catch(() => {});
+        }
+      }, 250);
+      displayMoveTimer.unref?.();
+    });
+    window.on('closed', () => {
+      if (displayWindow !== window) return;
+      displayWindow = null; state.output = null;
+      displaySize = manualDisplaySize ? { ...manualDisplaySize } : { width: 960, height: 640 };
+      lastServerDisplaySize = null;
+      outputAppearance = null; outputDeadline = 0; outputHeld = false;
+      outputSnapshotId = null; outputReceiverId = null; outputEpoch = null;
+      outputVersion++; lastLiveFrame = null; lastObsFrameFingerprint = '';
+      broadcastScrollState(null); broadcastSpotlight(null); broadcastOnAir(null);
+      if (outputTestCard) broadcastTestCard(false);
+      obsBridge.pushBlank();
+      if (obsBridge.getClientCount() > 0 && isCurrent(scope)) void startObsPoller();
+      else if (isCurrent(scope)) void hideSite(site).catch(() => {});
+    });
+    window.webContents.on('unresponsive', () => { if (!outputHeld) void recoverOutput(window); });
+    window.webContents.on('render-process-gone', () => { if (!outputHeld) void recoverOutput(window, true); });
+    await window.loadFile(path.join(__dirname, 'build/display.html'));
+    assertCurrent(scope); if (displayWindow !== window || version !== outputVersion || window.isDestroyed()) throw new Error('展示窗口已关闭');
+    liveContents(window)?.send?.('output:overlay', overlayStore.get());
+    liveContents(window)?.send?.('output:motion', desktopPrefs.displayMotion !== false);
+    liveContents(window)?.send?.('output:spotlight', outputSnapshotId ? outputSpotlightAssetId : null);
+    if (outputTestCard && !outputSnapshotId) {
+      liveContents(window)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
+    }
+    window.showInactive();
+  } catch (error) {
+    if (window && displayWindow === window) {
+      closeOutput(window);
+    } else if (!displayWindow && version === outputVersion) {
+      state.output = null;
+    }
+    if (!displayWindow && obsBridge.getClientCount() > 0 && isCurrent(scope)) {
+      void startObsPoller();
+    }
+    throw error;
+  }
 }
 
 async function start() {
@@ -890,6 +1161,7 @@ async function start() {
   vaultPath = path.join(userDataDir, 'devices.v1.enc');
   workspacePath = path.join(userDataDir, 'workspace.v1.json');
   historyPath = path.join(userDataDir, 'play-history.v1.json');
+  timelineSecretsPath = path.join(userDataDir, 'timeline-secrets.v1.enc');
   overlayDir = path.join(userDataDir, 'local-overlay');
   updatesDir = path.join(userDataDir, 'updates');
 
@@ -897,8 +1169,11 @@ async function start() {
   const ws = await workspaceStore.read();
   await overlayStore.read();
   await sessionHistory.read();
+  await timelineSync.readSecrets();
 
   desktopTheme = ws.theme === 'dark' ? 'dark' : 'light';
+  manualDisplaySize = ws.displaySize ? { ...ws.displaySize } : null;
+  if (manualDisplaySize) displaySize = { ...manualDisplaySize };
   desktopPrefs = {
     randomDrawEnabled: ws.randomDrawEnabled === true,
     clearOnBlindDraw: ws.clearOnBlindDraw === true,
@@ -907,6 +1182,7 @@ async function start() {
     startupView: ws.startupView === 'inbox' || ws.startupView === 'studio' ? ws.startupView : 'last',
     lastView: ws.lastView ?? null,
     autoCheckUpdate: ws.autoCheckUpdate !== false,
+    displayMotion: ws.displayMotion !== false,
     uiSurface: ws.uiSurface === 'standard' || ws.uiSurface === 'lite' ? ws.uiSurface : 'liquid',
   };
 
@@ -923,6 +1199,7 @@ async function start() {
   }
 
   const partition = 'persist:windchime-private';
+  syncNativeTheme(desktopTheme);
   const controlUseAcrylic = desktopPrefs.uiSurface === 'liquid' && supportsWinAcrylic();
   controlWindow = new BrowserWindow({
     width: 1440,
@@ -938,6 +1215,15 @@ async function start() {
   });
   controlAcrylicActive = applyWindowSurface(controlWindow, desktopTheme, desktopPrefs.uiSurface, { isControl: true, allowAcrylic: true });
   secureWindow(controlWindow, partition);
+  controlWindowFocused = true;
+  controlWindow.on('focus', () => {
+    controlWindowFocused = true;
+    liveContents(controlWindow)?.send?.('app:window-focus', true);
+  });
+  controlWindow.on('blur', () => {
+    controlWindowFocused = false;
+    liveContents(controlWindow)?.send?.('app:window-focus', false);
+  });
   controlWindow.on('close', event => { if (!quitting) { event.preventDefault(); controlWindow.hide(); } });
   for (const event of ['blur', 'hide', 'closed']) controlWindow.on(event, () => shortcuts.setRecording(false, () => performance.now()));
 
@@ -1000,9 +1286,13 @@ async function start() {
       assertCurrent(scope);
       if (request.method === 'GET' && request.path.startsWith('/control/topics/') && typeof result?.title === 'string') {
         lastKnownTopicTitle = result.title;
+      } else if (request.method === 'GET' && (request.path === '/control/topics' || request.path.startsWith('/control/topics?')) && Array.isArray(result?.items)) {
+        const curTopic = activeTopic(site);
+        const matched = curTopic ? result.items.find(item => item && item.id === curTopic) : null;
+        if (matched && typeof matched.title === 'string') lastKnownTopicTitle = matched.title;
       }
       return result;
-    } catch (error) { if (isCurrent(scope) && (error.status === 401 || error.status === 403)) { blank(); state.output = null; } throw error; }
+    } catch (error) { if (isCurrent(scope) && isAuthFailure(error)) { blank(); state.output = null; } throw error; }
   }, true);
   handle('control:hide', 'private', hide);
   handle('control:upload', 'private', async input => {
@@ -1014,14 +1304,50 @@ async function start() {
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${site.origin}/api/mail/live/control/upload`, { method: 'POST', body: form, headers: { authorization: `Bearer ${site.token}` }, signal: controller.signal, redirect: 'error' });
-      const body = await response.json(); assertCurrent(scope); if (!response.ok) throw new Error(body.error || '图片上传失败'); return body.attachments?.[0] ?? body;
+      const body = await response.json().catch(() => ({})); assertCurrent(scope); if (!response.ok) throw new Error(body.error || '图片上传失败'); return body.attachments?.[0] ?? body;
     } finally { clearTimeout(timeout); }
   });
   handle('display:open', 'private', window => openDisplay(tileFor(window)), true);
   handle('display:scroll', 'private', command => { sendDisplayScroll(command); });
   handle('display:scroll-state', 'private', () => outputScrollState);
+  handle('display:spotlight-get', 'private', () => (outputSnapshotId ? outputSpotlightAssetId : null));
+  handle('display:spotlight-set', 'private', assetId => {
+    if (assetId === null || assetId === '') return broadcastSpotlight(null);
+    if (typeof assetId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(assetId)) {
+      throw new Error('无效附图标识');
+    }
+    if (!outputSnapshotId || !lastLiveFrame?.snapshot?.assets?.some(asset => asset.id === assetId)) {
+      return broadcastSpotlight(null);
+    }
+    return broadcastSpotlight(assetId);
+  });
   handle('display:on-air', 'private', () => outputOnAir);
   handle('display:test-card-get', 'private', () => outputTestCard);
+  handle('display:size-set', 'private', input => {
+    if (!input || typeof input !== 'object') throw new Error('无效展示尺寸');
+    const width = Number(input.width);
+    const height = Number(input.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('无效展示尺寸');
+    const clampedW = Math.round(Math.min(1920, Math.max(280, width)));
+    const clampedH = Math.round(Math.min(1080, Math.max(180, height)));
+    manualDisplaySize = { width: clampedW, height: clampedH };
+    void workspaceStore.save({ displaySize: manualDisplaySize }).catch(() => {});
+    outputAppearance = { ...(outputAppearance || {}), maxWidth: clampedW, viewportHeight: clampedH };
+    displaySize = { width: clampedW, height: clampedH };
+    if (displayWindow && !displayWindow.isDestroyed()) {
+      displayWindow.setContentSize?.(clampedW, clampedH);
+    }
+    if (outputTestCard && !outputSnapshotId) {
+      broadcastTestCard(true);
+    }
+    return { width: clampedW, height: clampedH };
+  });
+  handle('app:clipboard-write', 'private', text => {
+    if (typeof text !== 'string' || text.length > 524288) throw new Error('无效剪贴板内容');
+    if (!clipboard || typeof clipboard.writeText !== 'function') throw new Error('系统剪贴板不可用');
+    clipboard.writeText(text);
+    return true;
+  });
   handle('display:test-card', 'private', async (window, active) => {
     const enabled = Boolean(active);
     if (enabled) {
@@ -1038,6 +1364,9 @@ async function start() {
   }, true);
   handle('display:scroll-metrics', 'display', metrics => { broadcastScrollState(sanitizeScrollMetrics(metrics)); });
   handle('display:overlay-get', 'display', () => overlayStore.get());
+  handle('display:motion-get', 'display', () => desktopPrefs.displayMotion !== false);
+  handle('display:spotlight-output-get', 'display', () => (outputSnapshotId ? outputSpotlightAssetId : null));
+  handle('display:test-card-output-get', 'display', () => ({ active: outputTestCard && !outputSnapshotId, appearance: outputAppearance }));
   handle('display:request', 'display', async input => {
     const scope = context(), version = outputVersion;
     const request = validateRequest(input, 'display'); const output = state.output; if (!output) throw new Error('展示未连接');
@@ -1061,6 +1390,8 @@ async function start() {
         if (typeof result.receiverId !== 'string' || typeof result.epoch !== 'string') throw new Error('展示接收端无效');
         outputReceiverId = result.receiverId; outputEpoch = result.epoch;
         liveContents(displayWindow)?.send?.('output:overlay', overlayStore.get());
+        liveContents(displayWindow)?.send?.('output:motion', desktopPrefs.displayMotion !== false);
+        liveContents(displayWindow)?.send?.('output:spotlight', outputSnapshotId ? outputSpotlightAssetId : null);
         if (outputTestCard) liveContents(displayWindow)?.send?.('output:test-card', { active: true, appearance: outputAppearance });
       }
       if (request.path.startsWith('/display/frame?')) {
@@ -1074,7 +1405,7 @@ async function start() {
       return result;
     } catch (error) {
       if (isCurrent(scope) && version === outputVersion && output === state.output && receiverVersion === outputReceiverVersion) {
-        if (error.status === 401 || error.status === 403) { blank(); state.output = null; }
+        if (isAuthFailure(error)) { blank(); state.output = null; }
         else if (ownsAsset() && (outputSnapshotId || outputDeadline)) void recoverOutput();
       }
       throw error;
@@ -1108,7 +1439,7 @@ async function start() {
   });
   handle('tiles:open', 'control', openTile);
   ipcMain.handle('tiles:close', async (event, module) => { try { const window = assertWindow(event, 'private'), own = tileFor(window); if (own && own.module !== module) throw new Error('不可关闭其他磁贴'); await closeTile(module); return { ok: true }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
-  ipcMain.handle('tiles:pin', async (event, module, pinned) => { try { const window = assertWindow(event, 'private'), own = tileFor(window), tile = tiles.get(module); if (!tile || typeof pinned !== 'boolean' || (own && own !== tile)) throw new Error('无效磁贴'); assertTile(tile); tile.pinned = pinned; tile.window.setAlwaysOnTop(pinned); rememberTile(tile); return { ok: true, data: tileMetadata(tile) }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
+  ipcMain.handle('tiles:pin', async (event, module, pinned) => { try { const window = assertWindow(event, 'private'), own = tileFor(window), tile = tiles.get(module); if (!tile || typeof pinned !== 'boolean' || (own && own !== tile)) throw new Error('无效磁贴'); assertTile(tile); tile.pinned = pinned; tile.window.setAlwaysOnTop(pinned); rememberTile(tile, true); return { ok: true, data: tileMetadata(tile) }; } catch (error) { return { ok: false, error: error.message, code: error.code || 'DESKTOP_ERROR' }; } });
   ipcMain.handle('tiles:dirty', async (event, dirty) => {
     try {
       const window = assertWindow(event, 'private');
@@ -1140,11 +1471,12 @@ async function start() {
     broadcastPrivate('app:theme-changed', theme);
     return theme;
   });
-  handle('app:prefs-get', 'private', () => prefsPayload());
-  handle('app:prefs-set', 'private', async patch => {
+  handle('app:window-focus-get', 'private', window => (window === controlWindow ? controlWindowFocused : window.isFocused()), true);
+  handle('app:prefs-get', 'private', window => prefsPayload(Boolean(tileFor(window))), true);
+  handle('app:prefs-set', 'private', async (window, patch) => {
     if (!patch || typeof patch !== 'object') throw new Error('无效偏好设置');
     const next = { ...desktopPrefs };
-    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw', 'chimeEnabled', 'autoCheckUpdate']) {
+    for (const key of ['randomDrawEnabled', 'clearOnBlindDraw', 'chimeEnabled', 'autoCheckUpdate', 'displayMotion']) {
       if (key in patch) {
         if (typeof patch[key] !== 'boolean') throw new Error('无效偏好设置');
         next[key] = patch[key];
@@ -1167,8 +1499,13 @@ async function start() {
       next.uiSurface = patch.uiSurface;
     }
     const surfaceChanged = next.uiSurface !== desktopPrefs.uiSurface;
+    const motionChanged = next.displayMotion !== desktopPrefs.displayMotion;
     desktopPrefs = next;
     if (surfaceChanged) applyWindowTheme(desktopTheme);
+    if (motionChanged) {
+      liveContents(displayWindow)?.send?.('output:motion', next.displayMotion);
+      obsBridge.pushMotion(next.displayMotion);
+    }
     await workspaceStore.save({
       randomDrawEnabled: next.randomDrawEnabled,
       clearOnBlindDraw: next.clearOnBlindDraw,
@@ -1177,12 +1514,12 @@ async function start() {
       startupView: next.startupView,
       lastView: next.lastView,
       autoCheckUpdate: next.autoCheckUpdate,
+      displayMotion: next.displayMotion,
       uiSurface: next.uiSurface,
     });
-    const out = prefsPayload();
-    broadcastPrivate('app:prefs-changed', out);
-    return out;
-  });
+    broadcastPrefs();
+    return prefsPayload(Boolean(tileFor(window)));
+  }, true);
   handle('app:badge-update', 'control', count => {
     const n = Number.isInteger(count) && count > 0 ? Math.min(9999, count) : 0;
     tray?.setToolTip?.(n > 0 ? `风铃 · 未拆 ${n} 封 · Ctrl+Shift+H 一键隐藏` : '风铃 · Ctrl+Shift+H 一键隐藏');
@@ -1208,17 +1545,67 @@ async function start() {
   handle('overlay:pick', 'control', (window, slot) => overlayStore.pick(slot, window), true);
   handle('overlay:clear', 'control', slot => overlayStore.clear(slot));
 
-  // Local session broadcast history IPC
+  // Local session broadcast history & 3-source timeline auto-sync IPC
   handle('history:list', 'private', () => sessionHistory.list());
-  handle('history:export', 'control', async input => {
-    const format = input?.format === 'csv' ? 'csv' : 'md';
+  handle('history:stream-start-get', 'private', () => sessionHistory.getStreamStartedAt());
+  handle('history:stream-start-set', 'control', input => {
+    if (input && typeof input === 'object' && 'value' in input) {
+      return sessionHistory.setStreamStartedAt(input.value, { source: input.source, label: input.label });
+    }
+    return sessionHistory.setStreamStartedAt(input);
+  });
+  handle('history:offset-set', 'control', async sec => {
+    const next = await sessionHistory.setTimelineOffsetSec(sec);
+    timelineSync.notifyExternalChange();
+    return next;
+  });
+  handle('timeline:status-get', 'private', () => timelineSync.getStatus());
+  handle('timeline:config-set', 'control', patch => timelineSync.updateConfig(patch));
+  handle('timeline:sync-now', 'control', input =>
+    timelineSync.syncNow({
+      forceBilibili: true,
+      track: input?.track === 'stream' || input?.track === 'record' || input?.track === 'bilibili' ? input.track : null,
+      forceApply: input?.forceApply !== false,
+    }),
+  );
+  handle('timeline:pick-recording', 'control', async () => {
+    const choice = await dialog.showOpenDialog(controlWindow, {
+      title: '选择录播视频文件以对齐时间轴',
+      properties: ['openFile'],
+      filters: [{ name: '录播视频文件', extensions: ['mp4', 'mkv', 'flv', 'ts', 'mov', 'webm'] }],
+    });
+    if (choice.canceled || !choice.filePaths[0]) return null;
+    const latestPlayed = sessionHistory.list()[0]?.playedAt ?? null;
+    const info = await timelineSync.inspectRecordingFile(choice.filePaths[0], latestPlayed);
+    await sessionHistory.setStreamStartedAt(info.startedAt, {
+      source: 'file',
+      label: `录播文件 · ${info.fileName}`,
+    });
+    return { ...info, status: timelineSync.getStatus() };
+  });
+  handle('history:chapters-text', 'private', input => {
     const dateKey = typeof input?.dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dateKey) ? input.dateKey : undefined;
-    const content = format === 'csv' ? sessionHistory.exportCsv(dateKey) : sessionHistory.exportMarkdown(dateKey);
-    const defaultName = `风铃播报复盘-${dateKey || new Date().toISOString().slice(0, 10)}.${format}`;
+    return sessionHistory.exportChapters(dateKey);
+  });
+  handle('history:export', 'control', async input => {
+    const format = input?.format === 'csv' ? 'csv' : input?.format === 'chapters' ? 'chapters' : 'md';
+    const dateKey = typeof input?.dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dateKey) ? input.dateKey : undefined;
+    const content =
+      format === 'csv'
+        ? sessionHistory.exportCsv(dateKey)
+        : format === 'chapters'
+          ? sessionHistory.exportChapters(dateKey)
+          : sessionHistory.exportMarkdown(dateKey);
+    const ext = format === 'chapters' ? 'txt' : format;
+    const prefix = format === 'chapters' ? '风铃B站章节' : '风铃播报复盘';
+    const nowLocal = new Date();
+    const localDate = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
+    const defaultName = `${prefix}-${dateKey || localDate}.${ext}`;
+    const filterName = format === 'csv' ? 'CSV 表格' : format === 'chapters' ? 'B站切片章节 TXT' : 'Markdown 文档';
     const result = await dialog.showSaveDialog(controlWindow, {
-      title: '导出风铃播报复盘',
+      title: format === 'chapters' ? '导出 B站 / 录播切片章节' : '导出风铃播报复盘',
       defaultPath: defaultName,
-      filters: [{ name: format === 'csv' ? 'CSV 表格' : 'Markdown 文档', extensions: [format] }],
+      filters: [{ name: filterName, extensions: [ext] }],
     });
     if (result.canceled || !result.filePath) return false;
     await fs.writeFile(result.filePath, Buffer.from(content, 'utf8'));
@@ -1252,13 +1639,82 @@ async function start() {
     if (choice.canceled || !choice.filePaths[0]) return null;
     const stat = await fs.stat(choice.filePaths[0]); if (!stat.isFile() || stat.size > 5 * 1024 * 1024) throw new Error('头像不能超过 5 MiB');
     const bytes = await fs.readFile(choice.filePaths[0]);
-    const valid = bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) || (bytes[0]===255&&bytes[1]===216&&bytes[2]===255) || (bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP');
-    if (!valid) throw new Error('请选择 PNG、JPEG 或 WebP 图片');
-    const image = nativeImage.createFromBuffer(bytes), size = image.getSize();
-    if (image.isEmpty() || size.width * size.height > 16000000) throw new Error('头像无法解码或像素过大');
-    const scale = Math.min(1, 512 / Math.max(size.width, size.height));
-    const normalized = image.resize({ width: Math.max(1,Math.round(size.width*scale)), height: Math.max(1,Math.round(size.height*scale)), quality: 'best' }).toPNG();
-    return { image: normalized.toString('base64'), mimeType: 'image/png' };
+    return decodeValidatedImageBytes(bytes, { maxEdge: 512, label: '头像' });
+  });
+  handle('files:poster-image', 'control', async purpose => {
+    const validPurpose = purpose === 'background' || purpose === 'logo' ? purpose : 'avatar';
+    const title = validPurpose === 'background' ? '选择海报背景图' : validPurpose === 'logo' ? '选择二维码中心图标' : '选择海报头像';
+    const maxEdge = validPurpose === 'background' ? 1920 : 512;
+    const label = validPurpose === 'background' ? '背景图' : validPurpose === 'logo' ? '图标' : '头像';
+    const choice = await dialog.showOpenDialog(controlWindow, { title, properties: ['openFile'], filters: [{ name: '静态图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+    if (choice.canceled || !choice.filePaths[0]) return null;
+    const stat = await fs.stat(choice.filePaths[0]); if (!stat.isFile() || stat.size > 5 * 1024 * 1024) throw new Error(`${label}不能超过 5 MiB`);
+    const bytes = await fs.readFile(choice.filePaths[0]);
+    return decodeValidatedImageBytes(bytes, { maxEdge, label });
+  });
+  handle('share:fetch-image', 'control', async src => {
+    if (typeof src !== 'string' || !src.trim() || src.length > 2048) throw new Error('无效图片地址');
+    const site = selected();
+    const raw = src.trim();
+    let currentUrl;
+    try {
+      currentUrl = raw.startsWith('/') && !raw.startsWith('//')
+        ? (site ? new URL(raw, site.origin) : null)
+        : new URL(raw);
+    } catch {
+      currentUrl = null;
+    }
+    if (!currentUrl) throw new Error('无效图片地址');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    timer.unref?.();
+    try {
+      let response = null;
+      for (let hop = 0; hop < 3; hop++) {
+        await assertSafeExternalImageUrl(currentUrl, site?.origin || '');
+        const host = currentUrl.hostname.toLowerCase();
+        const headers = {
+          accept: 'image/webp,image/png,image/jpeg,image/*;q=0.8',
+          ...(host === 'hdslb.com' || host.endsWith('.hdslb.com') ? { referer: 'https://www.bilibili.com/' } : {}),
+        };
+        response = await fetch(currentUrl.href, {
+          method: 'GET',
+          headers,
+          credentials: 'omit',
+          cache: 'no-store',
+          redirect: 'manual',
+          signal: controller.signal,
+        });
+        if (response.status >= 300 && response.status < 400) {
+          const loc = response.headers.get('location');
+          if (!loc) throw new Error('图片重定向无效');
+          currentUrl = new URL(loc, currentUrl);
+          continue;
+        }
+        break;
+      }
+      if (!response || !response.ok) throw new Error(`图片获取失败（HTTP ${response?.status ?? 0}）`);
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.length === 0 || bytes.length > 5 * 1024 * 1024) throw new Error('图片不能超过 5 MiB');
+      const mime = detectImageMime(bytes);
+      if (!mime) throw new Error('远程文件不是有效的 PNG、JPEG 或 WebP 图片');
+      if (mime === 'image/webp') {
+        const size = parseWebpSize(bytes);
+        if (!size) throw new Error('WebP 图片无法解码或像素过大');
+      } else {
+        const img = nativeImage.createFromBuffer(bytes);
+        const size = img.getSize();
+        if (img.isEmpty() || size.width <= 0 || size.height <= 0 || size.width * size.height > 16000000) {
+          throw new Error('图片无法解码或像素过大');
+        }
+      }
+      return { image: bytes.toString('base64'), mimeType: mime };
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('获取图片超时，请稍后重试');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   });
   handle('share:open', 'control', async () => {
     const scope = context(); if (!activeTopic(scope.site)) throw new Error('请先选择话题');
@@ -1268,6 +1724,8 @@ async function start() {
   });
 
   await controlWindow.loadFile(path.join(__dirname, 'build/control.html'));
+  timelineSync.startPolling(15000);
+  void timelineSync.syncNow({ forceBilibili: false, forceApply: false }).catch(() => {});
   tray = new Tray(path.join(__dirname, 'build/tray.png'));
   tray.setToolTip('风铃 · Ctrl+Shift+H 一键隐藏');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -1288,6 +1746,7 @@ async function start() {
         outputSnapshotId = null;
         lastLiveFrame = null;
         broadcastScrollState(null);
+        broadcastSpotlight(null);
         broadcastOnAir(null);
         obsBridge.pushBlank();
       }
@@ -1299,6 +1758,7 @@ app.on('before-quit', event => {
   if (quitting) return; event.preventDefault(); quitting = true;
   const site = selected();
   stopObsPoller();
+  timelineSync.stopPolling();
   void obsBridge.stop().catch(() => {});
   closeOutput();
   disposeTiles();

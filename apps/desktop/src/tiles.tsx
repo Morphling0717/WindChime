@@ -34,6 +34,7 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
   const [keywordEnabled, setKeywordEnabled] = useState(false);
   const [topicTitle, setTopicTitle] = useState('');
   const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
+  const [spotlightAssetId, setSpotlightAssetId] = useState<string | null>(null);
   const [theme, setTheme] = useState<DesktopTheme>('light');
   const [prefs, setPrefs] = useState<DesktopPrefs>({
     randomDrawEnabled: false,
@@ -43,6 +44,7 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     startupView: 'last',
     lastView: null,
     autoCheckUpdate: true,
+    displayMotion: true,
     uiSurface: 'liquid',
   });
   const [testCardActive, setTestCardActive] = useState(false);
@@ -64,8 +66,8 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
   }, [theme]);
   useEffect(() => {
     document.documentElement.dataset.uiSurface = prefs.uiSurface;
-    document.documentElement.dataset.acrylic = prefs.acrylicActive ? '1' : '0';
-  }, [prefs.uiSurface, prefs.acrylicActive]);
+    document.documentElement.dataset.acrylic = '0';
+  }, [prefs.uiSurface]);
   useLiquidGlassMotion(rootRef, prefs.uiSurface === 'liquid');
   const toggleTheme = () => {
     const next: DesktopTheme = theme === 'dark' ? 'light' : 'dark';
@@ -75,7 +77,10 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
   useEffect(() => {
     if (module !== 'transport' && module !== 'blindbox') return;
     void unwrap(bridge.getScrollState()).then(value => { if (alive.current) setScrollState(value); }).catch(() => {});
-    return bridge.onScrollState(value => { if (alive.current) setScrollState(value); });
+    const offScroll = bridge.onScrollState(value => { if (alive.current) setScrollState(value); });
+    void unwrap(bridge.getSpotlight()).then(value => { if (alive.current) setSpotlightAssetId(value); }).catch(() => {});
+    const offSpotlight = bridge.onSpotlightChanged(value => { if (alive.current) setSpotlightAssetId(value); });
+    return () => { offScroll(); offSpotlight(); };
   }, [module]);
   useEffect(() => {
     if (module !== 'blindbox') return;
@@ -95,6 +100,10 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     (command: WindChimeDisplayScrollCommand) => unwrap(bridge.scrollDisplay(command)),
     [],
   );
+  const toggleSpotlight = useCallback(async (assetId: string | null) => {
+    const next = await unwrap(bridge.setSpotlight(assetId));
+    if (alive.current) setSpotlightAssetId(next);
+  }, []);
   const updatePrefs = useCallback(async (patch: Partial<DesktopPrefs>) => {
     setPrefs(current => ({ ...current, ...patch }));
     const saved = await unwrap(bridge.setPrefs(patch));
@@ -163,7 +172,7 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
     finally { if (alive.current) setBusy(false); }
   };
   const title = WINDCHIME_LIVE_MODULES.find(item => item.id === module)!.title;
-  return <div ref={rootRef} className="wc-desktop wc-tile" data-tile={module} data-theme={theme} data-ui-surface={prefs.uiSurface} data-acrylic={prefs.acrylicActive ? '1' : '0'}>
+  return <div ref={rootRef} className="wc-desktop wc-tile" data-tile={module} data-theme={theme} data-ui-surface={prefs.uiSurface} data-acrylic="0">
     <LiquidGlassDefs enabled={prefs.uiSurface === 'liquid'} />
     <header className="tile-titlebar">
       <div className="tile-title"><small>风铃 · 私人磁贴</small><strong>{title}</strong></div>
@@ -182,6 +191,8 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
         onOpenDisplay={() => unwrap(bridge.openDisplay())} onHideDisplay={() => unwrap(bridge.hide())} canApproveDevices={false} blockedTermsEnabled={keywordEnabled}
         scrollState={module === 'transport' || module === 'blindbox' ? scrollState : undefined}
         onScrollDisplay={module === 'transport' || module === 'blindbox' ? scrollDisplay : undefined}
+        spotlightAssetId={module === 'transport' || module === 'blindbox' ? spotlightAssetId : undefined}
+        onToggleSpotlight={module === 'transport' || module === 'blindbox' ? toggleSpotlight : undefined}
         testCardActive={module === 'blindbox' ? testCardActive : undefined}
         onToggleTestCard={module === 'blindbox' ? toggleTestCard : undefined}
         obsClientCount={module === 'blindbox' ? obsStatus?.clientCount ?? status.obsClients ?? 0 : undefined}
@@ -192,9 +203,10 @@ export function TileApp({ module }: { module: WindChimeLiveModule }) {
           module === 'blindbox' && site?.scope === 'site'
             ? async messageId => {
                 if (!(await unwrap(bridge.confirm('在整个网站屏蔽此发送者并处理其来信？对应展示会同步撤下。')))) {
-                  throw new Error('已取消屏蔽操作');
+                  return false;
                 }
                 await mailClient.messages.block(messageId, { topicId: tile.topicId });
+                return true;
               }
             : undefined
         }

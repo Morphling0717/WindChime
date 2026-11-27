@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef, useState, type WheelEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { WindChimeLiveClient } from '../client/live.js';
 import type { WindChimeLiveMessage } from '../core/live.js';
 import type {
@@ -13,6 +14,8 @@ export function OnAirTeleprompter({
   message,
   scrollState,
   onScrollDisplay,
+  spotlightAssetId,
+  onToggleSpotlight,
   compact = false,
 }: {
   client?: WindChimeLiveClient;
@@ -20,6 +23,8 @@ export function OnAirTeleprompter({
   message: WindChimeLiveMessage | null;
   scrollState?: WindChimeDisplayScrollMetrics | null;
   onScrollDisplay: (command: WindChimeDisplayScrollCommand) => Promise<void> | void;
+  spotlightAssetId?: string | null;
+  onToggleSpotlight?: (assetId: string | null) => Promise<void> | void;
   compact?: boolean;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -29,10 +34,17 @@ export function OnAirTeleprompter({
   const rafId = useRef<number | null>(null);
   const [fontSize, setFontSize] = useState(16);
   const [assetUrls, setAssetUrls] = useState<Record<string, string>>({});
-  const [zoomed, setZoomed] = useState<{ url: string; caption: string } | null>(null);
+  const [zoomed, setZoomed] = useState<{ id: string; caption: string } | null>(null);
+  const onScrollDisplayRef = useRef(onScrollDisplay);
+  onScrollDisplayRef.current = onScrollDisplay;
+  const canScrollRef = useRef(false);
 
   const send = (command: WindChimeDisplayScrollCommand) => {
     void Promise.resolve(onScrollDisplay(command)).catch(() => {});
+  };
+  const toggleSpotlight = (assetId: string | null) => {
+    if (!onToggleSpotlight) return;
+    void Promise.resolve(onToggleSpotlight(assetId)).catch(() => {});
   };
 
   useEffect(() => {
@@ -43,8 +55,13 @@ export function OnAirTeleprompter({
     };
   }, []);
 
-  // Reset local teleprompter scroll and close lightbox when the on-air message changes.
+  // Reset local teleprompter scroll, cancel pending rAF ratio, and close lightbox when the on-air message changes.
   useEffect(() => {
+    if (rafId.current !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    pendingRatio.current = null;
     setZoomed(null);
     const el = boxRef.current;
     if (!el) return;
@@ -56,6 +73,23 @@ export function OnAirTeleprompter({
     } else {
       programmatic.current = false;
     }
+  }, [message?.id, message?.snapshotId]);
+
+  // Attach non-passive wheel listener so preventDefault() succeeds without console warnings.
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const onWheel = (event: globalThis.WheelEvent) => {
+      const localMax = el.scrollHeight - el.clientHeight;
+      if (localMax <= 2 && canScrollRef.current && Math.abs(event.deltaY) > 0) {
+        event.preventDefault();
+        lastLocalAt.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const delta = Math.max(-0.85, Math.min(0.85, event.deltaY / 240));
+        void Promise.resolve(onScrollDisplayRef.current({ type: 'step', delta })).catch(() => {});
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, [message?.id, message?.snapshotId]);
 
   // Load attached image thumbnails for the on-air message when available.
@@ -151,6 +185,7 @@ export function OnAirTeleprompter({
   }
 
   const canScroll = Boolean(scrollState && scrollState.maximum > 1);
+  canScrollRef.current = canScroll;
   const ratio = scrollState ? Math.min(1, Math.max(0, scrollState.ratio)) : 0;
   const percent = Math.round(ratio * 100);
   const isAutoRunning = Boolean(canScroll && scrollState && !scrollState.paused);
@@ -180,20 +215,6 @@ export function OnAirTeleprompter({
     if (localMax <= 1) return;
     lastLocalAt.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
     scheduleRatio(Math.min(1, Math.max(0, el.scrollTop / localMax)));
-  };
-
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const el = boxRef.current;
-    if (!el) return;
-    const localMax = el.scrollHeight - el.clientHeight;
-    // If local reading text fits without a scrollbar while the larger audience
-    // card overflows, forward mouse wheel directly to the audience display.
-    if (localMax <= 2 && canScroll && Math.abs(event.deltaY) > 0) {
-      event.preventDefault();
-      lastLocalAt.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      const delta = Math.max(-0.85, Math.min(0.85, event.deltaY / 240));
-      send({ type: 'step', delta });
-    }
   };
 
   const handleScrub = (value: number) => {
@@ -274,7 +295,6 @@ export function OnAirTeleprompter({
         tabIndex={0}
         aria-label="在播信件提词内容，滚动滑轮可同步观众画面"
         onScroll={handleScroll}
-        onWheel={handleWheel}
       >
         <div className="wc-teleprompter-copy">{message.draft.text}</div>
         {message.draft.linkUrl ? (
@@ -287,23 +307,39 @@ export function OnAirTeleprompter({
 
       {mediaItems.length > 0 ? (
         <div className="wc-teleprompter-media" aria-label="在播附图预览">
-          {mediaItems.map((item, index) => (
-            <button
-              key={`${item.id}-${index}`}
-              type="button"
-              className="wc-teleprompter-thumb"
-              disabled={!item.url}
-              title={item.url ? `查看大图：${item.caption}` : '图片载入中'}
-              aria-label={`放大查看附图 ${index + 1}`}
-              onClick={() => { if (item.url) setZoomed({ url: item.url, caption: item.caption }); }}
-            >
-              {item.url ? (
-                <img src={item.url} alt={item.caption} />
-              ) : (
-                <span className="wc-muted">载入中…</span>
-              )}
-            </button>
-          ))}
+          {mediaItems.map((item, index) => {
+            const isSpotlight = Boolean(spotlightAssetId && spotlightAssetId === item.id);
+            return (
+              <div key={`${item.id}-${index}`} className={`wc-teleprompter-media-item${isSpotlight ? ' is-spotlight' : ''}`}>
+                <button
+                  type="button"
+                  className="wc-teleprompter-thumb"
+                  disabled={!item.url}
+                  title={item.url ? `私下查看大图：${item.caption}` : '图片载入中'}
+                  aria-label={`放大查看附图 ${index + 1}`}
+                  onClick={() => { if (item.url) setZoomed({ id: item.id, caption: item.caption }); }}
+                >
+                  {item.url ? (
+                    <img src={item.url} alt={item.caption} />
+                  ) : (
+                    <span className="wc-muted">载入中…</span>
+                  )}
+                </button>
+                {onToggleSpotlight ? (
+                  <button
+                    type="button"
+                    className={`wc-queue-small wc-teleprompter-spotlight-btn${isSpotlight ? ' is-active' : ''}`}
+                    disabled={!item.url && !isSpotlight}
+                    aria-pressed={isSpotlight}
+                    title={isSpotlight ? '收起观众端大图放大' : '同步在展示窗和 OBS 放大展示这张图'}
+                    onClick={() => toggleSpotlight(isSpotlight ? null : item.id)}
+                  >
+                    {isSpotlight ? '✕ 收起放大' : '🔍 投屏放大'}
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
@@ -350,23 +386,44 @@ export function OnAirTeleprompter({
         </div>
       </div>
 
-      {zoomed ? (
-        <div
-          className="wc-teleprompter-lightbox"
-          role="dialog"
-          aria-modal="true"
-          aria-label="附图大图预览"
-          onClick={() => setZoomed(null)}
-        >
-          <div className="wc-teleprompter-lightbox-card" onClick={event => event.stopPropagation()}>
-            <img src={zoomed.url} alt={zoomed.caption} />
-            <div className="wc-teleprompter-lightbox-foot">
-              <span>{zoomed.caption}</span>
-              <button type="button" onClick={() => setZoomed(null)}>关闭</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {zoomed && assetUrls[zoomed.id]
+        ? (() => {
+            const zoomedUrl = assetUrls[zoomed.id]!;
+            const lightbox = (
+              <div
+                className="wc-teleprompter-lightbox"
+                role="dialog"
+                aria-modal="true"
+                aria-label="附图大图预览"
+                onClick={() => setZoomed(null)}
+              >
+                <div className="wc-teleprompter-lightbox-card" onClick={event => event.stopPropagation()}>
+                  <img src={zoomedUrl} alt={zoomed.caption} />
+                  <div className="wc-teleprompter-lightbox-foot">
+                    <span>{zoomed.caption}</span>
+                    <div className="wc-actions">
+                      {onToggleSpotlight ? (
+                        <button
+                          type="button"
+                          className={spotlightAssetId === zoomed.id ? 'wc-danger' : 'wc-primary'}
+                          onClick={() => toggleSpotlight(spotlightAssetId === zoomed.id ? null : zoomed.id)}
+                        >
+                          {spotlightAssetId === zoomed.id ? '✕ 收起观众放大' : '🔍 同步放大给观众看'}
+                        </button>
+                      ) : null}
+                      <button type="button" onClick={() => setZoomed(null)}>关闭</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+            const portalTarget =
+              typeof document !== 'undefined' ? document.querySelector('.wc-desktop') ?? document.body : null;
+            return portalTarget
+              ? createPortal(<div className="wc-live wc-modal-portal">{lightbox}</div>, portalTarget)
+              : lightbox;
+          })()
+        : null}
     </section>
   );
 }

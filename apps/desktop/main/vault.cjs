@@ -16,7 +16,7 @@ async function atomicRename(fs, temporary, target, setTimeoutFn) {
   }
 }
 
-function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge, sanitizeLocalOverlay, onReadError, setTimeoutFn = setTimeout }) {
+function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge, sanitizeLocalOverlay, sanitizeTimelineSync, onReadError, setTimeoutFn = setTimeout }) {
   let workspace = restoreWorkspace(null);
   let tail = Promise.resolve();
 
@@ -33,6 +33,7 @@ function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge
     if (!['inbox', 'studio'].includes(value.startupView)) delete value.startupView;
     if (!['inbox', 'studio', 'topics', 'share', 'settings'].includes(value.lastView)) delete value.lastView;
     if (value.autoCheckUpdate !== false) delete value.autoCheckUpdate;
+    if (value.displayMotion !== false) delete value.displayMotion;
     if (value.uiSurface !== 'standard' && value.uiSurface !== 'lite') delete value.uiSurface;
     if (
       !value.displayBounds ||
@@ -42,12 +43,32 @@ function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge
     ) {
       delete value.displayBounds;
     }
+    if (
+      !value.displaySize ||
+      typeof value.displaySize !== 'object' ||
+      !Number.isFinite(value.displaySize.width) ||
+      !Number.isFinite(value.displaySize.height) ||
+      value.displaySize.width < 280 ||
+      value.displaySize.width > 1920 ||
+      value.displaySize.height < 180 ||
+      value.displaySize.height > 1080
+    ) {
+      delete value.displaySize;
+    } else {
+      value.displaySize = {
+        width: Math.round(value.displaySize.width),
+        height: Math.round(value.displaySize.height),
+      };
+    }
     const cleanObs = sanitizeObsBridge(value.obsBridge);
     if (cleanObs) value.obsBridge = cleanObs;
     else delete value.obsBridge;
     const cleanOverlay = sanitizeLocalOverlay(value.localOverlay);
     if (cleanOverlay) value.localOverlay = cleanOverlay;
     else delete value.localOverlay;
+    const cleanTimeline = sanitizeTimelineSync?.(value.timelineSync);
+    if (cleanTimeline) value.timelineSync = cleanTimeline;
+    else delete value.timelineSync;
     return value;
   }
 
@@ -61,9 +82,14 @@ function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge
   }
 
   function save(patch = {}) {
+    return update(() => patch);
+  }
+
+  function update(mutator) {
     const op = tail.then(async () => {
       const target = getPath();
-      const next = cleanValue({ ...workspace, ...patch });
+      const patch = typeof mutator === 'function' ? mutator(workspace) : mutator;
+      const next = cleanValue({ ...workspace, ...(patch || {}) });
       const temporary = `${target}.tmp`;
       await fs.writeFile(temporary, JSON.stringify(next));
       await atomicRename(fs, temporary, target, setTimeoutFn);
@@ -78,6 +104,7 @@ function createWorkspaceStore({ fs, getPath, restoreWorkspace, sanitizeObsBridge
     get: () => workspace,
     read,
     save,
+    update,
   };
 }
 

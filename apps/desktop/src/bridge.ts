@@ -32,6 +32,7 @@ export type DesktopPrefs = {
   startupView: DesktopStartupView;
   lastView: DesktopRememberedView | null;
   autoCheckUpdate: boolean;
+  displayMotion: boolean;
   uiSurface: DesktopUiSurface;
   acrylicActive?: boolean;
 };
@@ -59,6 +60,66 @@ export type PlayHistoryEntry = {
   nickname: string | null;
   textSnippet: string;
   assetCount: number;
+  obsStreamMs?: number;
+  obsRecordMs?: number;
+};
+export type TimelineStartSource =
+  | "manual"
+  | "obs-ws-stream"
+  | "obs-ws-record"
+  | "obs-log-stream"
+  | "obs-log-record"
+  | "bilibili"
+  | "file";
+export type TimelineTrackInfo = {
+  source: TimelineStartSource;
+  label: string;
+  startedAt: string;
+  active: boolean;
+};
+export type TimelineSyncStatus = {
+  config: {
+    obsLogEnabled: boolean;
+    obsWsEnabled: boolean;
+    obsWsPort: number;
+    bilibiliRoomId: string;
+    preferTrack: "stream" | "record";
+    hasObsWsPassword: boolean;
+  };
+  anchor: {
+    startedAt: string | null;
+    source: TimelineStartSource | null;
+    label: string;
+    offsetSec: number;
+  };
+  obsWs: {
+    enabled: boolean;
+    reachable: boolean;
+    streamActive: boolean;
+    recordActive: boolean;
+    recordPaused: boolean;
+    authError: string;
+  };
+  obsLog: {
+    enabled: boolean;
+    detected: boolean;
+    streamActive: boolean;
+    recordActive: boolean;
+  };
+  bilibili: {
+    configured: boolean;
+    roomId: string;
+    live: boolean;
+    startedAt: string | null;
+    title: string;
+    error: string;
+  };
+  tracks: {
+    stream: TimelineTrackInfo | null;
+    record: TimelineTrackInfo | null;
+    bilibili: TimelineTrackInfo | null;
+  };
+  checkedAt: string | null;
 };
 export type UpdaterInfo = {
   currentVersion: string;
@@ -134,6 +195,9 @@ type Bridge = {
   scrollDisplay(command: WindChimeDisplayScrollCommand): Promise<Result<void>>;
   getScrollState(): Promise<Result<WindChimeDisplayScrollMetrics | null>>;
   onScrollState(callback: (state: WindChimeDisplayScrollMetrics | null) => void): () => void;
+  getSpotlight(): Promise<Result<string | null>>;
+  setSpotlight(assetId: string | null): Promise<Result<string | null>>;
+  onSpotlightChanged(callback: (assetId: string | null) => void): () => void;
   getOnAir(): Promise<Result<OnAirInfo | null>>;
   onOnAir(callback: (state: OnAirInfo | null) => void): () => void;
   getTheme(): Promise<Result<DesktopTheme>>;
@@ -142,10 +206,14 @@ type Bridge = {
   getPrefs(): Promise<Result<DesktopPrefs>>;
   setPrefs(patch: Partial<DesktopPrefs>): Promise<Result<DesktopPrefs>>;
   onPrefsChanged(callback: (prefs: DesktopPrefs) => void): () => void;
+  getWindowFocus(): Promise<Result<boolean>>;
+  onWindowFocus(callback: (focused: boolean) => void): () => void;
   updateBadge(count: number): Promise<Result<number>>;
   getTestCard(): Promise<Result<boolean>>;
   setTestCard(active: boolean): Promise<Result<boolean>>;
+  setDisplaySize(size: { width: number; height: number }): Promise<Result<{ width: number; height: number }>>;
   onTestCardChanged(callback: (active: boolean) => void): () => void;
+  writeClipboard(text: string): Promise<Result<boolean>>;
   getObsStatus(): Promise<Result<ObsBridgeStatus>>;
   configureObs(patch: { enabled?: boolean; port?: number }): Promise<Result<ObsBridgeStatus>>;
   resetObsKey(): Promise<Result<ObsBridgeStatus>>;
@@ -156,7 +224,25 @@ type Bridge = {
   clearOverlayImage(slot: "badge" | "background"): Promise<Result<DesktopOverlayState>>;
   onOverlayChanged(callback: (overlay: DesktopOverlayState) => void): () => void;
   getHistory(): Promise<Result<PlayHistoryEntry[]>>;
-  exportHistory(input?: { format?: "md" | "csv"; dateKey?: string }): Promise<Result<boolean>>;
+  getStreamStartedAt(): Promise<Result<string | null>>;
+  setStreamStartedAt(iso: string | null): Promise<Result<string | null>>;
+  setTimelineOffset(sec: number): Promise<Result<number>>;
+  onStreamStartChanged(callback: (iso: string | null) => void): () => void;
+  getTimelineStatus(): Promise<Result<TimelineSyncStatus>>;
+  configureTimeline(patch: {
+    obsLogEnabled?: boolean;
+    obsWsEnabled?: boolean;
+    obsWsPort?: number;
+    bilibiliRoomId?: string;
+    preferTrack?: "stream" | "record";
+    obsWsPassword?: string;
+    clearObsWsPassword?: boolean;
+  }): Promise<Result<TimelineSyncStatus>>;
+  syncTimelineNow(input?: { track?: "stream" | "record" | "bilibili"; forceApply?: boolean }): Promise<Result<TimelineSyncStatus>>;
+  pickRecordingForTimeline(): Promise<Result<{ startedAt: string; fileName: string; afterLatestEntry: boolean; warning: string; status: TimelineSyncStatus } | null>>;
+  onTimelineStatusChanged(callback: (status: TimelineSyncStatus) => void): () => void;
+  getHistoryChapters(input?: { dateKey?: string }): Promise<Result<string>>;
+  exportHistory(input?: { format?: "md" | "csv" | "chapters"; dateKey?: string }): Promise<Result<boolean>>;
   clearHistory(): Promise<Result<PlayHistoryEntry[]>>;
   onHistoryChanged(callback: (entries: PlayHistoryEntry[]) => void): () => void;
   getUpdaterInfo(): Promise<Result<UpdaterInfo>>;
@@ -185,6 +271,8 @@ type Bridge = {
     bytes?: Uint8Array;
   }): Promise<Result<boolean>>;
   chooseAvatar(): Promise<Result<{ image: string; mimeType: string } | null>>;
+  choosePosterImage(purpose: "avatar" | "background" | "logo"): Promise<Result<{ image: string; mimeType: string } | null>>;
+  fetchShareImage(src: string): Promise<Result<{ image: string; mimeType: string }>>;
   openSubmission(): Promise<Result<boolean>>;
 };
 declare global {
@@ -192,10 +280,15 @@ declare global {
     windchimeDesktop: Bridge;
     windchimeOutput: Pick<Bridge, "request"> & {
       getOverlay(): Promise<Result<DesktopOverlayState>>;
+      getMotion(): Promise<Result<boolean>>;
+      getSpotlight(): Promise<Result<string | null>>;
+      getTestCard(): Promise<Result<{ active: boolean; appearance: unknown }>>;
       onBlank(callback: () => void): () => void;
       onScrollCommand(callback: (command: WindChimeDisplayScrollCommand) => void): () => void;
       onTestCard(callback: (payload: { active: boolean; appearance: unknown }) => void): () => void;
       onOverlay(callback: (overlay: DesktopOverlayState) => void): () => void;
+      onSpotlight(callback: (assetId: string | null) => void): () => void;
+      onMotion(callback: (enabled: boolean) => void): () => void;
       reportScroll(metrics: WindChimeDisplayScrollMetrics | null): void;
     };
   }

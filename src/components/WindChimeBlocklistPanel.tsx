@@ -68,13 +68,17 @@ export function WindChimeBlocklistPanel({
     [theme],
   );
   const [busyHash, setBusyHash] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleUnblock = async (hash: string) => {
     if (!onUnblock) return;
     if (!window.confirm("解除对该发送者的拉黑？")) return;
+    setActionError(null);
     setBusyHash(hash);
     try {
       await onUnblock(hash);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "解除拉黑失败");
     } finally {
       setBusyHash(null);
     }
@@ -100,12 +104,12 @@ export function WindChimeBlocklistPanel({
         </div>
       </div>
 
-      {error && (
+      {(error || actionError) && (
         <p
           className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-900 dark:text-red-100"
           role="alert"
         >
-          {error}
+          {error || actionError}
         </p>
       )}
 

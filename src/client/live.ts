@@ -99,9 +99,11 @@ export function createWindChimeLiveClient(options: WindChimeLiveOptions = {}) {
       const form = new FormData(); form.set('topicId', topicId); form.set('messageId', messageId); form.set('file', file);
       const headers = new Headers(await options.getHeaders?.());
       const result = await (options.fetch ?? globalThis.fetch)(`${(options.baseUrl ?? '/api/mail/live').replace(/\/$/, '')}/control/upload`, { method: 'POST', body: form, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
-      const body = await result.json();
+      const body = await result.json().catch(() => ({})) as { id?: string; code?: string; error?: string; attachments?: Array<{ id: string }> };
       if (!result.ok) throw new WindChimeLiveClientError(body.code ?? 'UPLOAD_FAILED', result.status, body.error ?? '图片上传失败');
-      return body.attachments?.[0] ?? body;
+      const uploaded = body.attachments?.[0] ?? (typeof body.id === 'string' ? { id: body.id } : null);
+      if (!uploaded) throw new WindChimeLiveClientError('INVALID_RESPONSE', result.status, '图片上传返回异常');
+      return uploaded;
     },
   };
 }

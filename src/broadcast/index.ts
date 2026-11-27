@@ -4,7 +4,17 @@ export type { WindChimeConnectionKeysProps } from './ConnectionKeys.js';
 export { WindChimeLiveControlPanel, WINDCHIME_LIVE_MODULES } from './ControlPanel.js';
 export type { WindChimeLiveControlPanelProps, WindChimeLiveModule } from './ControlPanel.js';
 export { OnAirTeleprompter } from './Teleprompter.js';
-export { BlindBoxStudio, type BlindBoxStudioProps } from './BlindBoxStudio.js';
+export {
+  BlindBoxStudio,
+  filterAndOrderPending,
+  type BlindBoxStudioProps,
+  type BlindBoxContentFilter,
+  type BlindBoxDrawOrder,
+  type BlindBoxHistoryEntry,
+  type BlindBoxTimelineInfo,
+} from './BlindBoxStudio.js';
+export { ImageRedactorModal } from './ImageRedactorModal.js';
+export type { ImageRedactorModalProps, RedactorTool, RedactorMode } from './ImageRedactorModal.js';
 export { WindChimeLiveDisplay, WindChimeLiveCard } from './Display.js';
 export type { WindChimeLiveRenderProps, WindChimeLocalOverlay } from './Display.js';
 export type {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { unwrap, type ObsBridgeStatus } from './bridge';
 
 const bridge = window.windchimeDesktop;
@@ -24,17 +24,69 @@ export function ObsGuidePanel({
 }) {
   const [tab, setTab] = useState<'browser' | 'window'>('browser');
   const [portInput, setPortInput] = useState(String(obsStatus.port || 17420));
+  const [sizeWidth, setSizeWidth] = useState('1000');
+  const [sizeHeight, setSizeHeight] = useState('640');
+  const [sizeFeedback, setSizeFeedback] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const syncedPortRef = useRef(String(obsStatus.port || 17420));
+  const copyTimerRef = useRef<number | null>(null);
+  const sizeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const nextPort = String(obsStatus.port || 17420);
+    if (nextPort !== syncedPortRef.current) {
+      syncedPortRef.current = nextPort;
+      setPortInput(nextPort);
+    }
+  }, [obsStatus.port]);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    if (sizeTimerRef.current !== null) window.clearTimeout(sizeTimerRef.current);
+  }, []);
+
+  const applyDisplaySize = async (w: number, h: number) => {
+    setBusy(true);
+    setError('');
+    setSizeFeedback('');
+    try {
+      const next = await unwrap(bridge.setDisplaySize({ width: w, height: h }));
+      setSizeWidth(String(next.width));
+      setSizeHeight(String(next.height));
+      setSizeFeedback(
+        displayOpen
+          ? `已应用窗口尺寸 ${next.width} × ${next.height} px。`
+          : `已预设窗口尺寸 ${next.width} × ${next.height} px，打开独立展示窗口后立即生效。`,
+      );
+      if (sizeTimerRef.current !== null) window.clearTimeout(sizeTimerRef.current);
+      sizeTimerRef.current = window.setTimeout(() => {
+        setSizeFeedback('');
+        sizeTimerRef.current = null;
+      }, 3200);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '调整展示尺寸失败');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const applyConfig = async (patch: { enabled?: boolean; port?: number }) => {
+    if (patch.port !== undefined) {
+      if (!Number.isInteger(patch.port) || patch.port < 1024 || patch.port > 65535) {
+        setError('本机端口需填写 1024–65535 之间的整数');
+        return;
+      }
+    }
     setBusy(true);
     setError('');
     try {
       const next = await unwrap(bridge.configureObs(patch));
       onObsChanged(next);
-      setPortInput(String(next.port || 17420));
+      const resolvedPort = String(next.port || 17420);
+      syncedPortRef.current = resolvedPort;
+      setPortInput(resolvedPort);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'OBS 服务配置失败');
     } finally {
@@ -58,14 +110,23 @@ export function ObsGuidePanel({
 
   const copyUrl = async () => {
     if (!obsStatus.url) return;
+    setError('');
     try {
-      await navigator.clipboard.writeText(obsStatus.url);
+      await unwrap(bridge.writeClipboard(obsStatus.url));
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 2000);
     } catch {
       setError('剪贴板写入失败，请手动全选复制链接');
     }
   };
+
+  const parsedPort = portInput.trim() === '' ? NaN : Number(portInput.trim());
+  const portValid = Number.isInteger(parsedPort) && parsedPort >= 1024 && parsedPort <= 65535;
+  const showPortControls = obsStatus.running || obsStatus.enabled || Boolean(obsStatus.error);
 
   return (
     <section className="obs-guide-card glass-surface management" aria-label="OBS 采集配置">
@@ -115,20 +176,22 @@ export function ObsGuidePanel({
             />
           </label>
 
-          {obsStatus.running && obsStatus.url ? (
+          {showPortControls ? (
             <div className="obs-url-box">
-              <label>
-                OBS 浏览器源 URL（直接复制到 OBS → 来源 → 浏览器）
-                <div className="obs-url-row">
-                  <input type="text" readOnly value={obsStatus.url} aria-label="OBS 浏览器源地址" onFocus={e => e.currentTarget.select()} />
-                  <button type="button" className="primary" onClick={() => void copyUrl()}>
-                    {copied ? '已复制 ✓' : '复制链接'}
-                  </button>
-                  <button type="button" disabled={busy} onClick={() => void resetUrl()}>
-                    重置链接
-                  </button>
-                </div>
-              </label>
+              {obsStatus.running && obsStatus.url ? (
+                <label>
+                  OBS 浏览器源 URL（直接复制到 OBS → 来源 → 浏览器）
+                  <div className="obs-url-row">
+                    <input type="text" readOnly value={obsStatus.url} aria-label="OBS 浏览器源地址" onFocus={e => e.currentTarget.select()} />
+                    <button type="button" className="primary" onClick={() => void copyUrl()}>
+                      {copied ? '已复制 ✓' : '复制链接'}
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => void resetUrl()}>
+                      重置链接
+                    </button>
+                  </div>
+                </label>
+              ) : null}
               <div className="obs-port-row">
                 <label>
                   本机端口
@@ -143,24 +206,28 @@ export function ObsGuidePanel({
                 </label>
                 <button
                   type="button"
-                  disabled={busy || Number(portInput) === obsStatus.port}
-                  onClick={() => void applyConfig({ enabled: true, port: Number(portInput) })}
+                  disabled={busy || !portValid || (obsStatus.running && parsedPort === obsStatus.port)}
+                  onClick={() => void applyConfig({ enabled: true, port: parsedPort })}
                 >
-                  应用端口
+                  {obsStatus.running ? '应用端口' : '更换端口并重试'}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy || Boolean(onAir && !testCardActive)}
-                  onClick={() => void onToggleTestCard(!testCardActive).catch(() => {})}
-                >
-                  {testCardActive ? '关闭 OBS 测试卡' : '发测试卡对位 OBS'}
-                </button>
+                {obsStatus.running && obsStatus.url ? (
+                  <button
+                    type="button"
+                    disabled={busy || Boolean(onAir && !testCardActive)}
+                    onClick={() => void onToggleTestCard(!testCardActive).catch(() => {})}
+                  >
+                    {testCardActive ? '关闭 OBS 测试卡' : '发测试卡对位 OBS'}
+                  </button>
+                ) : null}
               </div>
-              <ol className="obs-steps">
-                <li>在 OBS 点击「来源 +」→ 选择「浏览器」，粘贴上方 URL。</li>
-                <li>宽高填你在「设置与外观 → 展示外观」设定的展示宽度与高度（默认 <code>1200 × 640</code>），确定即可。</li>
-                <li>点击「发测试卡对位 OBS」即可实时拖放对位；一键隐藏（<code>Ctrl+Shift+H</code>）会毫秒级清空 OBS 画面。</li>
-              </ol>
+              {obsStatus.running && obsStatus.url ? (
+                <ol className="obs-steps">
+                  <li>在 OBS 点击「来源 +」→ 选择「浏览器」，粘贴上方 URL。</li>
+                  <li><strong>自由调整形状（拉长 / 拉宽 / 改竖屏）</strong>：在 OBS 双击该浏览器源，直接填你想要的「宽度 / 高度」（例如竖屏 <code>480 × 860</code>、横屏 <code>1000 × 640</code>、横幅 <code>1280 × 360</code>），风铃卡片会自动 <strong>100% 铺满整个画布</strong>且文字绝不变形。</li>
+                  <li>点击「发测试卡对位 OBS」会显示四边虚线框与实时像素尺寸，在 OBS 预览区拖红框四角即可等比缩放与定位；一键隐藏（<code>Ctrl+Shift+H</code>）会毫秒级清空 OBS 画面。</li>
+                </ol>
+              ) : null}
             </div>
           ) : (
             <p className="obs-hint">开启上方开关后会自动生成专属本机地址，无需打开独立窗口就能在 OBS 里直接出画面。</p>
@@ -185,6 +252,30 @@ export function ObsGuidePanel({
               {testCardActive ? '关闭测试卡' : '发测试卡对位 OBS'}
             </button>
           </div>
+          <div className="obs-port-row" style={{ marginTop: 10 }}>
+            <button type="button" disabled={busy} onClick={() => void applyDisplaySize(1000, 640)}>横屏 1000×640</button>
+            <button type="button" disabled={busy} onClick={() => void applyDisplaySize(480, 860)}>长竖屏 480×860</button>
+            <button type="button" disabled={busy} onClick={() => void applyDisplaySize(360, 800)}>窄侧栏 360×800</button>
+            <button type="button" disabled={busy} onClick={() => void applyDisplaySize(1280, 360)}>宽条幅 1280×360</button>
+          </div>
+          <div className="obs-port-row" style={{ marginTop: 8 }}>
+            <label>
+              窗口宽度
+              <input type="number" min={280} max={1920} value={sizeWidth} disabled={busy} onChange={e => setSizeWidth(e.target.value)} />
+            </label>
+            <label>
+              窗口高度
+              <input type="number" min={180} max={1080} value={sizeHeight} disabled={busy} onChange={e => setSizeHeight(e.target.value)} />
+            </label>
+            <button type="button" disabled={busy} onClick={() => void applyDisplaySize(Number(sizeWidth) || 1000, Number(sizeHeight) || 640)}>
+              应用窗口尺寸
+            </button>
+          </div>
+          {sizeFeedback ? (
+            <p className="desktop-hotkey-feedback" role="status">
+              {sizeFeedback}
+            </p>
+          ) : null}
         </div>
       )}
 

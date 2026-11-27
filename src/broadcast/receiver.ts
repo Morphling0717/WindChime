@@ -11,8 +11,12 @@ export type WindChimeReceiverOptions = {
 };
 async function prepareAsset(blob: Blob, sha256: string, signal: AbortSignal) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) || blob.size > 5 * 1024 * 1024) throw new Error('Invalid image');
-  const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))).map(x => x.toString(16).padStart(2, '0')).join('');
-  if (hash !== sha256 || signal.aborted) throw new Error('Invalid image digest');
+  if (typeof globalThis.crypto?.subtle?.digest === 'function') {
+    const hash = Array.from(new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))).map(x => x.toString(16).padStart(2, '0')).join('');
+    if (hash !== sha256 || signal.aborted) throw new Error('Invalid image digest');
+  } else if (signal.aborted) {
+    throw new Error('Asset cancelled');
+  }
   const decoded = await createImageBitmap(blob);
   decoded.close();
   if (signal.aborted) throw new Error('Asset cancelled');

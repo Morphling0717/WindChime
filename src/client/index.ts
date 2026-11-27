@@ -82,8 +82,6 @@ export function createWindChimeClient(options: WindChimeClientOptions = {}) {
     body?: unknown,
     opts: WindChimeRequestOptions = {},
   ): Promise<T> {
-    const query = new URLSearchParams();
-    if (opts.topicId) query.set("topicId", opts.topicId);
     const resourcePaths: Record<WindChimeResource, string> = {
       messages: "/messages",
       topics: "/topics",
@@ -111,7 +109,10 @@ export function createWindChimeClient(options: WindChimeClientOptions = {}) {
         break;
       }
     }
-    const url = `${target}${query.size ? `${target.includes("?") ? "&" : "?"}${query}` : ""}`;
+    const [baseTarget, targetQuery = ""] = target.split("?");
+    const finalQuery = new URLSearchParams(targetQuery);
+    if (opts.topicId) finalQuery.set("topicId", opts.topicId);
+    const url = `${baseTarget}${finalQuery.size ? `?${finalQuery}` : ""}`;
     const headers = new Headers(await options.getHeaders?.());
     if (body !== undefined) headers.set("Content-Type", "application/json");
     let response: Response;

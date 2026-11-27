@@ -32,6 +32,12 @@ const PILL_TRACKS: readonly PillTrackConfig[] = [
     axis: "x",
     variant: "segment",
   },
+  {
+    containerSelector: ".wc-bb-filter-group",
+    activeSelector: 'button[aria-pressed="true"]',
+    axis: "x",
+    variant: "segment",
+  },
 ];
 
 const SHEEN_SELECTOR = [
@@ -53,6 +59,8 @@ type TrackInstance = {
   config: PillTrackConfig;
   lastRect: { x: number; y: number; w: number; h: number } | null;
   stretchTimer: number | null;
+  initFrame: number;
+  disposed: boolean;
   ro: ResizeObserver;
   mo: MutationObserver;
   update: (animate: boolean) => void;
@@ -60,6 +68,10 @@ type TrackInstance = {
 };
 
 function mountPillTrack(container: HTMLElement, config: PillTrackConfig): TrackInstance {
+  // Remove any stale pill that could survive abnormal teardown
+  for (const stale of Array.from(container.querySelectorAll<HTMLElement>(":scope > .lg-sliding-pill"))) {
+    stale.remove();
+  }
   const pill = document.createElement("span");
   pill.className = `lg-sliding-pill is-${config.variant}`;
   pill.setAttribute("aria-hidden", "true");
@@ -72,9 +84,12 @@ function mountPillTrack(container: HTMLElement, config: PillTrackConfig): TrackI
     config,
     lastRect: null,
     stretchTimer: null,
+    initFrame: 0,
+    disposed: false,
     ro: null as unknown as ResizeObserver,
     mo: null as unknown as MutationObserver,
     update(animate: boolean) {
+      if (instance.disposed) return;
       const active = container.querySelector<HTMLElement>(config.activeSelector);
       if (!active || active.offsetWidth === 0 || active.offsetHeight === 0) {
         pill.style.opacity = "0";
@@ -121,7 +136,15 @@ function mountPillTrack(container: HTMLElement, config: PillTrackConfig): TrackI
       instance.lastRect = next;
     },
     destroy() {
-      if (instance.stretchTimer !== null) window.clearTimeout(instance.stretchTimer);
+      instance.disposed = true;
+      if (instance.initFrame) {
+        cancelAnimationFrame(instance.initFrame);
+        instance.initFrame = 0;
+      }
+      if (instance.stretchTimer !== null) {
+        window.clearTimeout(instance.stretchTimer);
+        instance.stretchTimer = null;
+      }
       instance.ro.disconnect();
       instance.mo.disconnect();
       container.classList.remove("has-lg-pill");
@@ -144,7 +167,10 @@ function mountPillTrack(container: HTMLElement, config: PillTrackConfig): TrackI
   });
 
   // Measure after initial layout settles
-  requestAnimationFrame(() => instance.update(false));
+  instance.initFrame = requestAnimationFrame(() => {
+    instance.initFrame = 0;
+    instance.update(false);
+  });
   return instance;
 }
 
@@ -167,8 +193,10 @@ export function useLiquidGlassMotion(
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
     const mounted = new Map<HTMLElement, TrackInstance>();
+    let disposed = false;
 
     const scanTracks = () => {
+      if (disposed) return;
       // Prune detached containers
       for (const [el, inst] of mounted) {
         if (!root.contains(el)) {
@@ -189,13 +217,12 @@ export function useLiquidGlassMotion(
       }
     };
 
-    let scanQueued = false;
+    let scanFrame = 0;
     const queueScan = () => {
-      if (scanQueued) return;
-      scanQueued = true;
-      requestAnimationFrame(() => {
-        scanQueued = false;
-        scanTracks();
+      if (disposed || scanFrame) return;
+      scanFrame = requestAnimationFrame(() => {
+        scanFrame = 0;
+        if (!disposed) scanTracks();
       });
     };
 
@@ -267,7 +294,12 @@ export function useLiquidGlassMotion(
     window.addEventListener("scroll", onScrollSync, { passive: true });
 
     return () => {
+      disposed = true;
       rootObserver.disconnect();
+      if (scanFrame) {
+        cancelAnimationFrame(scanFrame);
+        scanFrame = 0;
+      }
       for (const inst of mounted.values()) inst.destroy();
       mounted.clear();
       if (pointerFrame) cancelAnimationFrame(pointerFrame);

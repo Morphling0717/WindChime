@@ -143,7 +143,7 @@ function createObsBridge({
       // 1. Entry HTML page
       if (req.method === 'GET' && subPath.length === 0) {
         await loadBundle();
-        const html = cachedHtml.replace('__WINDCHIME_OBS_BASE__', basePath);
+        const html = cachedHtml.replaceAll('__WINDCHIME_OBS_BASE__', basePath);
         res.writeHead(200, securityHeaders({
           'content-type': 'text/html; charset=utf-8',
           'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
@@ -175,8 +175,11 @@ function createObsBridge({
 
         const initial = getInitialState?.(basePath);
         if (initial?.overlay) sendSse(res, 'overlay', initial.overlay);
-        if (initial?.frame) sendSse(res, 'frame', initial.frame);
-        else if (initial?.testCard?.active) sendSse(res, 'test-card', initial.testCard);
+        if (initial?.motion !== undefined) sendSse(res, 'motion', { enabled: Boolean(initial.motion) });
+        if (initial?.frame) {
+          sendSse(res, 'frame', initial.frame);
+          if (initial?.spotlight) sendSse(res, 'spotlight', { assetId: initial.spotlight });
+        } else if (initial?.testCard?.active) sendSse(res, 'test-card', initial.testCard);
         else sendSse(res, 'blank', { ts: Date.now() });
 
         const cleanup = () => {
@@ -222,8 +225,9 @@ function createObsBridge({
           res.end('Overlay not set');
           return;
         }
+        const isWebp = bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
         res.writeHead(200, securityHeaders({
-          'content-type': 'image/png',
+          'content-type': isWebp ? 'image/webp' : 'image/png',
           'content-length': String(bytes.length),
         }));
         res.end(bytes);
@@ -304,11 +308,22 @@ function createObsBridge({
       actualPort = typeof addr === 'object' && addr ? addr.port : targetPort;
       if (targetPort > 0) port = actualPort;
       heartbeatTimer = setIntervalFn(() => {
+        let removed = 0;
         for (const res of [...clients]) {
-          if (res.writableEnded || res.destroyed) clients.delete(res);
-          else {
-            try { res.write(': ping\n\n'); } catch {}
+          if (res.writableEnded || res.destroyed) {
+            if (clients.delete(res)) removed++;
+          } else {
+            try {
+              res.write(': ping\n\n');
+            } catch {
+              if (clients.delete(res)) removed++;
+              try { res.destroy?.(); } catch {}
+            }
           }
+        }
+        if (removed > 0) {
+          onClientCountChange?.(clients.size);
+          emitStatus();
         }
       }, 15000);
       heartbeatTimer.unref?.();
@@ -376,6 +391,8 @@ function createObsBridge({
     pushFrame: frame => broadcast('frame', frame),
     pushBlank: () => broadcast('blank', { ts: Date.now() }),
     pushScroll: command => broadcast('scroll', command),
+    pushSpotlight: assetId => broadcast('spotlight', { assetId: assetId ?? null }),
+    pushMotion: enabled => broadcast('motion', { enabled: Boolean(enabled) }),
     pushTestCard: payload => broadcast('test-card', payload),
     pushOverlay: () => {
       if (!key || !clients.size) return;

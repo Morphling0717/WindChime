@@ -13,12 +13,42 @@ const DEFAULT_OVERLAY_CONFIG = Object.freeze({
 
 const VALID_POSITIONS = new Set(['top-right', 'top-left', 'bottom-right', 'bottom-left']);
 
+function detectImageMime(bytes) {
+  if (!bytes || bytes.length < 12) return null;
+  if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'image/png';
+  if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return 'image/jpeg';
+  if (bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  return null;
+}
+
+function parseWebpSize(bytes) {
+  if (!bytes || bytes.length < 25) return null;
+  if (bytes.toString('ascii', 0, 4) !== 'RIFF' || bytes.toString('ascii', 8, 12) !== 'WEBP') return null;
+  const chunk = bytes.toString('ascii', 12, 16);
+  let width = 0;
+  let height = 0;
+  if (chunk === 'VP8X') {
+    if (bytes.length < 30) return null;
+    width = 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16));
+    height = 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16));
+  } else if (chunk === 'VP8L') {
+    if (bytes.length < 25 || bytes[20] !== 0x2f) return null;
+    const bits = bytes.readUInt32LE(21);
+    width = (bits & 0x3fff) + 1;
+    height = ((bits >>> 14) & 0x3fff) + 1;
+  } else if (chunk === 'VP8 ') {
+    if (bytes.length < 30 || bytes[23] !== 0x9d || bytes[24] !== 0x01 || bytes[25] !== 0x2a) return null;
+    width = bytes.readUInt16LE(26) & 0x3fff;
+    height = bytes.readUInt16LE(28) & 0x3fff;
+  } else {
+    return null;
+  }
+  if (width <= 0 || height <= 0 || width > 16384 || height > 16384 || width * height > 16000000) return null;
+  return { width, height };
+}
+
 function isValidImageBuffer(bytes) {
-  if (!bytes || bytes.length < 12) return false;
-  const isPng = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-  const isJpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-  const isWebp = bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
-  return isPng || isJpeg || isWebp;
+  return Boolean(detectImageMime(bytes));
 }
 
 function resolveOverlayConfig(raw) {
@@ -61,12 +91,14 @@ function createOverlayStore({ fs, path, nativeImage, dialog, getDir, getConfig, 
 
   function snapshot() {
     const config = resolveOverlayConfig(getConfig());
+    const badgeMime = cache.badge ? (detectImageMime(cache.badge) || 'image/png') : 'image/png';
+    const bgMime = cache.background ? (detectImageMime(cache.background) || 'image/png') : 'image/png';
     return {
       ...config,
       hasBadge: !!cache.badge,
       hasBackground: !!cache.background,
-      badgeUrl: cache.badge ? `data:image/png;base64,${cache.badge.toString('base64')}` : null,
-      backgroundUrl: cache.background ? `data:image/png;base64,${cache.background.toString('base64')}` : null,
+      badgeUrl: cache.badge ? `data:${badgeMime};base64,${cache.badge.toString('base64')}` : null,
+      backgroundUrl: cache.background ? `data:${bgMime};base64,${cache.background.toString('base64')}` : null,
       version,
     };
   }
@@ -100,24 +132,34 @@ function createOverlayStore({ fs, path, nativeImage, dialog, getDir, getConfig, 
 
   async function saveImageBytes(slot, rawBytes) {
     if (slot !== 'badge' && slot !== 'background') throw new Error('无效装饰位置');
-    if (!rawBytes || rawBytes.length > 5 * 1024 * 1024 || !isValidImageBuffer(rawBytes)) {
+    const mime = detectImageMime(rawBytes);
+    if (!rawBytes || rawBytes.length > 5 * 1024 * 1024 || !mime) {
       throw new Error('请选择不超过 5 MiB 的静态 PNG、JPEG 或 WebP 图片');
     }
     const image = nativeImage.createFromBuffer(rawBytes);
     const size = image.getSize();
-    if (image.isEmpty() || size.width <= 0 || size.height <= 0 || size.width * size.height > 16000000) {
+    let storedBytes;
+    if (!image.isEmpty()) {
+      if (size.width <= 0 || size.height <= 0 || size.width * size.height > 16000000) {
+        throw new Error('图片无法解码或像素过大');
+      }
+      const maxEdge = slot === 'badge' ? 256 : 1920;
+      const scale = Math.min(1, maxEdge / Math.max(size.width, size.height));
+      storedBytes = image.resize({
+        width: Math.max(1, Math.round(size.width * scale)),
+        height: Math.max(1, Math.round(size.height * scale)),
+        quality: 'best',
+      }).toPNG();
+    } else if (mime === 'image/webp') {
+      const webpSize = parseWebpSize(rawBytes);
+      if (!webpSize) throw new Error('图片无法解码或像素过大');
+      storedBytes = Buffer.from(rawBytes);
+    } else {
       throw new Error('图片无法解码或像素过大');
     }
-    const maxEdge = slot === 'badge' ? 256 : 1920;
-    const scale = Math.min(1, maxEdge / Math.max(size.width, size.height));
-    const png = image.resize({
-      width: Math.max(1, Math.round(size.width * scale)),
-      height: Math.max(1, Math.round(size.height * scale)),
-      quality: 'best',
-    }).toPNG();
     await fs.mkdir(getDir(), { recursive: true });
-    await fs.writeFile(slotPath(slot), png);
-    cache[slot] = png;
+    await fs.writeFile(slotPath(slot), storedBytes);
+    cache[slot] = storedBytes;
     version++;
     const state = snapshot();
     onChanged?.(state);
@@ -167,4 +209,4 @@ function createOverlayStore({ fs, path, nativeImage, dialog, getDir, getConfig, 
   };
 }
 
-module.exports = { DEFAULT_OVERLAY_CONFIG, resolveOverlayConfig, isValidImageBuffer, createOverlayStore };
+module.exports = { DEFAULT_OVERLAY_CONFIG, resolveOverlayConfig, detectImageMime, parseWebpSize, isValidImageBuffer, createOverlayStore };

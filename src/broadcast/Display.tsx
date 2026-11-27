@@ -23,12 +23,21 @@ export type WindChimeLiveRenderProps = {
   assetUrls: Readonly<Record<string, string>>;
   scrollControl?: WindChimeDisplayScrollController;
   localOverlay?: WindChimeLocalOverlay | null;
+  spotlightAssetId?: string | null;
+  enhancedMotion?: boolean;
+  onAssetError?: (assetId: string) => void;
 };
 const metric = (value: number | undefined, fallback: number, min: number, max: number) => Number.isFinite(value) ? Math.min(max, Math.max(min, value!)) : fallback;
 
-function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl }: WindChimeLiveRenderProps) {
+function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl, pausedByOverlay = false, onAssetError }: WindChimeLiveRenderProps & { pausedByOverlay?: boolean }) {
   const viewport = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
+  const overlayListeners = useRef(new Set<(paused: boolean) => void>());
+  const overlayPausedRef = useRef(pausedByOverlay);
+  overlayPausedRef.current = pausedByOverlay;
   const assets = snapshot.assets.filter(asset => assetUrls[asset.id]);
+  useEffect(() => {
+    for (const listener of overlayListeners.current) listener(pausedByOverlay);
+  }, [pausedByOverlay]);
   useEffect(() => {
     if (!viewport.current || !content.current || typeof requestAnimationFrame !== 'function') return;
     return startDisplayScroll(viewport.current, content.current, {
@@ -37,6 +46,11 @@ function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl }: Win
       startPauseMs: metric(appearance.scrollStartPauseMs, 2000, 0, 15000),
       endPauseMs: metric(appearance.scrollEndPauseMs, 2500, 0, 15000),
       control: scrollControl,
+      overlayPaused: overlayPausedRef.current,
+      subscribeOverlayPause: handler => {
+        overlayListeners.current.add(handler);
+        return () => { overlayListeners.current.delete(handler); };
+      },
     });
   }, [scrollControl]); // The parent remounts this subtree whenever the approved content or appearance changes.
   return <div className="wc-display-body">
@@ -54,15 +68,21 @@ function ScrollingLetter({ snapshot, appearance, assetUrls, scrollControl }: Win
     </div>
     {assets.length ? <div className="wc-display-media" data-arrangement={appearance.imageLayout ?? 'column'} data-count={assets.length} style={{ '--wc-display-image-count': assets.length } as CSSProperties}>
       {assets.map((asset, index) => <figure key={asset.id}>
-        <img src={assetUrls[asset.id]} alt={asset.caption} width={asset.width} height={asset.height} style={{ '--wc-display-image-ratio': asset.width / asset.height } as CSSProperties} />
+        <img src={assetUrls[asset.id]} alt={asset.caption} width={asset.width} height={asset.height} style={{ '--wc-display-image-ratio': asset.width / asset.height } as CSSProperties} onError={() => onAssetError?.(asset.id)} />
         {assets.length > 1 || asset.caption ? <span className="wc-display-image-number" aria-hidden="true">{index + 1}</span> : null}
       </figure>)}
     </div> : null}
   </div>;
 }
-export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollControl, localOverlay }: WindChimeLiveRenderProps) {
+export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollControl, localOverlay, spotlightAssetId, enhancedMotion = false, onAssetError }: WindChimeLiveRenderProps) {
   const theme = appearance.theme ?? 'pure';
   const size = resolveLiveViewportSize(appearance);
+  const enterAnimation =
+    appearance.animation === 'none'
+      ? undefined
+      : enhancedMotion
+        ? 'wc-display-glass-enter .42s cubic-bezier(.22,1,.36,1) both'
+        : `wc-display-${appearance.animation} .3s ease-out both`;
   const style: CSSProperties = {
     ...{
       '--wc-display-ink': appearance.textColor,
@@ -79,13 +99,17 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollContr
     } as CSSProperties,
     width: size.width,
     height: size.height,
-    animation: appearance.animation === 'none' ? undefined : `wc-display-${appearance.animation} .3s ease-out both`,
+    animation: enterAnimation,
   };
   const showOverlay = Boolean(localOverlay?.enabled);
   const badgeSize = showOverlay ? metric(localOverlay?.badgeSize, 64, 32, 128) : 64;
   const badgeOpacity = showOverlay ? metric(localOverlay?.badgeOpacity, 90, 10, 100) / 100 : 0.9;
   const bgOpacity = showOverlay ? metric(localOverlay?.backgroundOpacity, 35, 0, 80) / 100 : 0.35;
-  return <article className="wc-display" style={style} data-windchime-snapshot={snapshot.id} data-theme={theme} data-layout={resolveLiveLayout(appearance.layout)} data-filled={!appearance.transparent} data-has-media={snapshot.assets.length > 0} data-has-author={!!snapshot.nickname}>
+  const spotlightAsset = spotlightAssetId
+    ? snapshot.assets.find(asset => asset.id === spotlightAssetId && Boolean(assetUrls[asset.id])) ?? null
+    : null;
+  const spotlightIndex = spotlightAsset ? snapshot.assets.indexOf(spotlightAsset) : -1;
+  return <article className="wc-display" style={style} data-windchime-snapshot={snapshot.id} data-theme={theme} data-layout={resolveLiveLayout(appearance.layout)} data-filled={!appearance.transparent} data-has-media={snapshot.assets.length > 0} data-has-author={!!snapshot.nickname} data-spotlight={spotlightAsset ? 'true' : undefined}>
     <style>{windChimeDisplayCss}</style>
     {showOverlay && localOverlay?.backgroundUrl ? (
       <img className="wc-display-local-bg" src={localOverlay.backgroundUrl} alt="" style={{ opacity: bgOpacity }} aria-hidden="true" />
@@ -99,11 +123,34 @@ export function WindChimeLiveCard({ snapshot, appearance, assetUrls, scrollContr
       <svg className="wc-display-ornament wc-display-arch" viewBox="0 0 90 122" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 120V47a36 36 0 0 1 72 0v73M18 120V47a27 27 0 0 1 54 0v73M45 12v108M9 62h72M9 94h72" /></svg>
       <svg className="wc-display-ornament wc-display-star" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 0v16M0 8h16M3 3l10 10M3 13 13 3" /></svg>
     </> : null}
-    <ScrollingLetter key={JSON.stringify([snapshot, appearance, assetUrls])} snapshot={snapshot} appearance={appearance} assetUrls={assetUrls} scrollControl={scrollControl} />
+    <ScrollingLetter key={JSON.stringify([snapshot, appearance, assetUrls])} snapshot={snapshot} appearance={appearance} assetUrls={assetUrls} scrollControl={scrollControl} pausedByOverlay={Boolean(spotlightAsset)} onAssetError={onAssetError} />
     {showOverlay && (localOverlay?.badgeUrl || localOverlay?.watermarkText) ? (
       <div className="wc-display-local-overlay" data-position={localOverlay.badgePosition} style={{ opacity: badgeOpacity }} aria-hidden="true">
         {localOverlay.badgeUrl ? <img className="wc-display-local-badge" src={localOverlay.badgeUrl} alt="" style={{ width: badgeSize, height: badgeSize }} /> : null}
         {localOverlay.watermarkText ? <span className="wc-display-local-watermark">{localOverlay.watermarkText}</span> : null}
+      </div>
+    ) : null}
+    {spotlightAsset ? (
+      <div className="wc-display-spotlight" data-spotlight-id={spotlightAsset.id}>
+        <figure className="wc-display-spotlight-frame">
+          <div className="wc-display-spotlight-media">
+            <img
+              src={assetUrls[spotlightAsset.id]}
+              alt={spotlightAsset.caption || `附图 ${spotlightIndex + 1}`}
+              width={spotlightAsset.width}
+              height={spotlightAsset.height}
+              onError={() => onAssetError?.(spotlightAsset.id)}
+            />
+          </div>
+          {spotlightAsset.caption || snapshot.assets.length > 1 ? (
+            <figcaption className="wc-display-spotlight-caption">
+              {snapshot.assets.length > 1 ? (
+                <span className="wc-display-spotlight-badge">{`${spotlightIndex + 1} / ${snapshot.assets.length}`}</span>
+              ) : null}
+              {spotlightAsset.caption ? <span>{spotlightAsset.caption}</span> : null}
+            </figcaption>
+          ) : null}
+        </figure>
       </div>
     ) : null}
   </article>;
@@ -114,7 +161,7 @@ class BlankOnError extends Component<{ children: ReactNode }, { failed: boolean 
   render() { return this.state.failed ? null : this.props.children; }
 }
 /** Capture only this isolated output. No login, notification or error UI is rendered. */
-export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl, fallbackSnapshot, fallbackAppearance, localOverlay }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController; fallbackSnapshot?: WindChimeLiveSnapshot | null; fallbackAppearance?: WindChimeLiveAppearance | null; localOverlay?: WindChimeLocalOverlay | null }) {
+export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, scrollControl, fallbackSnapshot, fallbackAppearance, localOverlay, spotlightAssetId, enhancedMotion }: { client: WindChimeDisplayClient; render?: (props: WindChimeLiveRenderProps) => ReactNode; pollIntervalMs?: number; scrollControl?: WindChimeDisplayScrollController; fallbackSnapshot?: WindChimeLiveSnapshot | null; fallbackAppearance?: WindChimeLiveAppearance | null; localOverlay?: WindChimeLocalOverlay | null; spotlightAssetId?: string | null; enhancedMotion?: boolean }) {
   const [received, setReceived] = useState<{ client: WindChimeDisplayClient; value: WindChimeDisplayValue } | null>(null);
   // A caller changing accounts/credentials must not paint the previous client's
   // frame while React is waiting to run the effect cleanup.
@@ -134,9 +181,9 @@ export function WindChimeLiveDisplay({ client, render, pollIntervalMs = 1000, sc
   }, [value, snapshot, scrollControl]);
   if (!value || !snapshot) {
     if (!fallbackSnapshot) return null;
-    const testProps = { snapshot: fallbackSnapshot, appearance: fallbackAppearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE, assetUrls: {}, localOverlay };
+    const testProps: WindChimeLiveRenderProps = { snapshot: fallbackSnapshot, appearance: fallbackAppearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE, assetUrls: {}, localOverlay, enhancedMotion };
     return <BlankOnError key={`test-card:${fallbackSnapshot.id}`}>{render ? render(testProps) : <WindChimeLiveCard {...testProps} />}</BlankOnError>;
   }
-  const props = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl, localOverlay };
+  const props: WindChimeLiveRenderProps = { snapshot, appearance: value.frame.appearance, assetUrls: value.assetUrls, scrollControl, localOverlay, spotlightAssetId, enhancedMotion };
   return <BlankOnError key={`${value.frame.epoch}:${value.frame.activation}`}>{render ? render(props) : <WindChimeLiveCard {...props} />}</BlankOnError>;
 }

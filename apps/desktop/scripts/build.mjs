@@ -13,7 +13,7 @@ await buildWizardArt(root);
 await build({ absWorkingDir: root, entryPoints: ['../../src/core/connection-key.ts'], outfile: 'build/connection-key.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node22' });
 const rendererBuild = await build({
   absWorkingDir: root,
-  entryPoints: ['src/control.tsx', 'src/display.tsx', 'src/obs-display.tsx'],
+  entryPoints: ['src/control.tsx', 'src/display.tsx'],
   outdir: 'build', bundle: true, minify: true, sourcemap: false, metafile: true,
   platform: 'browser', target: 'chrome148', jsx: 'automatic',
   // Every React import, including imports originating in the shared library,
@@ -21,5 +21,14 @@ const rendererBuild = await build({
   alias: { react: path.join(root, 'node_modules/react'), 'react-dom': path.join(root, 'node_modules/react-dom') },
   define: { 'process.env.NODE_ENV': '"production"' },
 });
-await generateDesktopLicenses({ root, metafiles: [rendererBuild.metafile] });
+// OBS Studio (CEF 103–127) and Bilibili Livehime embed older Chromium engines than Electron 44.
+const obsRendererBuild = await build({
+  absWorkingDir: root,
+  entryPoints: ['src/obs-display.tsx'],
+  outdir: 'build', bundle: true, minify: true, sourcemap: false, metafile: true,
+  platform: 'browser', target: 'chrome103', jsx: 'automatic',
+  alias: { react: path.join(root, 'node_modules/react'), 'react-dom': path.join(root, 'node_modules/react-dom') },
+  define: { 'process.env.NODE_ENV': '"production"' },
+});
+await generateDesktopLicenses({ root, metafiles: [rendererBuild.metafile, obsRendererBuild.metafile] });
 for (const name of ['control.html', 'display.html', 'obs-display.html']) await copyFile(path.join(root, 'src', name), path.join(root, 'build', name));

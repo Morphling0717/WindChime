@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -220,25 +221,30 @@ export function WindChimeArchivedTopicsDrawer({
 
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const isControlled = itemsProp !== undefined;
+  const headersRef = useRef(requestHeaders);
+  headersRef.current = requestHeaders;
   const client = useMemo(
     () =>
       createWindChimeClient({
         endpoints: { topics: listEndpoint },
-        getHeaders: () => requestHeaders ?? {},
+        getHeaders: () => headersRef.current ?? {},
       }),
-    [listEndpoint, requestHeaders],
+    [listEndpoint],
   );
   const resource = useWindChimeTopics(client, {
     enabled: open && !isControlled && !!listEndpoint,
     includeArchived: true,
   });
   const loading = resource.isLoading;
-  const error = resource.error?.message ?? null;
-  const load = resource.reload;
+  const error = restoreError ?? resource.error?.message ?? null;
   const fetched = resource.items;
   useEffect(() => {
-    if (!open) setSearch("");
+    if (!open) {
+      setSearch("");
+      setRestoreError(null);
+    }
   }, [open]);
 
   // ESC 关闭
@@ -269,6 +275,7 @@ export function WindChimeArchivedTopicsDrawer({
   const doRestore = useCallback(
     async (topic: WindChimeTopic) => {
       setBusyId(topic.id);
+      setRestoreError(null);
       try {
         let restored: WindChimeTopic;
         if (onRestore) {
@@ -277,7 +284,7 @@ export function WindChimeArchivedTopicsDrawer({
           if (restoreEndpointBuilder) {
             const custom = createWindChimeClient({
               baseUrl: "",
-              getHeaders: () => requestHeaders ?? {},
+              getHeaders: () => headersRef.current ?? {},
             });
             restored = await custom.request<WindChimeTopic>(
               restoreEndpointBuilder(topic.id),
@@ -292,7 +299,7 @@ export function WindChimeArchivedTopicsDrawer({
         // 从拉取列表里移除这一条
         onRestored(restored);
       } catch (e) {
-        alert(e instanceof Error ? e.message : L.restoreFailed);
+        setRestoreError(e instanceof Error ? e.message : L.restoreFailed);
       } finally {
         setBusyId(null);
       }
@@ -300,7 +307,6 @@ export function WindChimeArchivedTopicsDrawer({
     [
       onRestore,
       listEndpoint,
-      requestHeaders,
       restoreEndpointBuilder,
       onRestored,
       L.restoreFailed,
@@ -348,15 +354,15 @@ export function WindChimeArchivedTopicsDrawer({
 
         <div className={th.listWrap}>
           {loading && <div className={th.listLoading}>{L.loading}</div>}
-          {error && <div className={th.listError}>{error}</div>}
-          {!loading && !error && filtered.length === 0 && (
+          {error && <div className={th.listError} role="alert">{error}</div>}
+          {!loading && !resource.error && filtered.length === 0 && (
             <div className={th.listEmpty}>
               {archivedItems.length === 0
                 ? L.empty
                 : L.noMatchTemplate.replace("{query}", search.trim())}
             </div>
           )}
-          {!loading && !error && filtered.length > 0 && (
+          {!loading && !resource.error && filtered.length > 0 && (
             <ul className="space-y-2">
               {filtered.map((t) => (
                 <li key={t.id} className={th.item}>

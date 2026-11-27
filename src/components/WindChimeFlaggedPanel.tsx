@@ -41,6 +41,16 @@ function safeHost(raw: string | null | undefined): string {
   }
 }
 
+function isSafeExternalUrl(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  try {
+    const u = new URL(raw);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 通过 `theme` 覆盖视觉。所有键可选，缺省走内置玻璃拟态 + 琉璃红色调。
  */
@@ -72,6 +82,7 @@ export type WindChimeFlaggedPanelTheme = {
   modalLink?: string;
   modalLinkNote?: string;
   modalActions?: string;
+  buttonApprove?: string;
   buttonMarkRead?: string;
   buttonBlock?: string;
   buttonDelete?: string;
@@ -119,6 +130,8 @@ const DEFAULT_THEME: Required<WindChimeFlaggedPanelTheme> = {
   modalLinkNote:
     "text-[10px] leading-relaxed text-slate-500 dark:text-slate-400",
   modalActions: "mt-5 flex flex-wrap items-center justify-end gap-2",
+  buttonApprove:
+    "rounded-lg border border-emerald-400 bg-emerald-50 px-3 py-1.5 font-mono text-xs text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500 dark:hover:text-black",
   buttonMarkRead:
     "rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 font-mono text-xs text-sky-700 transition hover:bg-sky-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-cyan-400/50 dark:bg-slate-900/60 dark:text-cyan-200 dark:hover:bg-cyan-400 dark:hover:text-black",
   buttonBlock:
@@ -161,6 +174,8 @@ export type WindChimeFlaggedPanelProps = {
   emptyText?: ReactNode;
   /** 拉取原文（打开 modal 时调用），失败请抛出 `Error` */
   onLoadDetail: (id: string) => Promise<WindChimeFlaggedDetail>;
+  /** 解除待审标记（误杀放行，设为 isFlagged=false） */
+  onApprove?: (id: string) => Promise<void>;
   /** 标为已读 */
   onMarkRead?: (id: string) => Promise<void>;
   /** 删除（软删即可，组件只负责发起） */
@@ -176,6 +191,7 @@ export type WindChimeFlaggedPanelProps = {
   /** 语言按钮文案 */
   labels?: {
     viewOriginal?: string;
+    approve?: string;
     markRead?: string;
     block?: string;
     delete?: string;
@@ -194,6 +210,7 @@ export type WindChimeFlaggedPanelProps = {
 
 const DEFAULT_LABELS = {
   viewOriginal: "查看原文 →",
+  approve: "解除待审",
   markRead: "标为已读",
   block: "拉黑发信人",
   delete: "删除",
@@ -213,6 +230,7 @@ export function WindChimeFlaggedPanel({
   caption,
   emptyText = "当前无待审核留言",
   onLoadDetail,
+  onApprove,
   onMarkRead,
   onDelete,
   onBlockSender,
@@ -265,6 +283,11 @@ export function WindChimeFlaggedPanel({
     } catch {
       /* The shared mutation state displays the failure and keeps the dialog open. */
     }
+  };
+
+  const handleApprove = () => {
+    if (!openId || !onApprove) return;
+    void runAction(openId, () => onApprove(openId));
   };
 
   const handleMarkRead = () => {
@@ -320,9 +343,21 @@ export function WindChimeFlaggedPanel({
             {flagged.map((m) => (
               <li key={m.id} className={th.listItem}>
                 <div className="flex flex-col">
-                  <span className={th.senderLabel}>
-                    {m.senderLabel ?? L.unknownSender}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={th.senderLabel}>
+                      {m.senderLabel ?? L.unknownSender}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold",
+                        m.isRead
+                          ? "bg-slate-200/80 text-slate-600 dark:bg-slate-700/70 dark:text-slate-300"
+                          : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200",
+                      )}
+                    >
+                      {m.isRead ? "已读" : "未读"}
+                    </span>
+                  </div>
                   <span className={th.timestamp}>{fmtTime(m.createdAt)}</span>
                 </div>
                 <button
@@ -398,22 +433,31 @@ export function WindChimeFlaggedPanel({
                     {openData.linkUrl && (
                       <div className={th.modalLinkRow}>
                         <div style={{ opacity: 0.7 }}>{L.linkLabel}</div>
-                        <a
-                          href={openData.linkUrl}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className={th.modalLink}
-                        >
-                          <span aria-hidden>⚠</span>
-                          <span style={{ fontWeight: 700 }}>
-                            {safeHost(openData.linkUrl) || "外站链接"}
-                          </span>
-                          <span
-                            style={{ wordBreak: "break-all", opacity: 0.8 }}
+                        {isSafeExternalUrl(openData.linkUrl) ? (
+                          <a
+                            href={openData.linkUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className={th.modalLink}
                           >
-                            {openData.linkUrl}
-                          </span>
-                        </a>
+                            <span aria-hidden>⚠</span>
+                            <span style={{ fontWeight: 700 }}>
+                              {safeHost(openData.linkUrl) || "外站链接"}
+                            </span>
+                            <span
+                              style={{ wordBreak: "break-all", opacity: 0.8 }}
+                            >
+                              {openData.linkUrl}
+                            </span>
+                          </a>
+                        ) : (
+                          <div className={th.modalLink}>
+                            <span aria-hidden>⚠</span>
+                            <span style={{ wordBreak: "break-all" }}>
+                              {openData.linkUrl}（非 HTTP/HTTPS 链接，已禁用点击）
+                            </span>
+                          </div>
+                        )}
                         <div className={th.modalLinkNote}>
                           {L.linkExternalNote}
                         </div>
@@ -424,6 +468,16 @@ export function WindChimeFlaggedPanel({
               </div>
 
               <div className={th.modalActions}>
+                {onApprove && (
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    disabled={!openData || acting}
+                    className={th.buttonApprove}
+                  >
+                    {L.approve}
+                  </button>
+                )}
                 {onMarkRead && (
                   <button
                     type="button"

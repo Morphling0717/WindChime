@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -159,20 +160,22 @@ export function WindChimeBlockedTermsPanel({
   const L = { ...DEFAULT_LABELS, ...(labels ?? {}) };
 
   const isControlled = termsProp !== undefined;
+  const headersRef = useRef(requestHeaders);
+  headersRef.current = requestHeaders;
 
   const client = useMemo(
     () =>
       createWindChimeClient({
         endpoints: { blockedTerms: endpoint },
-        getHeaders: () => requestHeaders ?? {},
+        getHeaders: () => headersRef.current ?? {},
       }),
-    [endpoint, requestHeaders],
+    [endpoint],
   );
   const resource = useWindChimeBlockedTerms(client, {
     enabled: !isControlled && !!endpoint,
   });
   const effectiveTerms = isControlled ? termsProp! : resource.terms;
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() => effectiveTerms.join(", "));
   const loading = resource.isLoading;
   const [saving, setSaving] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
@@ -182,16 +185,23 @@ export function WindChimeBlockedTermsPanel({
   }, [resource.error, onUnauthorized]);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  // 同步 effectiveTerms → draft（受控模式下 terms 外部变化时也要跟上）
-  useEffect(() => {
-    setDraft(effectiveTerms.join(", "));
-  }, [effectiveTerms]);
-
   const parsed = useMemo(() => parseTermsInput(draft), [draft]);
   const dirty = useMemo(
     () => !arraysEqual(parsed, effectiveTerms),
     [parsed, effectiveTerms],
   );
+  const lastSyncedRef = useRef<string[]>(effectiveTerms);
+  const userEditedRef = useRef(false);
+
+  // 同步 effectiveTerms → draft（未编辑或外部真实变更且用户未改动时才覆盖）
+  useEffect(() => {
+    if (!arraysEqual(effectiveTerms, lastSyncedRef.current)) {
+      lastSyncedRef.current = effectiveTerms;
+      if (!userEditedRef.current) {
+        setDraft(effectiveTerms.join(", "));
+      }
+    }
+  }, [effectiveTerms]);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -199,11 +209,15 @@ export function WindChimeBlockedTermsPanel({
     try {
       if (onSave) {
         await onSave(parsed);
+        userEditedRef.current = false;
+        lastSyncedRef.current = parsed;
         setSavedAt(Date.now());
         return;
       }
       if (endpoint) {
         await resource.save(parsed);
+        userEditedRef.current = false;
+        lastSyncedRef.current = parsed;
         setSavedAt(Date.now());
       }
     } catch (e) {
@@ -231,7 +245,10 @@ export function WindChimeBlockedTermsPanel({
 
         <textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            userEditedRef.current = true;
+            setDraft(e.target.value);
+          }}
           placeholder={placeholder}
           rows={3}
           className={th.textarea}

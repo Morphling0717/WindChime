@@ -51,5 +51,19 @@ export type WindChimeLiveGrant = {
 };
 export type WindChimeShareInfo = {
   siteName: string; origin: string; topicId: string; topicTitle: string; submissionUrl: string;
-  posterDefaults: { title?: string; subtitle?: string; signature?: string; avatarUrl?: string };
+  posterDefaults: {
+    title?: string;
+    subtitle?: string;
+    signature?: string;
+    avatarUrl?: string;
+    qrForeground?: string;
+    qrBackground?: string;
+    qrLogoUrl?: string;
+    gradient?: [string, string];
+    textColor?: string;
+    backgroundImageUrl?: string;
+    backgroundImageOpacity?: number;
+    backgroundImageOverlay?: string;
+    brandingText?: string;
+  };
 };

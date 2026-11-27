@@ -29,16 +29,37 @@ const FONT_OPTIONS = [
 function NumberField({ label, value, min, max, step = 1, unit = 'px', onChange }: {
   label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (value: number) => void;
 }) {
-  // An empty intermediate input lets people replace a number with Backspace.
-  // Keep the last numeric preview until a replacement is entered or focus leaves.
-  const [empty, setEmpty] = useState(false);
-  useEffect(() => { setEmpty(false); }, [value]);
+  // Keep an intermediate draft only while the user holds an incomplete string ('' / '-' / '.' / '-.').
+  const [draft, setDraft] = useState<string | null>(null);
   return <label className="wc-appearance-field">{label}<span className="wc-appearance-number">
-    <input type="number" aria-label={label} min={min} max={max} step={step} required value={empty ? '' : value} onBlur={() => setEmpty(false)} onChange={event => {
-      setEmpty(!event.target.value.trim());
-      const next = Number(event.target.value);
-      if (event.target.value.trim() && Number.isFinite(next)) onChange(next);
-    }} />{unit ? <span className="wc-appearance-unit" aria-hidden="true">{unit}</span> : null}
+    <input
+      type="number"
+      aria-label={label}
+      min={min}
+      max={max}
+      step={step}
+      value={draft ?? value}
+      onBlur={() => {
+        if (draft !== null) {
+          const trimmed = draft.trim();
+          const parsed = trimmed ? Number(trimmed) : NaN;
+          if (Number.isFinite(parsed)) onChange(Math.min(max, Math.max(min, parsed)));
+          setDraft(null);
+        }
+      }}
+      onChange={event => {
+        const raw = event.target.value;
+        const trimmed = raw.trim();
+        if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') {
+          setDraft(raw);
+          return;
+        }
+        const next = Number(trimmed);
+        if (!Number.isFinite(next)) return;
+        setDraft(null);
+        onChange(Math.min(max, Math.max(min, next)));
+      }}
+    />{unit ? <span className="wc-appearance-unit" aria-hidden="true">{unit}</span> : null}
   </span></label>;
 }
 
@@ -59,8 +80,9 @@ function AppearancePreview({ appearance, localOverlay }: { appearance: WindChime
   const size = resolveLiveViewportSize(appearance);
   const canvasWidth = Math.max(verticalLayout ? 440 : 1280, size.width + 80);
   const canvasHeight = Math.max(canvasWidth * 9 / 16, size.height + 80);
-  const scale = previewWidth / canvasWidth;
-  const viewportHeight = canvasHeight * scale;
+  const maxPreviewHeight = 460;
+  const scale = Math.min(1, previewWidth / canvasWidth, maxPreviewHeight / canvasHeight);
+  const viewportHeight = Math.round(canvasHeight * scale);
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
@@ -88,7 +110,7 @@ function AppearancePreview({ appearance, localOverlay }: { appearance: WindChime
   return <section className="wc-appearance-preview" aria-label="外观预览">
     <div className="wc-appearance-preview-head"><strong>即时预览</strong><span className="wc-appearance-caption">示例内容 · 不参与播出</span></div>
     <div ref={viewport} className={`wc-appearance-viewport${lightCanvas ? ' wc-appearance-viewport-light' : ''}`} style={{ height: viewportHeight }} aria-label="固定视窗来信预览">
-      <div className="wc-appearance-scroll-space" style={{ height: canvasHeight * scale }}>
+      <div className="wc-appearance-scroll-space" style={{ width: canvasWidth * scale, height: canvasHeight * scale, margin: '0 auto' }}>
         <div className="wc-appearance-canvas" style={{ width: canvasWidth, height: canvasHeight, transform: `scale(${scale})` }}>
           <div className="wc-appearance-preview-content">
             <WindChimeLiveCard key={appearance.animation} snapshot={snapshot} appearance={appearance} assetUrls={SAMPLE_URLS} localOverlay={localOverlay} />

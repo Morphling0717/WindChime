@@ -18,6 +18,16 @@ function cn(...parts: (string | undefined | false | null)[]) {
   return parts.filter(Boolean).join(" ");
 }
 
+function isSafeExternalUrl(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const defaultAdminTheme: Required<WindChimeAdminTheme> = {
   root: "w-full max-w-6xl text-slate-800 dark:text-slate-100",
   toolbar: "mb-5 flex flex-wrap items-center gap-3",
@@ -119,6 +129,7 @@ export function WindChimeAdminPanel({
 
   const [busy, setBusy] = useState<{ id: string; op: string } | null>(null);
   const [batchBusy, setBatchBusy] = useState<null | "delete" | "read">(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const visibleItems = useMemo(
     () =>
@@ -158,9 +169,12 @@ export function WindChimeAdminPanel({
 
   const run = useCallback(
     async (id: string, op: string, fn: () => Promise<void>) => {
+      setActionError(null);
       setBusy({ id, op });
       try {
         await fn();
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : "操作失败");
       } finally {
         setBusy(null);
       }
@@ -173,8 +187,11 @@ export function WindChimeAdminPanel({
       onExportCsv();
       return;
     }
+    const exportRows = someSelected
+      ? visibleItems.filter((r) => selected.has(r.id))
+      : visibleItems;
     downloadWindChimeCsv(
-      visibleItems,
+      exportRows,
       `windchime-messages-${new Date().toISOString().slice(0, 10)}.csv`,
     );
   };
@@ -207,10 +224,13 @@ export function WindChimeAdminPanel({
     if (!onBatchDelete || !someSelected) return;
     const ids = Array.from(selected);
     if (!window.confirm(`批量删除 ${ids.length} 条留言？`)) return;
+    setActionError(null);
     setBatchBusy("delete");
     try {
       await onBatchDelete(ids);
       clearSelection();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "批量删除失败");
     } finally {
       setBatchBusy(null);
     }
@@ -219,10 +239,13 @@ export function WindChimeAdminPanel({
   const handleBatchMarkRead = async () => {
     if (!onBatchMarkRead || !someSelected) return;
     const ids = Array.from(selected);
+    setActionError(null);
     setBatchBusy("read");
     try {
       await onBatchMarkRead(ids);
       clearSelection();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "批量标记已读失败");
     } finally {
       setBatchBusy(null);
     }
@@ -254,7 +277,9 @@ export function WindChimeAdminPanel({
             onClick={handleExport}
             disabled={visibleItems.length === 0}
           >
-            导出 CSV
+            {!onExportCsv && someSelected
+              ? `导出已选 CSV (${selected.size})`
+              : "导出 CSV"}
           </button>
         </div>
       </div>
@@ -319,12 +344,12 @@ export function WindChimeAdminPanel({
       )}
 
       {/* Error */}
-      {error && (
+      {(error || actionError) && (
         <p
           className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-900 dark:text-red-100"
           role="alert"
         >
-          {error}
+          {error || actionError}
         </p>
       )}
 
@@ -416,6 +441,19 @@ export function WindChimeAdminPanel({
                         待审核
                       </span>
                     )}
+                    {Array.isArray(
+                      (row as { attachments?: unknown[] }).attachments,
+                    ) &&
+                      (row as { attachments?: unknown[] }).attachments!.length >
+                        0 && (
+                        <span className={th.badge}>
+                          附图{" "}
+                          {
+                            (row as { attachments?: unknown[] }).attachments!
+                              .length
+                          }
+                        </span>
+                      )}
                   </div>
 
                   {/* 装饰分隔 */}
@@ -426,21 +464,32 @@ export function WindChimeAdminPanel({
                   </div>
 
                   {/* 正文 —— 衬线体、可选中可复制 */}
-                  <p className="flex-1 whitespace-pre-wrap break-words font-serif text-[15px] leading-[1.9] text-stone-800 selection:bg-violet-200/60">
-                    {row.text}
-                  </p>
+                  {row.isFlagged && !row.text?.trim() ? (
+                    <p className="flex-1 font-serif text-sm italic text-rose-700/80">
+                      命中敏感词已折叠 · 请前往「待审核」面板查看原文
+                    </p>
+                  ) : (
+                    <p className="flex-1 whitespace-pre-wrap break-words font-serif text-[15px] leading-[1.9] text-stone-800 selection:bg-violet-200/60">
+                      {row.text}
+                    </p>
+                  )}
 
                   {/* 链接 */}
-                  {row.linkUrl && (
-                    <a
-                      className="mt-3 inline-block max-w-full truncate font-serif text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-2 hover:text-violet-500"
-                      href={row.linkUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      🔗 {row.linkUrl}
-                    </a>
-                  )}
+                  {row.linkUrl &&
+                    (isSafeExternalUrl(row.linkUrl) ? (
+                      <a
+                        className="mt-3 inline-block max-w-full truncate font-serif text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-2 hover:text-violet-500"
+                        href={row.linkUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        🔗 {row.linkUrl}
+                      </a>
+                    ) : (
+                      <span className="mt-3 inline-block max-w-full truncate font-serif text-xs text-stone-500">
+                        🔗 {row.linkUrl}
+                      </span>
+                    ))}
 
                   {/* 页脚：水印 + 署名 */}
                   <div className="mt-5 flex items-end justify-between border-t border-dashed border-amber-200/70 pt-3">

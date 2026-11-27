@@ -154,6 +154,7 @@ function createShortcutManager({
         }
       }
       const previous = nextShortcut;
+      const wasRegistered = nextRegistered;
       try {
         await saveWorkspace({ nextShortcut: normalized });
       } catch {
@@ -161,7 +162,7 @@ function createShortcutManager({
         shortcutError = '快捷键设置无法保存，原快捷键保持不变';
         throw new Error(shortcutError);
       }
-      if (previous && previous !== normalized) globalShortcut.unregister(previous);
+      if (previous && wasRegistered && previous !== normalized) globalShortcut.unregister(previous);
       nextVersion++;
       nextShortcut = normalized;
       nextRegistered = !!normalized;
@@ -224,11 +225,12 @@ function createShortcutManager({
       onConnectionError?.('Ctrl+Shift+H 快捷键注册失败，请使用一键隐藏按钮或托盘菜单');
     }
     if (workspace.nextShortcut) {
+      nextShortcut = workspace.nextShortcut;
       try {
         if (!globalShortcut.register(workspace.nextShortcut, () => { void triggerNext(perfNow); })) throw new Error();
-        nextShortcut = workspace.nextShortcut;
         nextRegistered = true;
       } catch {
+        nextRegistered = false;
         shortcutError = '保存的下一封快捷键无法注册，请在设置中选择其他快捷键';
       }
     }

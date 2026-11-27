@@ -708,7 +708,7 @@ async function run() {
   await nav("share", "投稿分享");
   await until(
     () =>
-      evaluate('document.querySelector(".poster-preview canvas")?.width===720'),
+      evaluate('document.querySelector(".poster-preview canvas")?.width===900'),
     "poster render",
   );
   await until(

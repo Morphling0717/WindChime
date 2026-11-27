@@ -143,16 +143,21 @@ jobs:
           WINDCHIME_UPDATE_PRIVATE_KEY: ${{ secrets.WINDCHIME_UPDATE_PRIVATE_KEY }}
           MIA_SSH_KEY: ${{ secrets.MIA_SSH_KEY }}
           MIA_SSH_HOST: ${{ secrets.MIA_SSH_HOST }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           if (-not $env:WINDCHIME_UPDATE_PRIVATE_KEY -or -not $env:MIA_SSH_KEY -or -not $env:MIA_SSH_HOST) {
             Write-Host 'China mirror secrets not configured; skipping windchime.uliuli.cn publish.'
             exit 0
           }
           $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { $env:INPUT_TAG }
           $relDir = "out\releases\$version"
           $setup = "$relDir\WindChime-Setup-$version.exe"
           $manifest = "$relDir\latest.json"
           $notesFile = "$relDir\auto-release-notes.md"
+          $expectedSha = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLowerInvariant()
+          $releaseUrl = "https://github.com/$($env:GITHUB_REPOSITORY)/releases/download/$tag/WindChime-Setup-$version.exe"
+
           node scripts/generate-update-manifest.cjs --version $version --setup $setup --notes-file $notesFile --out $manifest --title "风铃 $version"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -161,11 +166,43 @@ jobs:
           icacls $keyPath /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
           try {
             $sshOpts = @('-i', $keyPath, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'BatchMode=yes')
-            scp @sshOpts $setup "$relDir\SHA256SUMS.txt" "root@$($env:MIA_SSH_HOST):/opt/windchime-updates/"
+            $remoteHost = "root@$($env:MIA_SSH_HOST)"
+
+            # Fast path: pull the just-published installer directly on the HK mirror from GitHub Release and verify SHA-256 (~10s vs ~11min scp).
+            $pullScript = @'
+set -euo pipefail
+version="$1"
+expected_sha="$2"
+release_url="$3"
+mkdir -p /opt/windchime-updates
+tmp="/opt/windchime-updates/WindChime-Setup-${version}.exe.dl"
+target="/opt/windchime-updates/WindChime-Setup-${version}.exe"
+rm -f "$tmp"
+curl -fSL --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 180 -o "$tmp" "$release_url"
+actual="$(sha256sum "$tmp" | awk '{print tolower($1)}')"
+if [ "$actual" != "$expected_sha" ]; then
+  echo "SHA-256 mismatch: $actual != $expected_sha" >&2
+  rm -f "$tmp"
+  exit 42
+fi
+mv "$tmp" "$target"
+'@ -replace "`r`n", "`n"
+            Write-Host "Pulling WindChime-Setup-$version.exe directly onto HK mirror from $releaseUrl ..."
+            $pullScript | ssh @sshOpts $remoteHost "bash -s -- '$version' '$expectedSha' '$releaseUrl'"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Direct pull on HK mirror failed (exit $LASTEXITCODE); falling back to scp upload..."
+              scp @sshOpts $setup "${remoteHost}:/opt/windchime-updates/WindChime-Setup-$version.exe.tmp"
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              ssh @sshOpts $remoteHost "mv /opt/windchime-updates/WindChime-Setup-$version.exe.tmp /opt/windchime-updates/WindChime-Setup-$version.exe"
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+
+            # Upload tiny metadata files and atomically flip latest.json + WindChime-Setup-latest.exe symlink.
+            scp @sshOpts "$relDir\SHA256SUMS.txt" "${remoteHost}:/opt/windchime-updates/"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            scp @sshOpts $manifest "root@$($env:MIA_SSH_HOST):/opt/windchime-updates/latest.json.tmp"
+            scp @sshOpts $manifest "${remoteHost}:/opt/windchime-updates/latest.json.tmp"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            ssh @sshOpts "root@$($env:MIA_SSH_HOST)" "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ln -sf WindChime-Setup-$version.exe /opt/windchime-updates/WindChime-Setup-latest.exe && ls -t /opt/windchime-updates/WindChime-Setup-[0-9]*.exe | tail -n +3 | xargs -r rm -f"
+            ssh @sshOpts $remoteHost "mv /opt/windchime-updates/latest.json.tmp /opt/windchime-updates/latest.json && ln -sf WindChime-Setup-$version.exe /opt/windchime-updates/WindChime-Setup-latest.exe && ls -t /opt/windchime-updates/WindChime-Setup-[0-9]*.exe | tail -n +3 | xargs -r rm -f"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $keyPath

@@ -148,7 +148,57 @@ export async function renderWindChimePoster(
 ): Promise<HTMLCanvasElement> {
   const { url } = poster;
   const W = poster.width ?? 900;
-  const H = Math.round(W * 1.55);
+  const baseH = Math.round(W * 1.55);
+
+  // 预先加载可选头像并测算标题/副标题总高度，确保长文案不会将二维码卡片顶出画布底部
+  let loadedAvatar: HTMLImageElement | null = null;
+  if (poster.avatarSrc) {
+    try {
+      loadedAvatar = await loadImage(poster.avatarSrc);
+    } catch {
+      loadedAvatar = null;
+    }
+  }
+
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+  if (!measureCtx) throw new Error("CANVAS_UNAVAILABLE");
+
+  const headingFont = `700 ${Math.round(W * 0.075)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
+  const bodyFont = `400 ${Math.round(W * 0.036)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
+  measureCtx.font = headingFont;
+  const rawHeadingLines = poster.heading
+    ? wrapText(measureCtx, poster.heading, W * 0.84)
+    : [];
+  const headingLines =
+    rawHeadingLines.length > 2
+      ? [rawHeadingLines[0]!, `${rawHeadingLines[1]!.slice(0, -1)}…`]
+      : rawHeadingLines;
+
+  measureCtx.font = bodyFont;
+  const bodyLines = poster.body
+    ? poster.body
+        .split(/\r?\n/)
+        .flatMap((para) =>
+          para.trim() ? wrapText(measureCtx, para, W * 0.78) : [""],
+        )
+    : [];
+
+  const aSize = Math.round(W * (poster.avatarSizeRatio ?? 0.22));
+  let estY = loadedAvatar
+    ? W * 0.08 + aSize + W * 0.045
+    : poster.avatarSrc
+      ? W * 0.1
+      : W * 0.12;
+  estY += Math.max(1, headingLines.length) * W * 0.085;
+  if (bodyLines.length) {
+    estY += bodyLines.length * W * 0.052 + W * 0.02;
+  }
+  const cardSize = Math.round(W * 0.58);
+  const estCardBottom = estY + W * 0.05 + cardSize;
+  const footerSpace = poster.brandingText ? W * 0.18 : W * 0.13;
+  const H = Math.max(baseH, Math.ceil(estCardBottom + footerSpace));
+
   const out = document.createElement("canvas");
   out.width = W;
   out.height = H;
@@ -205,72 +255,77 @@ export async function renderWindChimePoster(
 
   // 头像（圆形 + 光晕 + 白色描边）
   let cursorY = W * 0.08;
-  if (poster.avatarSrc) {
-    try {
-      const avatar = await loadImage(poster.avatarSrc);
-      const aSize = Math.round(W * (poster.avatarSizeRatio ?? 0.22));
-      const ax = W / 2;
-      const ay = cursorY + aSize / 2;
-      // 外光晕
-      const halo = ctx.createRadialGradient(
-        ax,
-        ay,
-        aSize * 0.48,
-        ax,
-        ay,
-        aSize * 0.95,
-      );
-      halo.addColorStop(0, "rgba(255,255,255,0.45)");
-      halo.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(ax, ay, aSize * 0.95, 0, Math.PI * 2);
-      ctx.fill();
-      // 白环
-      ctx.fillStyle = poster.avatarRingColor ?? "rgba(255,255,255,0.9)";
-      ctx.beginPath();
-      ctx.arc(ax, ay, aSize / 2 + Math.round(W * 0.012), 0, Math.PI * 2);
-      ctx.fill();
-      // 头像裁圆
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(ax, ay, aSize / 2, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar, ax - aSize / 2, ay - aSize / 2, aSize, aSize);
-      ctx.restore();
-      cursorY = ay + aSize / 2 + W * 0.045;
-    } catch {
-      // 头像加载失败就跳过
-      cursorY = W * 0.1;
-    }
+  if (loadedAvatar) {
+    const ax = W / 2;
+    const ay = cursorY + aSize / 2;
+    // 外光晕
+    const halo = ctx.createRadialGradient(
+      ax,
+      ay,
+      aSize * 0.48,
+      ax,
+      ay,
+      aSize * 0.95,
+    );
+    halo.addColorStop(0, "rgba(255,255,255,0.45)");
+    halo.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(ax, ay, aSize * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+    // 白环
+    ctx.fillStyle = poster.avatarRingColor ?? "rgba(255,255,255,0.9)";
+    ctx.beginPath();
+    ctx.arc(ax, ay, aSize / 2 + Math.round(W * 0.012), 0, Math.PI * 2);
+    ctx.fill();
+    // 头像裁圆（保持 cover 比例居中裁剪，避免非方形头像变形）
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ax, ay, aSize / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    const avatarScale = Math.max(
+      aSize / loadedAvatar.width,
+      aSize / loadedAvatar.height,
+    );
+    const aw = loadedAvatar.width * avatarScale;
+    const ah = loadedAvatar.height * avatarScale;
+    ctx.drawImage(loadedAvatar, ax - aw / 2, ay - ah / 2, aw, ah);
+    ctx.restore();
+    cursorY = ay + aSize / 2 + W * 0.045;
+  } else if (poster.avatarSrc) {
+    cursorY = W * 0.1;
   } else {
     cursorY = W * 0.12;
   }
 
-  // 标题
+  // 标题（自动折行防止左右裁切）
   ctx.fillStyle = textColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  ctx.font = `700 ${Math.round(W * 0.075)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
-  const heading = poster.heading ?? "";
-  ctx.fillText(heading, W / 2, cursorY + W * 0.06);
-  cursorY += W * 0.08;
+  ctx.font = headingFont;
+  if (headingLines.length) {
+    for (const line of headingLines) {
+      cursorY += W * 0.068;
+      ctx.fillText(line, W / 2, cursorY);
+      cursorY += W * 0.017;
+    }
+  } else {
+    cursorY += W * 0.08;
+  }
 
   // 副标题
-  if (poster.body) {
-    ctx.font = `400 ${Math.round(W * 0.036)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
+  if (bodyLines.length) {
+    ctx.font = bodyFont;
     ctx.fillStyle = textColor;
-    const lines = wrapText(ctx, poster.body, W * 0.78);
-    for (const line of lines) {
+    for (const line of bodyLines) {
       cursorY += W * 0.052;
-      ctx.fillText(line, W / 2, cursorY);
+      if (line) ctx.fillText(line, W / 2, cursorY);
     }
     cursorY += W * 0.02;
   }
 
   // QR 白底卡片
-  const cardSize = Math.round(W * 0.58);
   const cardX = (W - cardSize) / 2;
   const cardY = cursorY + W * 0.05;
   // 卡片阴影
@@ -288,14 +343,20 @@ export async function renderWindChimePoster(
   const innerY = cardY + (cardSize - inner) / 2;
   ctx.drawImage(qrCanvas, innerX, innerY, inner, inner);
 
-  // 落款
+  // 落款（空串自动回退为去协议的分享网址，与编辑器提示一致）
+  const footerText =
+    poster.footer?.trim() || url.replace(/^https?:\/\//i, "");
   ctx.fillStyle = textColor;
   ctx.font = `600 ${Math.round(W * 0.034)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
-  ctx.fillText(poster.footer ?? url, W / 2, cardY + cardSize + W * 0.075);
-  ctx.font = `400 ${Math.round(W * 0.026)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  if (poster.brandingText)
-    ctx.fillText(poster.brandingText, W / 2, H - W * 0.045);
+  ctx.fillText(footerText, W / 2, cardY + cardSize + W * 0.075, W * 0.88);
+  if (poster.brandingText) {
+    ctx.save();
+    ctx.font = `400 ${Math.round(W * 0.026)}px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif`;
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = 0.72;
+    ctx.fillText(poster.brandingText, W / 2, H - W * 0.045, W * 0.88);
+    ctx.restore();
+  }
 
   return out;
 }
@@ -323,7 +384,7 @@ export async function downloadWindChimeCanvas(
   link.href = URL.createObjectURL(blob);
   link.download = filename;
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 function roundRect(
   ctx: CanvasRenderingContext2D,

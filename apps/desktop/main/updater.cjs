@@ -302,6 +302,15 @@ function createUpdater({
         try {
           const gh = await fetchGitHubFallback();
           const hasUpdate = compareSemver(gh.version, currentVersion) > 0;
+          if (state.stage === 'ready' && downloadedPath && compareSemver(gh.version, state.latestVersion) <= 0) {
+            state = {
+              ...state,
+              checkedAt: new Date().toISOString(),
+              error: '',
+            };
+            emit();
+            return publicInfo();
+          }
           state = {
             ...state,
             currentVersion,
@@ -488,7 +497,18 @@ function createUpdater({
         }
       } catch {}
 
-      await fs.rename(partPath, finalPath);
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await fs.rename(partPath, finalPath);
+          break;
+        } catch (err) {
+          if ((err?.code === 'EPERM' || err?.code === 'EBUSY') && attempt < 4) {
+            await new Promise(resolve => setTimeoutFn(resolve, 60 * (attempt + 1)));
+            continue;
+          }
+          throw err;
+        }
+      }
       downloadedPath = finalPath;
       state = { ...state, stage: 'ready', percent: 100, downloadedBytes: verified.size, totalBytes: verified.size, speedBytesPerSec: 0, error: '' };
       emit();

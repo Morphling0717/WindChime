@@ -100,11 +100,24 @@ function ConnectionKeysOwner({ client = defaultClient, topicId, topicTitle, user
     setCreated({ id: grant.id, value, label: name, expiresAt: grant.expiresAt });
   }
 
+  async function copyCreatedKey() {
+    if (!created) return;
+    setError('');
+    setNotice('');
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('unavailable');
+      await navigator.clipboard.writeText(created.value);
+      setNotice('连接密钥已复制');
+    } catch {
+      setError('剪贴板写入失败，请手动全选复制上方连接密钥');
+    }
+  }
+
   return <section className={className} aria-label="桌面连接密钥" style={stack}>
     <div><h2 style={{ fontSize: 20, fontWeight: 700 }}>桌面连接密钥</h2><p style={{ marginTop: 8, opacity: .8 }}>生成后复制到风铃桌面版 0.7.0 或更高版本。密钥可管理本站全部话题，有效期 30 天，可供多台电脑使用；重复连接不会延长有效期。</p></div>
     <label style={stack}>密钥名称<input style={input} value={label} maxLength={100} autoComplete="off" placeholder="例如：直播电脑" onChange={event => setLabel(event.target.value)} /></label>
     <div><button type="button" style={button} disabled={busy || !label.trim()} onClick={() => void run(create, '连接密钥已生成，只在本次页面显示')}>{busy ? '处理中…' : '生成连接密钥'}</button></div>
-    {created ? <div style={stack}><strong>{created.label} · 全站管理</strong><span>到期时间：{new Date(created.expiresAt).toLocaleString('zh-CN')}</span><textarea style={input} aria-label="完整连接密钥" readOnly rows={4} autoComplete="off" spellCheck={false} value={created.value} /><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}><button type="button" style={button} disabled={busy} onClick={() => void run(() => navigator.clipboard.writeText(created.value), '连接密钥已复制')}>复制连接密钥</button><button type="button" style={button} onClick={() => setCreated(null)}>隐藏密钥</button></div><p style={{ opacity: .8 }}>完整密钥只显示一次，不会保存在浏览器中。刷新、切换话题或退出登录后不再显示；隐藏文本不会撤销授权。</p></div> : null}
+    {created ? <div style={stack}><strong>{created.label} · 全站管理</strong><span>到期时间：{new Date(created.expiresAt).toLocaleString('zh-CN')}</span><textarea style={input} aria-label="完整连接密钥" readOnly rows={4} autoComplete="off" spellCheck={false} value={created.value} /><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}><button type="button" style={button} disabled={busy} onClick={() => void copyCreatedKey()}>复制连接密钥</button><button type="button" style={button} onClick={() => setCreated(null)}>隐藏密钥</button></div><p style={{ opacity: .8 }}>完整密钥只显示一次，不会保存在浏览器中。刷新、切换话题或退出登录后不再显示；隐藏文本不会撤销授权。</p></div> : null}
     {error ? <p role="alert">{error}</p> : null}{notice ? <p role="status">{notice}</p> : null}
     <details><summary style={{ cursor: 'pointer' }}>已生成的授权（{grants.length}）</summary><div style={{ ...stack, marginTop: 14 }}><div><button type="button" style={button} disabled={busy} onClick={() => void run(async () => {}, '授权列表已刷新')}>刷新授权列表</button></div>{grants.map(grant => <div key={grant.id} style={{ ...stack, borderTop: '1px solid currentColor', paddingTop: 12 }}><strong>{grant.label || (grant.kind === 'display' ? '只读展示' : '旧版设备')}</strong><span>{grant.scope === 'site' ? '全站管理' : `${grant.kind === 'display' ? '只读展示' : '话题管理'} · ${grant.topicId}`} · 到期 {new Date(grant.expiresAt).toLocaleString('zh-CN')} · {grant.revokedAt ? '已撤销' : Date.parse(grant.expiresAt) <= Date.now() ? '已到期' : '有效'}</span>{!grant.revokedAt ? <div><button type="button" style={button} disabled={busy} aria-label={`撤销授权 ${grant.label || grant.id}`} onClick={() => {
       if (window.confirm('撤销后，使用此密钥的所有电脑及其展示授权会失效。确认撤销？')) void run(async () => { await client.revokeGrant(undefined, grant.id); setCreated(current => current?.id === grant.id ? null : current); }, '授权已撤销');

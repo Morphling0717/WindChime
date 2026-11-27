@@ -23,6 +23,7 @@ import {
   type ObsBridgeStatus,
   type DesktopOverlayState,
   type PlayHistoryEntry,
+  type TimelineSyncStatus,
   type UpdaterInfo,
 } from "./bridge";
 import { TileApp } from "./tiles";
@@ -150,6 +151,7 @@ function App() {
     selectedMessageId: null, contextVersion: 0, tiles: [], tile: null,
   });
   const [scrollState, setScrollState] = useState<WindChimeDisplayScrollMetrics | null>(null);
+  const [spotlightAssetId, setSpotlightAssetId] = useState<string | null>(null);
   const [onAir, setOnAir] = useState<OnAirInfo | null>(null);
   const [theme, setTheme] = useState<DesktopTheme>("light");
   const [prefs, setPrefs] = useState<DesktopPrefs>({
@@ -160,10 +162,12 @@ function App() {
     startupView: "last",
     lastView: null,
     autoCheckUpdate: true,
+    displayMotion: true,
     uiSurface: "liquid",
   });
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [windowFocused, setWindowFocused] = useState(true);
   const [testCardActive, setTestCardActive] = useState(false);
   const [obsStatus, setObsStatus] = useState<ObsBridgeStatus>({
     enabled: false,
@@ -188,6 +192,8 @@ function App() {
     version: 0,
   });
   const [history, setHistory] = useState<PlayHistoryEntry[]>([]);
+  const [streamStartedAt, setStreamStartedAt] = useState<string | null>(null);
+  const [timelineStatus, setTimelineStatus] = useState<TimelineSyncStatus | null>(null);
   const [updaterInfo, setUpdaterInfo] = useState<UpdaterInfo | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
@@ -204,6 +210,10 @@ function App() {
   useEffect(() => {
     void unwrap(bridge.getScrollState()).then(setScrollState).catch(() => {});
     return bridge.onScrollState(setScrollState);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getSpotlight()).then(setSpotlightAssetId).catch(() => {});
+    return bridge.onSpotlightChanged(setSpotlightAssetId);
   }, []);
   useEffect(() => {
     void unwrap(bridge.getOnAir()).then(setOnAir).catch(() => {});
@@ -239,6 +249,14 @@ function App() {
     return bridge.onHistoryChanged(setHistory);
   }, []);
   useEffect(() => {
+    void unwrap(bridge.getStreamStartedAt()).then(setStreamStartedAt).catch(() => {});
+    return bridge.onStreamStartChanged(setStreamStartedAt);
+  }, []);
+  useEffect(() => {
+    void unwrap(bridge.getTimelineStatus()).then(setTimelineStatus).catch(() => {});
+    return bridge.onTimelineStatusChanged(setTimelineStatus);
+  }, []);
+  useEffect(() => {
     void unwrap(bridge.getUpdaterInfo()).then(setUpdaterInfo).catch(() => {});
     return bridge.onUpdaterChanged((info) => {
       setUpdaterInfo(info);
@@ -264,22 +282,34 @@ function App() {
     };
   }, [prefsLoaded, prefs.autoCheckUpdate]);
   useEffect(() => {
+    void unwrap(bridge.getWindowFocus()).then(setWindowFocused).catch(() => {});
+    return bridge.onWindowFocus(setWindowFocused);
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   useEffect(() => {
     document.documentElement.dataset.uiSurface = prefs.uiSurface;
     document.documentElement.dataset.acrylic = prefs.acrylicActive ? "1" : "0";
-  }, [prefs.uiSurface, prefs.acrylicActive]);
+    document.documentElement.dataset.windowFocused = windowFocused ? "1" : "0";
+  }, [prefs.uiSurface, prefs.acrylicActive, windowFocused]);
   useLiquidGlassMotion(rootRef, prefs.uiSurface === "liquid");
   const toggleTheme = () => {
     const next: DesktopTheme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     void unwrap(bridge.setTheme(next)).catch(() => {});
   };
+  const pollErrorActiveRef = useRef(false);
   const updatePrefs = useCallback(async (patch: Partial<DesktopPrefs>) => {
+    const previous = prefsRef.current;
     setPrefs(current => ({ ...current, ...patch }));
-    const saved = await unwrap(bridge.setPrefs(patch));
-    setPrefs(saved);
+    try {
+      const saved = await unwrap(bridge.setPrefs(patch));
+      setPrefs(saved);
+    } catch (e) {
+      setPrefs(previous);
+      throw e;
+    }
   }, []);
   const manualCheckUpdate = async () => {
     if (checkingUpdate) return;
@@ -328,13 +358,95 @@ function App() {
       setError(e instanceof Error ? e.message : "启动更新安装程序失败");
     }
   };
-  const exportPlayHistory = useCallback(async (format: "md" | "csv") => {
+  const exportPlayHistory = useCallback(async (format: "md" | "csv" | "chapters") => {
     setError("");
     try {
       const saved = await unwrap(bridge.exportHistory({ format }));
-      if (saved) setNotice(format === "md" ? "已导出 Markdown 播报复盘清单。" : "已导出 CSV 播报复盘表格。");
+      if (saved) {
+        setNotice(
+          format === "chapters"
+            ? "已导出 B站 / 录播切片章节 TXT。"
+            : format === "md"
+              ? "已导出 Markdown 播报复盘清单。"
+              : "已导出 CSV 播报复盘表格。",
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "导出播报复盘失败");
+    }
+  }, []);
+  const updateStreamStartedAt = useCallback(async (iso: string | null) => {
+    setError("");
+    try {
+      const saved = await unwrap(bridge.setStreamStartedAt(iso));
+      setStreamStartedAt(saved);
+      setNotice(saved ? `已标记开播基准时间（${new Date(saved).toLocaleTimeString("zh-CN", { hour12: false })}），复盘记录将自动换算录播时间轴。` : "已清除开播时间标记。");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "设置开播时间失败");
+    }
+  }, []);
+  const updateTimelineOffset = useCallback(async (sec: number) => {
+    setError("");
+    try {
+      await unwrap(bridge.setTimelineOffset(sec));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "设置时间轴偏移失败");
+    }
+  }, []);
+  const syncTimelineTrack = useCallback(async (track?: "stream" | "record" | "bilibili") => {
+    setError("");
+    try {
+      const next = await unwrap(bridge.syncTimelineNow({ track, forceApply: true }));
+      setTimelineStatus(next);
+      const hasAutoLive = Boolean(
+        next.obsWs.streamActive ||
+        next.obsWs.recordActive ||
+        next.obsLog.streamActive ||
+        next.obsLog.recordActive ||
+        next.bilibili.live,
+      );
+      if (hasAutoLive && next.anchor.startedAt) {
+        setStreamStartedAt(next.anchor.startedAt);
+        setNotice(`已同步开播时间轴：${next.anchor.label || "自动基准"}（${new Date(next.anchor.startedAt).toLocaleTimeString("zh-CN", { hour12: false })}）。`);
+      } else if (next.anchor.startedAt && next.anchor.source === "manual") {
+        setNotice("尚未检测到活动中的 OBS 推流/录制或 B站直播间，已保留你的手动开播时间标记。");
+      } else {
+        setNotice("尚未检测到活动中的 OBS 推流/录制或已配置的 B站直播间，可在「设置 → 播控与热键」填入房间号或手动标记。");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "同步开播时间轴失败");
+    }
+  }, []);
+  const pickRecordingFileForTimeline = useCallback(async () => {
+    setError("");
+    try {
+      const res = await unwrap(bridge.pickRecordingForTimeline());
+      if (!res) return;
+      setTimelineStatus(res.status);
+      setStreamStartedAt(res.startedAt);
+      if (res.warning) {
+        setError(res.warning);
+      } else {
+        setNotice(`已按录播文件「${res.fileName}」创建时间（${new Date(res.startedAt).toLocaleTimeString("zh-CN", { hour12: false })}）对齐整场时间轴。`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "读取录播文件时间失败");
+    }
+  }, []);
+  const copyHistoryChapters = useCallback(async () => {
+    setError("");
+    try {
+      const text = await unwrap(bridge.getHistoryChapters());
+      if (!text.trim()) {
+        setError("暂无可导出的本场播报记录。");
+        return false;
+      }
+      await unwrap(bridge.writeClipboard(text));
+      setNotice("已复制 B站视频分段章节到剪贴板，可直接粘贴到 B站简介或评论区时间轴。");
+      return true;
+    } catch {
+      setError("复制到剪贴板失败，可使用「导出章节 TXT」保存。");
+      return false;
     }
   }, []);
   const clearPlayHistory = useCallback(async () => {
@@ -355,13 +467,16 @@ function App() {
       setTestCardActive(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : "无法切换对位测试卡");
-      throw e;
     }
   }, []);
   const scrollDisplay = useCallback(
     (command: WindChimeDisplayScrollCommand) => unwrap(bridge.scrollDisplay(command)),
     [],
   );
+  const toggleSpotlight = useCallback(async (assetId: string | null) => {
+    const next = await unwrap(bridge.setSpotlight(assetId));
+    setSpotlightAssetId(next);
+  }, []);
   const refreshStatus = useCallback(async () => { setStatus(await unwrap(bridge.status())); }, []);
   useEffect(() => {
     void unwrap(
@@ -436,6 +551,8 @@ function App() {
     )
       return;
     userNavigatedRef.current = true;
+    setError("");
+    setNotice("");
     setStudioDirty(false);
     setTopicDirty(false);
     setSettingsDirty(false);
@@ -534,14 +651,17 @@ function App() {
         setTopics(result.items);
         setTopicListStatus("ready");
         topicsLoaded = true;
-        if (selected?.scope === "site" && !topicId && result.items.length) {
-          await unwrap(
-            bridge.selectTopic(
-              (result.items.find((item) => item.isDefault) ?? result.items[0])
-                .id,
-              selectedId,
-            ),
-          );
+        if (pollErrorActiveRef.current) {
+          pollErrorActiveRef.current = false;
+          setError("");
+        }
+        const activeMissing = !topicId || !result.items.some((item) => item.id === topicId);
+        if (selected?.scope === "site" && activeMissing && result.items.length) {
+          const fallbackTopic =
+            result.items.find((item) => item.isDefault && !item.archivedAt) ??
+            result.items.find((item) => !item.archivedAt) ??
+            result.items[0];
+          await unwrap(bridge.selectTopic(fallbackTopic.id, selectedId));
           if (!disposed) await refresh();
         }
         if (selected?.scope === "site") {
@@ -564,6 +684,7 @@ function App() {
       } catch (e) {
         if (!disposed) {
           if (!topicsLoaded) setTopicListStatus("error");
+          pollErrorActiveRef.current = true;
           setError(
             e instanceof Error
               ? e.message
@@ -677,6 +798,7 @@ function App() {
       data-theme={theme}
       data-ui-surface={prefs.uiSurface}
       data-acrylic={prefs.acrylicActive ? "1" : "0"}
+      data-window-focused={windowFocused ? "1" : "0"}
     >
       <LiquidGlassDefs enabled={prefs.uiSurface === "liquid"} />
       <style>{windChimeControlCss}</style>
@@ -750,7 +872,7 @@ function App() {
               title={id === "studio" && pendingCount > 0 ? `${label}（待拆 ${pendingCount} 封）` : label}
               data-badge={id === "studio" && pendingCount > 0 ? (pendingCount > 99 ? "99+" : String(pendingCount)) : undefined}
               aria-current={view === id ? "page" : undefined}
-              disabled={id !== "connections" && id !== "inbox" && !selected}
+              disabled={id !== "connections" && !selected}
               onClick={() => void navigate(id)}
             >
               <Icon name={icon} />
@@ -773,12 +895,18 @@ function App() {
             <span>{theme === "dark" ? "浅色模式" : "夜间模式"}</span>
           </button>
           <div className="sidebar-version-row">
-            <span>{`v${status.version || updaterInfo?.currentVersion || "1.2.0"}`}</span>
+            <span>{`v${status.version || updaterInfo?.currentVersion || "1.3.0"}`}</span>
             <button
               type="button"
               className={`sidebar-update-btn${updaterInfo?.hasUpdate ? " has-update" : ""}`}
               disabled={checkingUpdate}
-              onClick={() => void manualCheckUpdate()}
+              onClick={() => {
+                if (updaterInfo?.stage === "ready") {
+                  setUpdateDismissed(false);
+                  return;
+                }
+                void manualCheckUpdate();
+              }}
             >
               {checkingUpdate
                 ? "检查中…"
@@ -971,9 +1099,10 @@ function App() {
             </div>
           ) : null}
           {error ? (
-            <p className="wc-error" role="alert">
-              {error}
-            </p>
+            <div className="wc-error desktop-alert-row" role="alert">
+              <span>{error}</span>
+              <button type="button" className="desktop-alert-close" aria-label="关闭错误提示" onClick={() => setError("")}>×</button>
+            </div>
           ) : null}
           {status.connectionError ? (
             <p className="wc-error" role="alert">
@@ -982,9 +1111,10 @@ function App() {
           ) : null}
           {status.nextActionError ? <p className="wc-error" role="alert">{status.nextActionError}</p> : null}
           {notice ? (
-            <p className="wc-notice" role="status">
-              {notice}
-            </p>
+            <div className="wc-notice desktop-alert-row" role="status">
+              <span>{notice}</span>
+              <button type="button" className="desktop-alert-close" aria-label="关闭通知" onClick={() => setNotice("")}>×</button>
+            </div>
           ) : null}
         </div>
         <section
@@ -1158,7 +1288,17 @@ function App() {
               <button
                 disabled={busy}
                 onClick={() =>
-                  void change(() => unwrap(bridge.forgetSite(selected.id)))
+                  void (async () => {
+                    if (
+                      await unwrap(
+                        bridge.confirm(
+                          `确定移除网站「${selected.label}」的连接？本机保存的连接密钥将被清除，展示窗口将立即清空。`,
+                        ),
+                      )
+                    ) {
+                      await change(() => unwrap(bridge.forgetSite(selected.id)));
+                    }
+                  })()
                 }
               >
                 移除此连接
@@ -1236,7 +1376,7 @@ function App() {
                 ))}
               </nav>
             )}
-            {topicId && (view === "studio" || view === "settings") && (
+            {(view === "studio" || view === "settings") && (
               <div
                 className="desktop-studio"
                 hidden={view === "settings" && settingsTab !== "appearance"}
@@ -1261,50 +1401,90 @@ function App() {
                     </div>
                   </div>
                 )}
-                <WindChimeLiveControlPanel
-                  key={`${selected.id}:${topicId}:${view}`}
-                  client={client}
-                  topicId={topicId}
-                  title={topic?.title ?? selected.label}
-                  module={view === "settings" ? "appearance" : undefined}
-                  canApproveDevices={false}
-                  blockedTermsEnabled={keywordEnabled}
-                  onDirtyChange={setStudioDirty}
-                  onConfirmDiscard={confirmDiscard}
-                  onOpenDisplay={() => unwrap(bridge.openDisplay())}
-                  onHideDisplay={() => unwrap(bridge.hide())}
-                  onOpenTile={view === 'studio' ? module => unwrap(bridge.openTile(module)) : undefined}
-                  selectedMessageId={view === "studio" ? status.selectedMessageId : undefined}
-                  onSelectMessage={view === "studio" ? async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); } : undefined}
-                  scrollState={view === "studio" ? scrollState : undefined}
-                  onScrollDisplay={view === "studio" ? scrollDisplay : undefined}
-                  defaultStudioMode={view === "studio" ? "blindbox" : undefined}
-                  studioMode={view === "studio" ? studioMode : undefined}
-                  onStudioModeChange={view === "studio" ? setStudioMode : undefined}
-                  collapsibleReviewEditor={view === "studio"}
-                  testCardActive={testCardActive}
-                  onToggleTestCard={toggleTestCard}
-                  randomDrawEnabled={prefs.randomDrawEnabled}
-                  clearOnBlindDraw={prefs.clearOnBlindDraw}
-                  onToggleClearOnBlindDraw={enabled => void updatePrefs({ clearOnBlindDraw: enabled }).catch(() => {})}
-                  localOverlay={overlay}
-                  obsClientCount={obsStatus.clientCount}
-                  onOpenObsGuide={view === "studio" ? () => setObsGuideOpen(true) : undefined}
-                  onPendingCountChange={view === "studio" ? reportPendingCount : undefined}
-                  sessionHistory={view === "studio" ? history : undefined}
-                  onExportHistory={view === "studio" ? exportPlayHistory : undefined}
-                  onClearHistory={view === "studio" ? clearPlayHistory : undefined}
-                  onBlockMessage={
-                    view === "studio" && selected.scope === "site"
-                      ? async messageId => {
-                          if (!(await unwrap(bridge.confirm("在整个网站屏蔽此发送者并处理其来信？对应展示会同步撤下。")))) {
-                            throw new Error("已取消屏蔽操作");
+                {topicId ? (
+                  <WindChimeLiveControlPanel
+                    key={`${selected.id}:${topicId}:${view}`}
+                    client={client}
+                    topicId={topicId}
+                    title={topic?.title ?? selected.label}
+                    module={view === "settings" ? "appearance" : undefined}
+                    hideSettingsSection={view === "studio"}
+                    canApproveDevices={false}
+                    blockedTermsEnabled={keywordEnabled}
+                    onDirtyChange={setStudioDirty}
+                    onConfirmDiscard={confirmDiscard}
+                    onOpenDisplay={() => unwrap(bridge.openDisplay())}
+                    onHideDisplay={() => unwrap(bridge.hide())}
+                    onOpenTile={view === 'studio' ? module => unwrap(bridge.openTile(module)) : undefined}
+                    selectedMessageId={view === "studio" ? status.selectedMessageId : undefined}
+                    onSelectMessage={view === "studio" ? async id => { await unwrap(bridge.selectMessage(id, selected.id, status.contextVersion)); await refreshStatus(); } : undefined}
+                    scrollState={view === "studio" ? scrollState : undefined}
+                    onScrollDisplay={view === "studio" ? scrollDisplay : undefined}
+                    spotlightAssetId={view === "studio" ? spotlightAssetId : undefined}
+                    onToggleSpotlight={view === "studio" ? toggleSpotlight : undefined}
+                    defaultStudioMode={view === "studio" ? "blindbox" : undefined}
+                    studioMode={view === "studio" ? studioMode : undefined}
+                    onStudioModeChange={view === "studio" ? setStudioMode : undefined}
+                    collapsibleReviewEditor={view === "studio"}
+                    testCardActive={testCardActive}
+                    onToggleTestCard={toggleTestCard}
+                    randomDrawEnabled={prefs.randomDrawEnabled}
+                    clearOnBlindDraw={prefs.clearOnBlindDraw}
+                    onToggleClearOnBlindDraw={enabled => void updatePrefs({ clearOnBlindDraw: enabled }).catch(() => {})}
+                    localOverlay={overlay}
+                    obsClientCount={obsStatus.clientCount}
+                    onOpenObsGuide={view === "studio" ? () => setObsGuideOpen(true) : undefined}
+                    onPendingCountChange={view === "studio" ? reportPendingCount : undefined}
+                    sessionHistory={view === "studio" ? history : undefined}
+                    streamStartedAt={view === "studio" ? streamStartedAt : undefined}
+                    timelineInfo={
+                      view === "studio" && timelineStatus
+                        ? {
+                            anchorStartedAt: timelineStatus.anchor.startedAt,
+                            anchorSource: timelineStatus.anchor.source,
+                            anchorLabel: timelineStatus.anchor.label,
+                            offsetSec: timelineStatus.anchor.offsetSec,
+                            activeLive: Boolean(
+                              timelineStatus.obsWs.streamActive ||
+                              timelineStatus.obsWs.recordActive ||
+                              timelineStatus.obsLog.streamActive ||
+                              timelineStatus.obsLog.recordActive ||
+                              timelineStatus.bilibili.live,
+                            ),
+                            streamTrack: timelineStatus.tracks.stream,
+                            recordTrack: timelineStatus.tracks.record,
+                            bilibiliTrack: timelineStatus.tracks.bilibili,
                           }
-                          await mailClient.messages.block(messageId, { topicId });
-                        }
-                      : undefined
-                  }
-                />
+                        : undefined
+                    }
+                    onSetStreamStartedAt={view === "studio" ? updateStreamStartedAt : undefined}
+                    onSetTimelineOffset={view === "studio" ? updateTimelineOffset : undefined}
+                    onSyncTimeline={view === "studio" ? syncTimelineTrack : undefined}
+                    onPickRecordingFile={view === "studio" ? pickRecordingFileForTimeline : undefined}
+                    onCopyChapters={view === "studio" ? copyHistoryChapters : undefined}
+                    onExportHistory={view === "studio" ? exportPlayHistory : undefined}
+                    onClearHistory={view === "studio" ? clearPlayHistory : undefined}
+                    onBlockMessage={
+                      view === "studio" && selected.scope === "site"
+                        ? async messageId => {
+                            if (!(await unwrap(bridge.confirm("在整个网站屏蔽此发送者并处理其来信？对应展示会同步撤下。")))) {
+                              return false;
+                            }
+                            await mailClient.messages.block(messageId, { topicId });
+                            return true;
+                          }
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <div className="glass-surface management settings-card">
+                    <p className="empty-copy">
+                      {topicListStatus === "loading"
+                        ? "正在同步网站话题列表…"
+                        : "当前尚未连接到可用话题，请检查网站连接或前往「网站连接」更新密钥。"}
+                    </p>
+                  </div>
+                )}
                 {view === "settings" ? (
                   <div style={{ marginTop: 18 }}>
                     <LocalOverlaySettings overlay={overlay} onChange={setOverlay} />
@@ -1312,17 +1492,27 @@ function App() {
                 ) : null}
               </div>
             )}
-            {topicId && view === "inbox" && (
-              <Inbox
-                key={`${selected.id}:${topicId}`}
-                client={mailClient}
-                liveClient={client}
-                topicId={topicId}
-                siteScope={selected.scope === "site"}
-                keywordEnabled={keywordEnabled}
-                onError={reportError}
-                onNotice={setNotice}
-              />
+            {view === "inbox" && (
+              topicId ? (
+                <Inbox
+                  key={`${selected.id}:${topicId}`}
+                  client={mailClient}
+                  liveClient={client}
+                  topicId={topicId}
+                  siteScope={selected.scope === "site"}
+                  keywordEnabled={keywordEnabled}
+                  onError={reportError}
+                  onNotice={setNotice}
+                />
+              ) : (
+                <div className="glass-surface management settings-card">
+                  <p className="empty-copy">
+                    {topicListStatus === "loading"
+                      ? "正在同步网站话题与收件箱…"
+                      : "暂时无法读取话题列表，请检查网站连接或前往「网站连接」更换密钥。"}
+                  </p>
+                </div>
+              )
             )}
             {view === "topics" && (
               <Topics
@@ -1335,14 +1525,25 @@ function App() {
                 onDirtyChange={setTopicDirty}
               />
             )}
-            {topicId && view === "share" && (
-              <Share
-                key={`${selected.id}:${topicId}`}
-                client={mailClient}
-                topicId={topicId}
-                siteId={selected.siteId}
-                onError={reportError}
-              />
+            {view === "share" && (
+              topicId ? (
+                <Share
+                  key={`${selected.id}:${topicId}`}
+                  client={mailClient}
+                  topicId={topicId}
+                  siteId={selected.siteId}
+                  onError={reportError}
+                  onNotice={setNotice}
+                />
+              ) : (
+                <div className="glass-surface management settings-card">
+                  <p className="empty-copy">
+                    {topicListStatus === "loading"
+                      ? "正在同步话题分享配置…"
+                      : "请先连接可用网站与话题后再生成投稿二维码与海报。"}
+                  </p>
+                </div>
+              )
             )}
             {view === "settings" && (
               <>
@@ -1361,9 +1562,11 @@ function App() {
                     onSaved={refreshStatus}
                     prefs={prefs}
                     onUpdatePrefs={updatePrefs}
+                    timelineStatus={timelineStatus}
+                    onTimelineChange={setTimelineStatus}
                   />
                 </div>
-                <div hidden={settingsTab !== "safety" && settingsTab !== "grants"}>
+                <div hidden={settingsTab !== "safety" && settingsTab !== "grants"} className="wc-live">
                   <GlobalSettings
                     key={`${selected.id}:${topicId}`}
                     client={mailClient}

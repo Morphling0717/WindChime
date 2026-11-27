@@ -61,6 +61,21 @@ test('workspace restores dark theme preference and omits default or invalid valu
   assert.equal(restoreWorkspace({ version: 1, uiSurface: 'standard', tiles: {} }).uiSurface, 'standard');
   assert.equal(restoreWorkspace({ version: 1, uiSurface: 'lite', tiles: {} }).uiSurface, 'lite');
   assert.equal(restoreWorkspace({ version: 1, uiSurface: 'crystal', tiles: {} }).uiSurface, undefined);
+  assert.equal(restoreWorkspace({ version: 1, displayMotion: true, tiles: {} }).displayMotion, undefined);
+  assert.equal(restoreWorkspace({ version: 1, displayMotion: false, tiles: {} }).displayMotion, false);
+  assert.equal(restoreWorkspace({ version: 1, displayMotion: 'no', tiles: {} }).displayMotion, undefined);
+  assert.equal(
+    restoreWorkspace({ version: 1, timelineSync: { obsLogEnabled: true, obsWsEnabled: true, obsWsPort: 4455, bilibiliRoomId: '', preferTrack: 'stream' }, tiles: {} }).timelineSync,
+    undefined,
+  );
+  assert.deepEqual(
+    restoreWorkspace({ version: 1, timelineSync: { obsWsEnabled: false, obsWsPort: 4466, bilibiliRoomId: ' 223344 ', preferTrack: 'record', obsWsPassword: 'leaked' }, tiles: {} }).timelineSync,
+    { obsWsEnabled: false, obsWsPort: 4466, bilibiliRoomId: '223344', preferTrack: 'record' },
+  );
+  assert.equal(
+    restoreWorkspace({ version: 1, timelineSync: { bilibiliRoomId: 'not-a-room', obsWsPort: 80 }, tiles: {} }).timelineSync,
+    undefined,
+  );
 });
 
 test('workspace restores 1.0.0 display position, chime, startup view, obs bridge, local overlay, and blindbox tile safely', () => {

@@ -21,7 +21,9 @@ async function harness(options={}) {
     getBounds(){return {x:50,y:60,width:this.options.width,height:this.options.height};}setAlwaysOnTop(pinned){this.pinned=pinned;}
     setContentSize(width,height){this.contentSize={width,height};this.resizeCount=(this.resizeCount??0)+1;}
   }
-  const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutPolicy?options.shortcutPolicy(key):options.shortcutResult??true;},unregister:key=>unregistered.push(key),unregisterAll:()=>{}},dialog:{showMessageBox:async(_window,input)=>{confirmations.push(input);return {response:typeof confirmation==='function'?await confirmation():confirmation};}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
+  const nativeTheme={themeSource:'system'};
+  const clipboardWrites=[];
+  const electron={app,BrowserWindow:Window,nativeTheme,clipboard:{writeText:text=>clipboardWrites.push(text)},ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},shell:{openExternal:async()=>{}},safeStorage:{isEncryptionAvailable:()=>options.encryptionAvailable??true,encryptString:s=>{persistence.encrypt?.();return Buffer.from(s);},decryptString:bytes=>bytes.toString()},globalShortcut:{register:(key,callback)=>{shortcuts.push({key,callback});if(options.shortcutResult instanceof Error)throw options.shortcutResult;return options.shortcutPolicy?options.shortcutPolicy(key):options.shortcutResult??true;},unregister:key=>unregistered.push(key),unregisterAll:()=>{}},dialog:{showMessageBox:async(_window,input)=>{confirmations.push(input);return {response:typeof confirmation==='function'?await confirmation():confirmation};}},Tray:class {constructor(icon){trayIcon=icon;}setToolTip(){}setContextMenu(){}on(){}},Menu:{buildFromTemplate:x=>x},session:{fromPartition:()=>({setPermissionRequestHandler:()=>{},setPermissionCheckHandler:()=>{},webRequest:{onBeforeRequest:()=>{}}})},powerMonitor:new EventEmitter()};
   const fetch=async(url,options)=>{
     const request={url,body:options.body?JSON.parse(options.body):null,method:options.method,headers:options.headers};requests.push(request);
     const intercepted=route?.(request);if(intercepted)return intercepted;
@@ -35,14 +37,14 @@ async function harness(options={}) {
     if(url.endsWith('/display/open'))value={receiverId:'r',epoch:'epoch',leaseMs:3000};
     return Response.json(value);
   };
-  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(file.endsWith('play-history.v1.json')||file.includes('local-overlay')){throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{if(file.endsWith('play-history.v1.json.tmp')||file.includes('local-overlay')){return;}const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('play-history.v1.json.tmp'))return;if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);}};
+  const fileSystem={readFile:async(file)=>{if(file.endsWith('workspace.v1.json')){if(options.workspace)return JSON.stringify(options.workspace);throw Object.assign(new Error(),{code:'ENOENT'});}if(file.endsWith('play-history.v1.json')||file.endsWith('timeline-secrets.v1.enc')||file.includes('local-overlay')){throw Object.assign(new Error(),{code:'ENOENT'});}if(options.readError)throw options.readError;if(options.vault)return Buffer.from(JSON.stringify(options.vault));throw Object.assign(new Error(),{code:'ENOENT'});},writeFile:async(file,bytes)=>{if(file.endsWith('play-history.v1.json.tmp')||file.endsWith('timeline-secrets.v1.enc.tmp')||file.includes('local-overlay')){return;}const candidate=JSON.parse(bytes.toString());if(file.endsWith('workspace.v1.json.tmp')){workspaceWrites.push(candidate);await persistence.workspace?.(candidate);temporaryWorkspace=candidate;return;}await persistence.write?.(candidate);vaultWrites.push(candidate);temporaryVault=candidate;},rename:async(file)=>{if(file.endsWith('play-history.v1.json.tmp')||file.endsWith('timeline-secrets.v1.enc.tmp'))return;if(file.endsWith('workspace.v1.json.tmp')){workspaceCommits.push(temporaryWorkspace);return;}await persistence.rename?.(temporaryVault);vaultCommits.push(temporaryVault);},unlink:async()=>{}};
   const source=fs.readFileSync(path.join(__dirname,'../main.cjs'),'utf8');
   const wrapper=vm.runInNewContext(`(function(require,__dirname){${source}\n})`,{process:{...process,execPath:options.execPath??process.execPath,argv:[process.execPath,'main.cjs',...(options.argv??[])]},Buffer,URL,Uint8Array,FormData,Blob,AbortController,fetch,setTimeout,clearTimeout,setInterval:callback=>{intervals.push(callback);return {unref(){}};},console});
   wrapper(name=>name==='electron'?electron:name==='node:fs/promises'?fileSystem:name==='node:perf_hooks'?{performance:{now:()=>now}}:name.startsWith('./')?require(path.join(__dirname,'..',name)):require(name),path.join(__dirname,'..'));
   await flush();await flush();const control=windows[0];
   const invoke=(name,args=[],window=control)=>handlers.get(name)({sender:window.webContents,senderFrame:window.webContents.mainFrame},...args);
   async function pair(port){const pending=await invoke('sites:pair',[{origin:`http://localhost:${port}`,label:`Site ${port}`}]);assert(pending.ok);const result=await invoke('sites:pair-status',[pending.data.id]);assert(result.ok,result.error);return result.data.site;}
-  return {windows,requests,invoke,pair,handlers,app,vaultWrites,vaultCommits,shortcuts,workspaceWrites,workspaceCommits,unregistered,confirmations,setConfirmation:value=>{confirmation=value;},powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
+  return {windows,requests,invoke,pair,handlers,app,nativeTheme,clipboardWrites,vaultWrites,vaultCommits,shortcuts,workspaceWrites,workspaceCommits,unregistered,confirmations,setConfirmation:value=>{confirmation=value;},powerMonitor:electron.powerMonitor,get trayIcon(){return trayIcon;},get quitCount(){return quitCount;},tick:()=>intervals.forEach(callback=>callback()),advance:ms=>{now+=ms;intervals.forEach(callback=>callback());},setRoute:value=>{route=value;},setBlankLoadGate:value=>{blankLoadGate=value;},setPersistence:value=>{persistence=value;},get output(){return windows.filter(w=>w.options.title==='WindChime Display').at(-1);}};
 }
 test('private tiles have distinct isolated windows, selected-only sites and no credential or display authority',async()=>{
   const h=await harness();await h.pair(3012);await h.pair(3011);
@@ -865,9 +867,127 @@ test('blind-box preferences and local OBS test card IPC enforce live-letter safe
   assert((await h.invoke('overlay:set',[{enabled:true,watermarkText:'@主播测试'}])).ok);
   assert.equal(h.output.sent.filter(m=>m.channel==='output:overlay').at(-1).args[0].watermarkText,'@主播测试');
   assert.equal((await h.invoke('overlay:set',[{enabled:false}],h.output)).ok,false,'display cannot write overlay');
-  // Blind-box tile opens as isolated topmost window
+  // Blind-box tile opens as isolated topmost window without OS acrylic
   assert((await h.invoke('tiles:open',['blindbox'])).ok);
   const bbTile=h.windows.at(-1);
   assert.equal(bbTile.options.title,'WindChime Private · 盲盒拆信');
   assert.equal(bbTile.loadOptions.query.tile,'blindbox');
+  assert.equal(bbTile.options.backgroundMaterial,undefined,'floating tiles never request Win11 OS acrylic');
+  assert.equal((await h.invoke('app:prefs-get',[],bbTile)).data.acrylicActive,false);
+});
+
+test('v1.3.0 window focus broadcast, audience spotlight auto-clear, displayMotion and VOD chapters IPC',async()=>{
+  const h=await harness();await h.pair(3011);await h.invoke('display:open');const output=h.output;
+  // Main control window syncs nativeTheme.themeSource with desktopTheme (prevents dark Win11 DWM acrylic behind light UI)
+  assert.equal(h.nativeTheme.themeSource,'light');
+  assert((await h.invoke('app:theme-set',['dark'])).ok);
+  assert.equal(h.nativeTheme.themeSource,'dark');
+  assert((await h.invoke('app:theme-set',['light'])).ok);
+  assert.equal(h.nativeTheme.themeSource,'light');
+  // Main control window emits app:window-focus on blur/focus
+  assert.equal((await h.invoke('app:window-focus-get')).data,true);
+  h.windows[0].emit('blur');
+  assert.equal((await h.invoke('app:window-focus-get')).data,false);
+  assert.equal(h.windows[0].sent.filter(m=>m.channel==='app:window-focus').at(-1).args[0],false);
+  h.windows[0].emit('focus');
+  assert.equal((await h.invoke('app:window-focus-get')).data,true);
+
+  // displayMotion defaults true, updates output window live, and persists when disabled
+  assert.equal((await h.invoke('app:prefs-get')).data.displayMotion,true);
+  assert.equal((await h.invoke('display:motion-get',[],output)).data,true);
+  assert((await h.invoke('app:prefs-set',[{displayMotion:false}])).ok);
+  assert.equal(output.sent.filter(m=>m.channel==='output:motion').at(-1).args[0],false);
+  assert.equal(h.workspaceCommits.at(-1).displayMotion,false);
+
+  // Spotlight validates active snapshot asset, broadcasts to output, and auto-clears on snapshot switch & hide
+  const snap1={id:'snap-a',messageId:'m1',nickname:'猫猫',text:'有图来信',assets:[{id:'asset-1',caption:'贺图'}]};
+  const snap2={id:'snap-b',messageId:'m2',nickname:'狗狗',text:'第二封信',assets:[]};
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:2,activation:1,snapshot:snap1}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.equal((await h.invoke('display:spotlight-set',['asset-1'])).data,'asset-1');
+  assert.equal(output.sent.filter(m=>m.channel==='output:spotlight').at(-1).args[0],'asset-1');
+  assert.equal((await h.invoke('display:spotlight-set',['nonexistent'])).data,null);
+  assert.equal((await h.invoke('display:spotlight-set',['asset-1'])).data,'asset-1');
+  // Switching to snap2 automatically clears spotlight
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:3,activation:2,snapshot:snap2}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.equal((await h.invoke('display:spotlight-get')).data,null);
+  assert.equal(output.sent.filter(m=>m.channel==='output:spotlight').at(-1).args[0],null);
+
+  // History stream start & chapters export IPC
+  assert.equal((await h.invoke('history:stream-start-get')).data,null);
+  assert((await h.invoke('history:stream-start-set',['now'])).ok);
+  assert.equal(typeof (await h.invoke('history:stream-start-get')).data,'string');
+  assert((await h.invoke('history:stream-start-set',[new Date(Date.now()-60000).toISOString()])).ok);
+  const chaptersRes=await h.invoke('history:chapters-text',[{}]);
+  assert(chaptersRes.ok);
+  assert(chaptersRes.data.includes('00:00:00 开场 / 读信开始'));
+  assert(chaptersRes.data.includes('猫猫'));
+  assert(chaptersRes.data.includes('狗狗'));
+  assert.equal((await h.invoke('history:stream-start-set',[null],output)).ok,false,'display cannot set stream start');
+
+  // Timeline auto-sync IPC defaults: OBS WS v5 & OBS Log ON, preferTrack='stream', zero Bilibili requests by default
+  const tl=(await h.invoke('timeline:status-get')).data;
+  assert.equal(tl.config.obsWsEnabled,true);
+  assert.equal(tl.config.obsLogEnabled,true);
+  assert.equal(tl.config.preferTrack,'stream');
+  assert.equal(tl.config.bilibiliRoomId,'');
+  assert(!h.requests.some(r=>r.url.includes('bilibili.com')),'must not call Bilibili API without explicit roomId');
+  assert.equal((await h.invoke('history:offset-set',[-15])).data,-15);
+  assert.equal((await h.invoke('timeline:status-get')).data.anchor.offsetSec,-15);
+  assert.equal((await h.invoke('timeline:config-set',[{bilibiliRoomId:'abc'}])).ok,false);
+  assert.equal((await h.invoke('timeline:config-set',[{obsWsEnabled:false}],output)).ok,false,'display cannot mutate timeline config');
+
+  // Native Electron clipboard IPC & display size presets work privately and are blocked from output window
+  assert((await h.invoke('app:clipboard-write',['http://127.0.0.1:17420/obs/test'])).ok);
+  assert.equal(h.clipboardWrites.at(-1),'http://127.0.0.1:17420/obs/test');
+  assert.equal((await h.invoke('app:clipboard-write',['nope'],output)).ok,false,'display cannot write clipboard');
+  const resized=await h.invoke('display:size-set',[{width:480,height:860}]);
+  assert(resized.ok);
+  assert.equal(resized.data.width,480);
+  assert.equal(resized.data.height,860);
+  assert.deepEqual(output.contentSize,{width:480,height:860});
+  assert.equal((await h.invoke('display:size-set',[{width:500,height:500}],output)).ok,false,'display cannot resize itself');
+
+  // Unchanged server 500ms frame polls must NOT snap manual display:size-set back
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:4,activation:2,appearance:{maxWidth:1200,viewportHeight:640},snapshot:snap2}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.deepEqual(output.contentSize,{width:480,height:860});
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.deepEqual(output.contentSize,{width:480,height:860});
+  // Explicit server appearance size change clears manual override and resizes cleanly
+  h.setRoute(r=>r.url.includes('/display/frame')?Response.json({receiverId:'r',epoch:'epoch',leaseMs:3000,revision:5,activation:2,appearance:{maxWidth:840,viewportHeight:520},snapshot:snap2}):null);
+  assert((await h.invoke('display:request',[{path:'/display/frame?receiverId=r',method:'GET'}],output)).ok);
+  assert.deepEqual(output.contentSize,{width:840,height:520});
+
+  // Poster image picker and remote image fetcher are strictly control-only & SSRF-protected
+  assert.equal((await h.invoke('files:poster-image',['background'],output)).ok,false);
+  assert.equal((await h.invoke('share:fetch-image',['https://example.com/a.png'],output)).ok,false);
+  const ssrfRes=await h.invoke('share:fetch-image',['https://127.0.0.1:9999/secret.png']);
+  assert.equal(ssrfRes.ok,false);
+  assert.match(ssrfRes.error,/内网|本机/);
+
+  // Output window can query initial test-card state, control window cannot
+  const tcOut=await h.invoke('display:test-card-output-get',[],output);
+  assert(tcOut.ok);
+  assert.equal(tcOut.data.active,false);
+  assert.equal((await h.invoke('display:test-card-output-get',[])).ok,false);
+
+  // Domain 403 error on control:request does not blank active display output
+  h.setRoute(r=>r.url.includes('/control/state')?Response.json({code:'INVALID_ASSET',error:'bad asset'},{status:403}):null);
+  const domErr=await h.invoke('control:request',[{path:'/control/state',method:'GET'}]);
+  assert.equal(domErr.ok,false);
+  assert.equal(output.hideCount,0,'domain 403 must not blank output');
+});
+
+test('failed startup nextShortcut remains visible and clearable via settings',async()=>{
+  const h=await harness({workspace:{version:1,nextShortcut:'CommandOrControl+Alt+X',tiles:{}},shortcutPolicy:key=>!key.endsWith('+X')});
+  const s1=(await h.invoke('app:status')).data;
+  assert.equal(s1.nextShortcut,'CommandOrControl+Alt+X');
+  assert(s1.shortcutError.length>0);
+  const cleared=await h.invoke('app:next-shortcut',['']);
+  assert(cleared.ok);
+  const s2=(await h.invoke('app:status')).data;
+  assert.equal(s2.nextShortcut,'');
+  assert.equal(s2.shortcutError,'');
 });

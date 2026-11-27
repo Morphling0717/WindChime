@@ -138,7 +138,7 @@ const DEFAULT_LABELS: Required<WindChimeArchiveConfirmModalLabels> = {
   flagged: "待审核",
   archiveLink: "【往期活动】",
   markReadFirstHeading: "✓ 先标为已读再归档",
-  markReadFirstHint: "所有未读先 markRead，然后归档（推荐）",
+  markReadFirstHint: "先将全部未读留言标为已读，再归档此主题（推荐）",
   archiveAnywayHeading: "⚡ 仍然归档",
   archiveAnywayHint: "未读状态保留；往期活动抽屉里还能看到",
   cancelHeading: "× 取消",
@@ -237,17 +237,19 @@ export function WindChimeArchiveConfirmModal({
         </p>
 
         <div className={th.buttonsWrap}>
-          <button
-            type="button"
-            onClick={onMarkReadThenArchive}
-            disabled={busy}
-            className={th.primaryAction}
-          >
-            <div className={th.primaryActionHeading}>
-              {L.markReadFirstHeading}
-            </div>
-            <div className={th.primaryActionHint}>{L.markReadFirstHint}</div>
-          </button>
+          {unread > 0 && (
+            <button
+              type="button"
+              onClick={onMarkReadThenArchive}
+              disabled={busy}
+              className={th.primaryAction}
+            >
+              <div className={th.primaryActionHeading}>
+                {L.markReadFirstHeading}
+              </div>
+              <div className={th.primaryActionHint}>{L.markReadFirstHint}</div>
+            </button>
+          )}
           <button
             type="button"
             onClick={onArchiveAnyway}

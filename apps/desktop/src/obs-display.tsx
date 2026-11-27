@@ -11,14 +11,20 @@ import type {
   WindChimeDisplayScrollMetrics,
 } from '../../../src/broadcast/scroll-loop';
 
-const LOCAL_TEST_CARD: WindChimeLiveSnapshot = {
-  id: 'windchime-local-test-card',
-  messageId: 'windchime-local-test-card',
-  nickname: '对位测试卡 · OBS 浏览器源',
-  text: 'OBS 浏览器源已连接成功！请将此浏览器源的宽高设为风铃推荐尺寸，并拖动到直播画面理想位置。\n\n确认位置无误后，在风铃控制台点击「关闭测试卡」即可恢复透明空白待机；本测试卡不会写入网站或任何来信。',
-  linkUrl: null,
-  assets: [],
-};
+function buildObsTestCard(width: number, height: number): WindChimeLiveSnapshot {
+  return {
+    id: 'windchime-local-test-card',
+    messageId: 'windchime-local-test-card',
+    nickname: `对位测试卡 · OBS 浏览器源（${width} × ${height}）`,
+    text:
+      'OBS 浏览器源已连接成功！画面会自动 100% 铺满你在 OBS 设置的宽高：\n' +
+      '• 自由拉长 / 拉宽 / 改竖屏（文字不变形）：在 OBS 双击此浏览器源，直接改「宽度 / 高度」即可。\n' +
+      '• 调整位置与等比缩放：在 OBS 预览区直接拖动红框或拉动四角。\n\n' +
+      '对位完成后点击控制台「关闭测试卡」即恢复透明空白待机（正式来信不会显示虚线边框）。',
+    linkUrl: null,
+    assets: [],
+  };
+}
 
 type FramePayload = {
   snapshot: WindChimeLiveSnapshot;
@@ -44,8 +50,30 @@ function ObsOutput() {
     appearance: null,
   });
   const [overlay, setOverlay] = useState<WindChimeLocalOverlay | null>(null);
+  const [spotlightAssetId, setSpotlightAssetId] = useState<string | null>(null);
+  const [displayMotion, setDisplayMotion] = useState(true);
+  const [viewport, setViewport] = useState(() => ({ width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) }));
   const scrollListeners = useRef(new Set<(cmd: WindChimeDisplayScrollCommand) => void>());
   const lastReportRef = useRef(0);
+  const pendingMetricsRef = useRef<WindChimeDisplayScrollMetrics | null | undefined>(undefined);
+  const metricsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentSnapshotIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (metricsTimerRef.current !== null) {
+        clearTimeout(metricsTimerRef.current);
+        metricsTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncSize = () => setViewport({ width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) });
+    syncSize();
+    window.addEventListener('resize', syncSize);
+    return () => window.removeEventListener('resize', syncSize);
+  }, []);
 
   useEffect(() => {
     if (!basePath) return;
@@ -64,12 +92,17 @@ function ObsOutput() {
         try {
           const payload = JSON.parse((ev as MessageEvent).data) as FramePayload;
           if (payload?.snapshot) {
+            const changed = currentSnapshotIdRef.current !== payload.snapshot.id;
+            currentSnapshotIdRef.current = payload.snapshot.id;
             setTestCard({ active: false, appearance: null });
+            if (changed) setSpotlightAssetId(null);
             setFrame(payload);
           }
         } catch {}
       });
       source.addEventListener('blank', () => {
+        currentSnapshotIdRef.current = null;
+        setSpotlightAssetId(null);
         setFrame(null);
         setTestCard({ active: false, appearance: null });
       });
@@ -85,6 +118,18 @@ function ObsOutput() {
           setOverlay(payload ?? null);
         } catch {}
       });
+      source.addEventListener('spotlight', ev => {
+        try {
+          const payload = JSON.parse((ev as MessageEvent).data) as { assetId?: string | null };
+          setSpotlightAssetId(typeof payload?.assetId === 'string' && payload.assetId ? payload.assetId : null);
+        } catch {}
+      });
+      source.addEventListener('motion', ev => {
+        try {
+          const payload = JSON.parse((ev as MessageEvent).data) as { enabled?: boolean };
+          setDisplayMotion(payload?.enabled !== false);
+        } catch {}
+      });
       source.addEventListener('scroll', ev => {
         try {
           const cmd = JSON.parse((ev as MessageEvent).data) as WindChimeDisplayScrollCommand;
@@ -93,6 +138,8 @@ function ObsOutput() {
       });
       source.onerror = () => {
         // Fail closed immediately whenever the local bridge drops or resets.
+        currentSnapshotIdRef.current = null;
+        setSpotlightAssetId(null);
         setFrame(null);
         setTestCard({ active: false, appearance: null });
         source?.close();
@@ -112,27 +159,50 @@ function ObsOutput() {
     };
   }, [basePath]);
 
-  const scrollControl = useMemo(
-    () => ({
+  const scrollControl = useMemo(() => {
+    const flushMetrics = (payload: WindChimeDisplayScrollMetrics | null) => {
+      if (!basePath) return;
+      lastReportRef.current = Date.now();
+      void fetch(`${basePath}/scroll-metrics`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    return {
       subscribe: (handler: (cmd: WindChimeDisplayScrollCommand) => void) => {
         scrollListeners.current.add(handler);
         return () => { scrollListeners.current.delete(handler); };
       },
       onMetrics: (metrics: WindChimeDisplayScrollMetrics | null) => {
         if (!basePath) return;
-        const now = Date.now();
-        if (metrics && now - lastReportRef.current < 160) return;
-        lastReportRef.current = now;
-        void fetch(`${basePath}/scroll-metrics`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(metrics),
-          keepalive: true,
-        }).catch(() => {});
+        if (metrics === null) {
+          pendingMetricsRef.current = undefined;
+          if (metricsTimerRef.current !== null) {
+            clearTimeout(metricsTimerRef.current);
+            metricsTimerRef.current = null;
+          }
+          flushMetrics(null);
+          return;
+        }
+        const elapsed = Date.now() - lastReportRef.current;
+        if (elapsed >= 160 && metricsTimerRef.current === null) {
+          flushMetrics(metrics);
+          return;
+        }
+        pendingMetricsRef.current = metrics;
+        if (metricsTimerRef.current === null) {
+          metricsTimerRef.current = setTimeout(() => {
+            metricsTimerRef.current = null;
+            const next = pendingMetricsRef.current;
+            pendingMetricsRef.current = undefined;
+            if (next !== undefined) flushMetrics(next);
+          }, Math.max(16, 160 - elapsed));
+        }
       },
-    }),
-    [basePath],
-  );
+    };
+  }, [basePath]);
 
   const assetUrls = useMemo(() => {
     if (!frame?.snapshot?.assets?.length || !basePath) return {};
@@ -143,6 +213,7 @@ function ObsOutput() {
   }, [frame, basePath]);
 
   if (frame?.snapshot) {
+    const activeSnapshotId = frame.snapshot.id;
     return (
       <WindChimeLiveCard
         key={`${frame.epoch ?? 'obs'}:${frame.activation ?? frame.snapshot.id}`}
@@ -151,18 +222,51 @@ function ObsOutput() {
         assetUrls={assetUrls}
         scrollControl={scrollControl}
         localOverlay={overlay}
+        spotlightAssetId={spotlightAssetId}
+        enhancedMotion={displayMotion}
+        onAssetError={() => {
+          if (currentSnapshotIdRef.current === activeSnapshotId) {
+            currentSnapshotIdRef.current = null;
+            setSpotlightAssetId(null);
+            setFrame(null);
+          }
+        }}
       />
     );
   }
   if (testCard.active) {
+    const hasCustomFill = Boolean(
+      testCard.appearance &&
+      testCard.appearance.transparent === false &&
+      typeof testCard.appearance.backgroundColor === 'string' &&
+      testCard.appearance.backgroundColor.trim(),
+    );
+    const testAppearance: WindChimeLiveAppearance = {
+      ...DEFAULT_WINDCHIME_LIVE_APPEARANCE,
+      ...(testCard.appearance ?? {}),
+      transparent: false,
+      backgroundColor: hasCustomFill
+        ? testCard.appearance!.backgroundColor
+        : 'rgba(16, 28, 42, 0.88)',
+      textColor: hasCustomFill
+        ? (testCard.appearance?.textColor || DEFAULT_WINDCHIME_LIVE_APPEARANCE.textColor)
+        : '#eef8fc',
+    };
     return (
-      <WindChimeLiveCard
-        key="obs-local-test-card"
-        snapshot={LOCAL_TEST_CARD}
-        appearance={testCard.appearance ?? DEFAULT_WINDCHIME_LIVE_APPEARANCE}
-        assetUrls={{}}
-        localOverlay={overlay}
-      />
+      <>
+        <WindChimeLiveCard
+          key="obs-local-test-card"
+          snapshot={buildObsTestCard(viewport.width, viewport.height)}
+          appearance={testAppearance}
+          assetUrls={{}}
+          localOverlay={overlay}
+          enhancedMotion={displayMotion}
+        />
+        <div className="wc-test-guide" aria-hidden="true">
+          <i className="tl" /><i className="tr" /><i className="bl" /><i className="br" />
+        </div>
+        <div className="wc-test-size" aria-hidden="true">{`${viewport.width} × ${viewport.height} px`}</div>
+      </>
     );
   }
   return null;
